@@ -1,0 +1,5 @@
+node_modules/
+data/sessions.json
+data/viewers.json
+data/betting.json
+.env

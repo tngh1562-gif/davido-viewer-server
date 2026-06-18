@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAVIDO INHOUSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base:#09090b;
+  --surface-dark:rgba(24,24,27,0.6);
+  --surface-border:rgba(255,255,255,0.08);
+  --text-main:#ffffff;
+  --text-muted:rgba(255,255,255,0.6);
+  --ref-blue:#0D52D6;
+  --ref-green:#39FF14;
+  --ref-green-bg:#4CFF50;
+  --ref-purple-start:#8E2DE2;
+  --ref-purple-end:#4A00E0;
+  --ref-white:#f4f4f5;
+  --ref-brown:#6B4226;
+  --gold:#ffc844;
+  --radius:20px;
+  --font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--text-main);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.bg-fx{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;background:radial-gradient(circle at 15% 50%,rgba(13,82,214,0.08),transparent 40%),radial-gradient(circle at 85% 20%,rgba(76,255,80,0.05),transparent 40%);animation:pulse 15s ease-in-out infinite alternate}
+.particles{position:absolute;width:100%;height:100%;background-image:radial-gradient(rgba(255,255,255,0.1) 1px,transparent 1px),radial-gradient(rgba(255,255,255,0.05) 1px,transparent 1px);background-size:50px 50px,100px 100px;background-position:0 0,25px 25px;animation:floatUp 60s linear infinite;opacity:0.3}
+@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.1);opacity:1}}
+@keyframes floatUp{0%{background-position:0 0,25px 25px}100%{background-position:0 -1000px,25px -1000px}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes msgPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes winGlow{from{text-shadow:0 0 10px gold}to{text-shadow:0 0 30px gold,0 0 60px orange}}
+@keyframes reelBlur{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* NAV */
+.nav-container{position:sticky;top:0;z-index:100;background:rgba(9,9,11,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--surface-border);padding:0 40px}
+.nav-inner{max-width:1400px;margin:0 auto;height:72px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-weight:700;font-size:20px;letter-spacing:-.04em;display:flex;align-items:center;gap:8px}
+.logo::before{content:'';display:block;width:12px;height:12px;background:var(--ref-green);border-radius:50%;box-shadow:0 0 10px var(--ref-green)}
+.nav-links{display:flex;gap:32px}
+.nav-item{color:var(--text-muted);text-decoration:none;font-weight:500;font-size:15px;padding:8px 0;position:relative;cursor:pointer;transition:color .2s}
+.nav-item:hover{color:var(--text-main)}
+.nav-item.active{color:var(--text-main)}
+.nav-item.active::after{content:'';position:absolute;bottom:-24px;left:0;width:100%;height:2px;background:var(--ref-green);box-shadow:0 0 8px rgba(76,255,80,.5)}
+.user-profile{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:500}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--ref-blue),var(--ref-purple-start))}
+.pts-badge{background:rgba(255,200,68,.12);border:1px solid rgba(255,200,68,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+
+main{max-width:1400px;margin:40px auto;padding:0 40px}
+.page{display:none;animation:fadeIn .4s ease forwards}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface-dark);border:1px solid var(--surface-border);border-radius:var(--radius);padding:24px;position:relative;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s;overflow:hidden}
+.card-solid-green{background:var(--ref-green-bg);color:#000;border:none}
+.card-solid-green .text-muted{color:rgba(0,0,0,.6)}
+.card-solid-green .dash{background:rgba(0,0,0,.2)}
+.card-solid-green .dash.active{background:#000}
+.card-solid-blue{background:var(--ref-blue);color:#fff;border:none}
+.card-solid-blue .text-muted{color:rgba(255,255,255,.7)}
+.card-gradient-purple{background:linear-gradient(135deg,var(--ref-purple-start),var(--ref-purple-end));color:#fff;border:none}
+.card-solid-white{background:var(--ref-white);color:#111;border:none}
+.card-solid-white .text-muted{color:rgba(0,0,0,.5)}
+.card-solid-white .dash{background:rgba(0,0,0,.15)}
+.card-solid-white .dash.active{background:rgba(0,0,0,.8)}
+.card-solid-brown{background:var(--ref-brown);color:#fff;border:none}
+.card-dashes{display:flex;gap:4px;margin-bottom:20px}
+.dash{height:2px;background:rgba(255,255,255,.2);border-radius:2px}
+.dash.short{width:12px}.dash.long{width:32px}.dash.active{background:rgba(255,255,255,.9)}
+.card-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:8px;opacity:.8}
+.card-title{font-size:20px;font-weight:600;letter-spacing:-.02em;line-height:1.2;margin-bottom:12px}
+.card-desc{font-size:14px;line-height:1.5;opacity:.8;margin-bottom:auto}
+.card-footer-link{margin-top:32px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px;cursor:pointer}
+.card-footer-brand{margin-top:32px;font-size:12px;font-weight:500;opacity:.6}
+.text-muted{color:var(--text-muted)}.text-green{color:var(--ref-green)}
+.h-section{font-size:18px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+.stat-val{font-size:36px;font-weight:700;letter-spacing:-.03em;margin-top:8px}
+.main-grid{display:grid;grid-template-columns:2fr 1fr;gap:32px}
+.live-match-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.side-stack{display:flex;flex-direction:column;gap:24px}
+.list-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.list-item:last-child{border-bottom:none;padding-bottom:0}
+.list-item-left{display:flex;align-items:center;gap:12px}
+.dot{width:8px;height:8px;border-radius:50%}
+
+/* BETTING HERO */
+.betting-hero{background:linear-gradient(to right,rgba(13,82,214,.1),rgba(255,71,87,.1));border:1px solid var(--surface-border);border-radius:var(--radius);padding:40px;text-align:center;margin-bottom:40px}
+.vs-container{display:flex;justify-content:center;align-items:center;gap:40px;margin-bottom:32px}
+.team{font-size:32px;font-weight:700;letter-spacing:-.02em}
+.team.blue{color:#4da3ff}.team.red{color:#ff6b81}
+.vs-text{font-size:16px;color:var(--text-muted);font-weight:600}
+.slider-container{max-width:600px;margin:0 auto}
+.slider-labels{display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600}
+input[type=range]{-webkit-appearance:none;width:100%;background:transparent}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:24px;width:24px;border-radius:50%;background:#fff;cursor:pointer;margin-top:-10px;box-shadow:0 0 10px rgba(0,0,0,.5)}
+input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:pointer;background:linear-gradient(to right,var(--ref-blue) 50%,#ff4757 50%);border-radius:2px}
+
+/* GAME CARDS GRID */
+.games-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px}
+.game-card{aspect-ratio:3/4;cursor:pointer}
+.game-card:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+
+/* SHOP GRID */
+.store-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.rarity-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:4px;text-transform:uppercase;margin-bottom:8px}
+.rarity-common{background:rgba(100,100,100,.3);color:#aaa}
+.rarity-uncommon{background:rgba(59,130,246,.2);color:#60a5fa}
+.rarity-rare{background:rgba(168,85,247,.2);color:#c084fc}
+.rarity-epic{background:rgba(234,179,8,.2);color:#fbbf24}
+.product-price{font-size:22px;font-weight:700;color:var(--gold);margin:14px 0 6px}
+.product-value{font-size:11px;color:var(--text-muted);margin-bottom:14px}
+.btn-buy{background:var(--text-main);color:#000;border:none;padding:12px;border-radius:8px;font-weight:600;font-family:var(--font-family);cursor:pointer;transition:opacity .2s;margin-top:auto}
+.btn-buy:hover{opacity:.85}
+.btn-buy:disabled{opacity:.35;cursor:not-allowed}
+
+/* ══════════ GAME MODAL ══════════ */
+.game-modal-bg{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+  animation:fadeIn .2s;
+}
+.game-modal-bg.open{display:flex}
+.game-modal{
+  background:#0f0f1a;border:1px solid rgba(255,255,255,.1);
+  border-radius:24px;padding:32px;
+  width:min(680px,96vw);max-height:92vh;overflow-y:auto;
+  position:relative;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);
+}
+.game-modal::-webkit-scrollbar{width:4px}
+.game-modal::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.modal-close{
+  position:absolute;top:16px;right:16px;width:32px;height:32px;
+  background:rgba(255,255,255,.08);border:none;color:#fff;border-radius:50%;
+  font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.modal-close:hover{background:rgba(255,255,255,.15)}
+.modal-title{font-size:1.3rem;font-weight:700;margin-bottom:6px}
+.modal-pts{font-size:.82rem;color:var(--text-muted);margin-bottom:24px}
+.modal-pts span{color:var(--gold);font-weight:700}
+
+/* ── SLOT ── */
+.slot-machine{
+  background:linear-gradient(145deg,#1a1a2e,#0f0f1a);
+  border:2px solid rgba(255,200,68,.2);border-radius:16px;padding:24px 28px;margin-bottom:16px;
+  box-shadow:0 0 40px rgba(255,200,68,.06),inset 0 0 30px rgba(0,0,0,.4);
+  position:relative;
+}
+.slot-lights{
+  position:absolute;top:-5px;left:16px;right:16px;height:10px;border-radius:5px;
+  background:repeating-linear-gradient(90deg,rgba(255,200,68,.7) 0,rgba(255,200,68,.7) 8px,transparent 8px,transparent 18px);
+  animation:lightsAnim .5s linear infinite;
+}
+@keyframes lightsAnim{0%{background-position:0 0}100%{background-position:26px 0}}
+.slot-reels{display:flex;gap:12px;justify-content:center;margin:16px 0 8px}
+.slot-reel{
+  width:96px;height:96px;background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,200,68,.2);border-radius:12px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 4px 12px rgba(0,0,0,.8);
+}
+.reel-sym{font-size:2.8rem;line-height:1;user-select:none}
+.reel-sym.spinning{animation:reelBlur .08s linear infinite;filter:blur(3px)}
+.reel-sym.win-glow{animation:winGlow .5s ease infinite alternate}
+.slot-bet-row{display:flex;gap:8px;justify-content:center;margin-bottom:8px}
+.s-chip{background:rgba(255,200,68,.1);border:1px solid rgba(255,200,68,.3);border-radius:8px;color:var(--gold);font-size:.82rem;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit;transition:all .15s}
+.s-chip:hover,.s-chip.active{background:rgba(255,200,68,.22);border-color:var(--gold);box-shadow:0 0 12px rgba(255,200,68,.3)}
+.slot-spin-btn{width:100%;padding:15px;border:none;border-radius:12px;background:linear-gradient(135deg,#b45309,#d97706,#fbbf24);color:#000;font-size:1rem;font-weight:900;letter-spacing:3px;cursor:pointer;font-family:inherit;box-shadow:0 0 30px rgba(251,191,36,.35);transition:all .2s;margin:12px 0}
+.slot-spin-btn:hover{box-shadow:0 0 50px rgba(251,191,36,.55);transform:translateY(-1px)}
+.slot-spin-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.slot-msg{min-height:26px;text-align:center;font-size:.95rem;font-weight:800;transition:all .3s}
+.slot-msg.win{color:var(--gold);text-shadow:0 0 16px rgba(255,200,68,.5);animation:msgPop .3s ease}
+.slot-msg.lose{color:var(--text-muted)}
+.slot-msg.jackpot{color:#fff;font-size:1.2rem;text-shadow:0 0 30px gold}
+.pay-table{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 14px;margin-top:8px}
+.pay-row{display:flex;justify-content:space-between;font-size:.78rem;color:var(--text-muted);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pay-row:last-child{border:none}
+.pay-val{font-weight:700;color:var(--text-main)}
+
+/* ── BLACKJACK ── */
+.bj-table{
+  background:radial-gradient(ellipse 80% 80% at 50% 50%,#0d4a2c,#051a0f);
+  border:1px solid rgba(0,180,100,.2);border-radius:16px;padding:24px;
+  box-shadow:0 0 50px rgba(0,100,50,.15);position:relative;min-height:400px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.bj-zone-lbl{font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:8px}
+.bj-zone-lbl span{font-size:.95rem;font-weight:700;color:#fff;letter-spacing:0;margin-left:8px}
+.bj-cards{display:flex;gap:8px;min-height:100px;flex-wrap:wrap;align-items:flex-start}
+.bj-card{
+  width:66px;height:100px;border-radius:8px;flex-shrink:0;
+  animation:cardDeal .3s cubic-bezier(.34,1.2,.64,1);
+}
+@keyframes cardDeal{from{transform:translateX(-30px) translateY(-15px) rotate(-6deg);opacity:0}to{transform:none;opacity:1}}
+.bj-card-face{
+  width:100%;height:100%;border-radius:8px;background:#fff;color:#222;
+  display:flex;flex-direction:column;justify-content:space-between;padding:5px 6px;
+  box-shadow:0 4px 14px rgba(0,0,0,.5);
+}
+.bj-card-back{width:100%;height:100%;border-radius:8px;background:linear-gradient(135deg,#1e3a5f,#0d1f38);box-shadow:0 4px 14px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.c-rank{font-size:.8rem;font-weight:900;line-height:1}
+.c-suit{font-size:.65rem;line-height:1}
+.c-center{font-size:1.3rem;text-align:center;flex:1;display:flex;align-items:center;justify-content:center}
+.c-bot{transform:rotate(180deg)}
+.red-card .c-rank,.red-card .c-suit,.red-card .c-center{color:#dc2626}
+.bj-res{
+  position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  display:none;flex-direction:column;align-items:center;gap:8px;padding:20px;z-index:5;
+}
+.bj-res.show{display:flex;animation:msgPop .35s ease}
+.bj-res-badge{font-size:1.8rem;font-weight:900;letter-spacing:2px;padding:10px 28px;border-radius:12px;backdrop-filter:blur(10px)}
+.bj-res-badge.win{background:rgba(0,200,100,.15);border:1px solid rgba(0,200,100,.4);color:#00dc64}
+.bj-res-badge.lose{background:rgba(255,45,90,.1);border:1px solid rgba(255,45,90,.3);color:#ff6b81}
+.bj-res-badge.push{background:rgba(255,200,68,.1);border:1px solid rgba(255,200,68,.3);color:var(--gold)}
+.bj-res-badge.blackjack{background:rgba(255,200,68,.2);border:1px solid var(--gold);color:var(--gold)}
+.bj-res-sub{font-size:.85rem;color:rgba(255,255,255,.6)}
+.bj-controls{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.bj-chip-row{display:flex;gap:8px}
+.bj-chip{background:rgba(255,200,68,.12);border:2px solid rgba(255,200,68,.3);border-radius:50%;width:48px;height:48px;color:var(--gold);font-size:.78rem;font-weight:900;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.bj-chip:hover,.bj-chip.active{background:rgba(255,200,68,.25);border-color:var(--gold);transform:scale(1.08)}
+.bj-bet-disp{font-size:.75rem;color:var(--text-muted);letter-spacing:1px}
+.bj-deal-btn{padding:12px 44px;border:none;border-radius:10px;background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;font-size:.95rem;font-weight:900;letter-spacing:2px;cursor:pointer;font-family:inherit;box-shadow:0 0 24px rgba(34,197,94,.35);transition:all .2s}
+.bj-deal-btn:hover{box-shadow:0 0 40px rgba(34,197,94,.5)}
+.bj-deal-btn:disabled{opacity:.3;cursor:not-allowed}
+.bj-act-row{display:flex;gap:10px;margin-top:10px}
+.bj-act{padding:11px 24px;border:none;border-radius:10px;font-size:.85rem;font-weight:800;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .15s}
+.bj-act.hit{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff}
+.bj-act.stand{background:linear-gradient(135deg,#be123c,#f43f5e);color:#fff}
+.bj-act.dbl{background:linear-gradient(135deg,#a16207,#d97706);color:#fff}
+.bj-act:disabled{opacity:.3;cursor:not-allowed}
+
+/* ── ROULETTE ── */
+.rl-wrap{display:flex;gap:24px;align-items:flex-start}
+#rlCanvas{border-radius:50%;box-shadow:0 0 40px rgba(100,50,255,.25);flex-shrink:0}
+.rl-right{flex:1;display:flex;flex-direction:column;gap:12px}
+.rl-lbl{font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.rl-color-row{display:flex;gap:8px}
+.rl-cbtn{flex:1;padding:10px;border-radius:8px;border:1px solid;font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;user-select:none;font-family:inherit}
+.rl-cbtn.red{background:rgba(220,38,38,.1);border-color:rgba(220,38,38,.3);color:#f87171}
+.rl-cbtn.red.sel{background:rgba(220,38,38,.3);border-color:#dc2626;box-shadow:0 0 12px rgba(220,38,38,.4)}
+.rl-cbtn.blk{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.15);color:#d1d5db}
+.rl-cbtn.blk.sel{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.4)}
+.rl-cbtn.par{background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.25);color:#c084fc}
+.rl-cbtn.par.sel{background:rgba(168,85,247,.2);border-color:#a855f7;box-shadow:0 0 12px rgba(168,85,247,.4)}
+.rl-num-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:3px}
+.rn{aspect-ratio:1;border-radius:4px;border:1px solid rgba(255,255,255,.08);font-size:.62rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.rn.r{background:rgba(220,38,38,.2);color:#f87171}.rn.r.sel{background:#dc2626;color:#fff;box-shadow:0 0 6px rgba(220,38,38,.5)}
+.rn.b{background:rgba(255,255,255,.04);color:#9ca3af}.rn.b.sel{background:rgba(255,255,255,.18);color:#fff}
+.rn.g{background:rgba(0,200,80,.15);color:#4ade80}.rn.g.sel{background:rgba(0,200,80,.4);color:#fff}
+.rl-chip-row{display:flex;gap:6px}
+.rl-chip{flex:1;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.25);border-radius:7px;color:#c084fc;font-size:.75rem;font-weight:700;padding:7px;cursor:pointer;font-family:inherit;transition:all .15s}
+.rl-chip:hover,.rl-chip.active{background:rgba(168,85,247,.22);border-color:#a855f7;color:#fff}
+.rl-bets-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;min-height:44px;font-size:.75rem;color:var(--text-muted);display:flex;flex-direction:column;gap:3px}
+.rl-bet-row{display:flex;justify-content:space-between;color:var(--text-main);font-weight:600}
+.rl-spin-btn{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:.9rem;font-weight:900;letter-spacing:2px;cursor:pointer;font-family:inherit;box-shadow:0 0 30px rgba(168,85,247,.35);transition:all .2s;margin-top:4px}
+.rl-spin-btn:hover{box-shadow:0 0 50px rgba(168,85,247,.55);transform:translateY(-1px)}
+.rl-spin-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.rl-result{min-height:52px;text-align:center}
+.rl-num-disp{font-size:2.2rem;font-weight:900;letter-spacing:-1px;transition:all .3s}
+.rl-num-disp.red{color:#f87171;text-shadow:0 0 20px rgba(220,38,38,.5)}
+.rl-num-disp.blk{color:#fff;text-shadow:0 0 20px rgba(255,255,255,.25)}
+.rl-num-disp.grn{color:#4ade80;text-shadow:0 0 20px rgba(74,222,128,.5)}
+.rl-num-sub{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted)}
+
+/* BUY MODAL */
+.buy-modal-bg{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);align-items:center;justify-content:center}
+.buy-modal-bg.open{display:flex;animation:fadeIn .15s}
+.buy-modal{background:#16161e;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:32px;width:min(380px,92vw);animation:slideUp .25s ease;text-align:center}
+.bm-icon{font-size:3rem;margin-bottom:12px}
+.bm-name{font-size:1.2rem;font-weight:700;margin-bottom:6px}
+.bm-desc{font-size:.85rem;color:var(--text-muted);margin-bottom:20px;line-height:1.5}
+.bm-price-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:6px}
+.bm-price{font-size:1.5rem;font-weight:900;color:var(--gold)}
+.bm-after{font-size:.78rem;color:var(--text-muted);margin-bottom:20px}
+.bm-after.ok{color:#4ade80}.bm-after.bad{color:#f87171}
+.bm-actions{display:flex;gap:10px}
+.bm-cancel{flex:1;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--text-muted);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
+.bm-cancel:hover{background:rgba(255,255,255,.1);color:#fff}
+.bm-ok{flex:1;padding:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .15s}
+.bm-ok:hover{box-shadow:0 0 24px rgba(168,85,247,.4)}
+.bm-ok:disabled{opacity:.35;cursor:not-allowed}
+
+/* TOAST */
+#toast-cont{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.t-toast{padding:10px 18px;border-radius:10px;font-size:.85rem;font-weight:600;animation:slideUp .25s ease;backdrop-filter:blur(8px);border:1px solid}
+.t-toast.ok{background:rgba(0,200,80,.15);border-color:rgba(0,200,80,.3);color:#4ade80}
+.t-toast.err{background:rgba(255,45,90,.1);border-color:rgba(255,45,90,.3);color:#f87171}
+.t-toast.info{background:rgba(255,200,68,.1);border-color:rgba(255,200,68,.3);color:var(--gold)}
+</style>
+</head>
+<body>
+
+<div class="bg-fx"><div class="particles"></div></div>
+
+<nav class="nav-container">
+  <div class="nav-inner">
+    <div class="logo">DAVIDO INHOUSE</div>
+    <div class="nav-links">
+      <div class="nav-item active" onclick="switchTab('page-home',this)">메인 대시보드</div>
+      <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
+      <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
+    </div>
+    <div class="user-profile">
+      <div class="pts-badge">◈ <span id="navPts">0</span></div>
+      <div class="avatar"></div>
+      <span id="navName">시청자</span>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+<!-- ═══ HOME ═══ -->
+<div id="page-home" class="page active">
+  <div class="stats-row">
+    <div class="card card-solid-blue">
+      <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div><div class="dash short"></div></div>
+      <div class="card-label">Platform Stats</div>
+      <div class="card-title">현재 접속자</div>
+      <div class="stat-val">1,248 <span style="font-size:16px;font-weight:500;opacity:.8">명</span></div>
+      <div class="card-footer-brand">Davido Inhouse</div>
+    </div>
+    <div class="card card-solid-green">
+      <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
+      <div class="card-label">My Points</div>
+      <div class="card-title">보유 포인트</div>
+      <div class="stat-val" id="homePoints">0 <span style="font-size:16px;font-weight:500;opacity:.8">P</span></div>
+      <div class="card-footer-brand">Davido Inhouse</div>
+    </div>
+  </div>
+  <div class="main-grid">
+    <div class="main-content">
+      <div class="h-section"><span class="dot" style="background:var(--ref-green);box-shadow:0 0 8px var(--ref-green)"></span>진행중인 내전</div>
+      <div class="live-match-grid">
+        <div class="card">
+          <div class="card-label text-green">LIVE MATCH</div>
+          <div class="card-title">T1 vs GENG 내전</div>
+          <div class="card-desc">현재 2세트 진행중<br>배팅 마감까지 5분 남음</div>
+          <div class="list-item" style="margin-top:16px;border:none;padding:0"><div style="color:#4da3ff;font-weight:600">BLUE (1.8x)</div><div style="color:#ff6b81;font-weight:600">RED (2.1x)</div></div>
+          <div class="card-footer-link" style="color:var(--ref-green)">배팅 참여하기 +</div>
+        </div>
+        <div class="card">
+          <div class="card-label text-muted">PREPARING</div>
+          <div class="card-title">심해 브론즈 대전</div>
+          <div class="card-desc">참가자 모집중 (8/10)<br>오늘 밤 10시 시작 예정</div>
+          <div class="card-footer-link">상세 보기 +</div>
+        </div>
+        <div class="card card-gradient-purple">
+          <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
+          <div class="card-label" style="opacity:.9">EVENT MATCH</div>
+          <div class="card-title">스트리머 멸망전</div>
+          <div class="card-desc">특별 배당률 적용 중!<br>총 상금 10,000,000 P</div>
+          <div class="card-footer-link">Explore Match +</div>
+        </div>
+      </div>
+    </div>
+    <div class="side-stack">
+      <div class="card">
+        <div class="h-section">실시간 피드</div>
+        <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">방금</span><span style="font-size:14px">User12님이 500P 배팅</span></div></div>
+        <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">2분전</span><span style="font-size:14px">슬롯에서 JACKPOT!</span></div></div>
+        <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">5분전</span><span style="font-size:14px">새로운 내전이 생성됨</span></div></div>
+      </div>
+      <div class="card">
+        <div class="h-section">포인트 랭킹</div>
+        <div class="list-item"><div class="list-item-left"><span style="color:#ffd700;font-weight:bold;width:20px">1</span><span style="font-size:14px;font-weight:500">Faker_Fan</span></div><span class="text-green" style="font-weight:600;font-size:14px">1.2M</span></div>
+        <div class="list-item"><div class="list-item-left"><span style="color:#c0c0c0;font-weight:bold;width:20px">2</span><span style="font-size:14px;font-weight:500">Chovy_God</span></div><span class="text-green" style="font-weight:600;font-size:14px">980K</span></div>
+        <div class="list-item"><div class="list-item-left"><span style="color:#cd7f32;font-weight:bold;width:20px">3</span><span style="font-size:14px;font-weight:500">Bronze_King</span></div><span class="text-green" style="font-weight:600;font-size:14px">450K</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MINI GAMES ═══ -->
+<div id="page-minigames" class="page">
+  <div class="betting-hero">
+    <div class="card-label" style="color:var(--text-main);margin-bottom:16px">🔥 메인 매치 라이브 배팅 🔥</div>
+    <div class="vs-container">
+      <div class="team blue">TEAM BLUE<br><span style="font-size:18px;color:var(--text-muted)">x 1.85</span></div>
+      <div class="vs-text">VS</div>
+      <div class="team red">TEAM RED<br><span style="font-size:18px;color:var(--text-muted)">x 2.10</span></div>
+    </div>
+    <div class="slider-container">
+      <div class="slider-labels"><span style="color:#4da3ff">블루팀 승리 배팅</span><span style="color:#ff6b81">레드팀 승리 배팅</span></div>
+      <input type="range" min="1" max="100" value="50">
+      <div style="margin-top:24px"><button style="background:var(--text-main);color:#000;padding:12px 32px;border-radius:8px;border:none;font-weight:bold;font-family:var(--font-family);cursor:pointer">10,000 P 배팅하기</button></div>
+    </div>
+  </div>
+  <div class="h-section" style="margin-bottom:24px">미니게임 아케이드</div>
+  <div class="games-grid">
+    <div class="card card-solid-blue game-card" onclick="openGame('slot')">
+      <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
+      <div class="card-label">CASINO</div>
+      <div class="card-title">슬롯머신</div>
+      <div class="card-desc" style="color:rgba(255,255,255,.7)">🍒 🍋 💎<br>릴을 돌려 잭팟을 노려라</div>
+      <div class="card-footer-link" style="color:#fff">Play Game +</div>
+    </div>
+    <div class="card card-solid-green game-card" onclick="openGame('rl')">
+      <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div></div>
+      <div class="card-label">CASINO</div>
+      <div class="card-title">룰렛</div>
+      <div class="card-desc" style="color:rgba(0,0,0,.7)">🎡 번호·색상·홀짝 배팅<br>유럽식 룰렛 (37칸)</div>
+      <div class="card-footer-link" style="color:#000">Play Game +</div>
+    </div>
+    <div class="card card-gradient-purple game-card" onclick="openGame('bj')">
+      <div class="card-dashes"><div class="dash short"></div><div class="dash short"></div><div class="dash long active"></div></div>
+      <div class="card-label">CARD</div>
+      <div class="card-title">블랙잭</div>
+      <div class="card-desc" style="color:rgba(255,255,255,.8)">🃏 딜러를 이겨라<br>블랙잭 2.5x 지급</div>
+      <div class="card-footer-link" style="color:#fff">Play Game +</div>
+    </div>
+    <div class="card card-solid-white game-card" style="opacity:.45;cursor:not-allowed">
+      <div class="card-dashes"><div class="dash short"></div><div class="dash short"></div></div>
+      <div class="card-label">COMING SOON</div>
+      <div class="card-title">카드 플립</div>
+      <div class="card-desc">준비 중...</div>
+    </div>
+    <div class="card card-solid-brown game-card" style="opacity:.45;cursor:not-allowed">
+      <div class="card-dashes"><div class="dash long active"></div></div>
+      <div class="card-label">COMING SOON</div>
+      <div class="card-title">Texas Hold'em</div>
+      <div class="card-desc">준비 중...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STORE ═══ -->
+<div id="page-store" class="page">
+  <div class="h-section" style="margin-bottom:8px">내전 상점</div>
+  <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:28px">내전 참여 및 미니게임으로 포인트를 모아 아이템을 구매하세요</div>
+  <div class="store-grid">
+
+    <div class="card">
+      <span class="rarity-badge rarity-common">일반</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">⭐</div>
+      <div class="card-title">선참권</div>
+      <div class="card-desc">다음 내전 팀 배치 선택 우선권이 주어집니다.</div>
+      <div class="product-price">60 P</div>
+      <div class="product-value">= 약 1,000~2,000 치즈 상당</div>
+      <button class="btn-buy" onclick="openBuy('priority')">구매하기</button>
+    </div>
+
+    <div class="card">
+      <span class="rarity-badge rarity-uncommon">고급</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">🛡️</div>
+      <div class="card-title">노밴권</div>
+      <div class="card-desc">다음 내전의 밴 페이즈가 면제됩니다.</div>
+      <div class="product-price">120 P</div>
+      <div class="product-value">= 약 3,000~5,000 치즈 상당</div>
+      <button class="btn-buy" onclick="openBuy('no_ban')">구매하기</button>
+    </div>
+
+    <div class="card" style="border-color:rgba(168,85,247,.3)">
+      <span class="rarity-badge rarity-rare">희귀</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">🌙</div>
+      <div class="card-title">종일권</div>
+      <div class="card-desc">당일 진행되는 모든 내전에 제한 없이 참가할 수 있습니다.</div>
+      <div class="product-price">230 P</div>
+      <div class="product-value">= 약 5,000~8,000 치즈 상당</div>
+      <button class="btn-buy" onclick="openBuy('all_day')">구매하기</button>
+    </div>
+
+    <div class="card card-gradient-purple" style="border:none">
+      <span class="rarity-badge" style="background:rgba(255,200,68,.2);color:#fbbf24">영웅</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">⚡</div>
+      <div class="card-title">연장권</div>
+      <div class="card-desc" style="color:rgba(255,255,255,.8)">내전을 1판 추가 연장할 수 있습니다.</div>
+      <div class="product-price" style="color:#fbbf24">300 P</div>
+      <div class="product-value" style="color:rgba(255,255,255,.5)">= 약 10~15만 치즈 상당</div>
+      <button class="btn-buy" style="background:rgba(255,200,68,.9);color:#000" onclick="openBuy('extend')">구매하기</button>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<!-- ═══ GAME MODAL ═══ -->
+<div class="game-modal-bg" id="gameBg">
+  <div class="game-modal" id="gameModal">
+    <button class="modal-close" onclick="closeGame()">✕</button>
+    <div class="modal-title" id="gmTitle"></div>
+    <div class="modal-pts">보유 포인트: <span id="gmPts">0</span> P</div>
+    <div id="gmContent"></div>
+  </div>
+</div>
+
+<!-- ═══ BUY MODAL ═══ -->
+<div class="buy-modal-bg" id="buyBg">
+  <div class="buy-modal">
+    <div class="bm-icon" id="bmIcon"></div>
+    <div class="bm-name" id="bmName"></div>
+    <div class="bm-desc" id="bmDesc"></div>
+    <div class="bm-price-row"><span>◈</span><span class="bm-price" id="bmPrice"></span><span>P</span></div>
+    <div class="bm-after" id="bmAfter"></div>
+    <div class="bm-actions">
+      <button class="bm-cancel" onclick="closeBuy()">취소</button>
+      <button class="bm-ok" id="bmOk" onclick="doBuy()">구매 확정</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-cont"></div>
+
+<script>
+/* ══════════ POINTS ══════════ */
+let pts = parseInt(localStorage.getItem('dv_pts')||'100');
+let buyTarget = null;
+
+function savePts(n){
+  pts=n;
+  localStorage.setItem('dv_pts',n);
+  document.getElementById('navPts').textContent=n.toLocaleString();
+  document.getElementById('homePoints').innerHTML=n.toLocaleString()+' <span style="font-size:16px;font-weight:500;opacity:.8">P</span>';
+  const gm=document.getElementById('gmPts');
+  if(gm)gm.textContent=n.toLocaleString();
+}
+savePts(pts);
+
+/* ══════════ NAV ══════════ */
+function switchTab(pageId, el){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+}
+
+/* ══════════ TOAST ══════════ */
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.className='t-toast '+type;el.textContent=msg;
+  document.getElementById('toast-cont').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
+/* ══════════ SHOP ══════════ */
+const ITEMS={
+  priority:{icon:'⭐',name:'선참권',desc:'다음 내전 팀 배치 선택 우선권',price:60},
+  no_ban:  {icon:'🛡️',name:'노밴권',desc:'다음 내전 밴 페이즈 면제',price:120},
+  all_day: {icon:'🌙',name:'종일권',desc:'당일 모든 내전 제한 없이 참가',price:230},
+  extend:  {icon:'⚡',name:'연장권',desc:'내전 1판 추가 연장',price:300},
+};
+function openBuy(id){
+  const it=ITEMS[id]; if(!it)return;
+  buyTarget=id;
+  document.getElementById('bmIcon').textContent=it.icon;
+  document.getElementById('bmName').textContent=it.name;
+  document.getElementById('bmDesc').textContent=it.desc;
+  document.getElementById('bmPrice').textContent=it.price.toLocaleString();
+  const after=pts-it.price;
+  const af=document.getElementById('bmAfter');
+  af.textContent='구매 후 잔액: '+(after<0?'포인트 부족':after.toLocaleString()+' P');
+  af.className='bm-after '+(after<0?'bad':'ok');
+  document.getElementById('bmOk').disabled=after<0;
+  document.getElementById('buyBg').classList.add('open');
+}
+function closeBuy(){document.getElementById('buyBg').classList.remove('open');buyTarget=null}
+function doBuy(){
+  if(!buyTarget)return;
+  const it=ITEMS[buyTarget];
+  if(pts<it.price){toast('포인트 부족','err');return;}
+  savePts(pts-it.price);
+  toast(`${it.name} 구매 완료! 🎉`,'ok');
+  closeBuy();
+}
+
+/* ══════════ GAME MODAL ══════════ */
+let currentGame=null;
+function openGame(g){
+  currentGame=g;
+  const titles={slot:'🎰 슬롯머신',bj:'🃏 블랙잭',rl:'🎡 룰렛'};
+  document.getElementById('gmTitle').textContent=titles[g]||g;
+  document.getElementById('gmPts').textContent=pts.toLocaleString();
+  const content=document.getElementById('gmContent');
+  content.innerHTML='';
+  if(g==='slot')initSlot(content);
+  else if(g==='bj')initBj(content);
+  else if(g==='rl')initRl(content);
+  document.getElementById('gameBg').classList.add('open');
+}
+function closeGame(){
+  document.getElementById('gameBg').classList.remove('open');
+  currentGame=null;
+}
+document.getElementById('gameBg').addEventListener('click',e=>{
+  if(e.target===document.getElementById('gameBg'))closeGame();
+});
+
+/* ══════════════════════════════════════
+   SLOT MACHINE
+══════════════════════════════════════ */
+const SL_SYM=['🍒','🍋','🔔','⭐','💎','7️⃣'];
+const SL_W=[35,28,20,12,4,1];
+const SL_PAY={'7️⃣7️⃣7️⃣':10,'💎💎💎':6,'⭐⭐⭐':4,'🔔🔔🔔':3,'🍋🍋🍋':2.5,'🍒🍒🍒':2};
+let slBet=1, slSpinning=false;
+
+function slPick(){
+  let r=Math.random()*100,cum=0;
+  for(let i=0;i<SL_SYM.length;i++){cum+=SL_W[i];if(r<cum)return SL_SYM[i];}
+  return SL_SYM[0];
+}
+function slCalcPay(res,bet){
+  const key=res.join('');
+  if(SL_PAY[key]) return Math.floor(bet*SL_PAY[key]);
+  const cnt=res.filter(s=>s===res[0]).length;
+  if(cnt>=2) return Math.floor(bet*1.3);
+  return 0;
+}
+
+function initSlot(wrap){
+  wrap.innerHTML=`
+  <div class="slot-machine">
+    <div class="slot-lights"></div>
+    <div class="slot-reels">
+      <div class="slot-reel"><div class="reel-sym" id="sl0">🍒</div></div>
+      <div class="slot-reel"><div class="reel-sym" id="sl1">⭐</div></div>
+      <div class="slot-reel"><div class="reel-sym" id="sl2">💎</div></div>
+    </div>
+  </div>
+  <div class="slot-bet-row">
+    <button class="s-chip active" onclick="slSetBet(1)">1p</button>
+    <button class="s-chip" onclick="slSetBet(5)">5p</button>
+    <button class="s-chip" onclick="slSetBet(10)">10p</button>
+    <button class="s-chip" onclick="slSetBet(20)">MAX</button>
+  </div>
+  <div style="text-align:center;font-size:.75rem;color:var(--text-muted);margin:6px 0">베팅: <span id="slBetTxt">1</span> P</div>
+  <button class="slot-spin-btn" id="slSpinBtn" onclick="doSpin()">SPIN</button>
+  <div class="slot-msg" id="slMsg"></div>
+  <div class="pay-table">
+    <div class="pay-row"><span>7️⃣ 7️⃣ 7️⃣</span><span class="pay-val" style="color:var(--gold)">10x JACKPOT</span></div>
+    <div class="pay-row"><span>💎 💎 💎</span><span class="pay-val">6x</span></div>
+    <div class="pay-row"><span>⭐ ⭐ ⭐</span><span class="pay-val">4x</span></div>
+    <div class="pay-row"><span>🔔 🔔 🔔</span><span class="pay-val">3x</span></div>
+    <div class="pay-row"><span>🍋 🍋 🍋</span><span class="pay-val">2.5x</span></div>
+    <div class="pay-row"><span>🍒 🍒 🍒</span><span class="pay-val">2x</span></div>
+    <div class="pay-row"><span>같은 심볼 2개</span><span class="pay-val">1.3x</span></div>
+  </div>`;
+}
+
+function slSetBet(n){
+  if(slSpinning)return;
+  slBet=n;
+  document.querySelectorAll('.s-chip').forEach((c,i)=>c.classList.toggle('active',[1,5,10,20][i]===n));
+  document.getElementById('slBetTxt').textContent=n;
+}
+
+function doSpin(){
+  if(slSpinning)return;
+  if(pts<slBet){toast('포인트 부족','err');return;}
+  slSpinning=true;
+  const btn=document.getElementById('slSpinBtn'),msg=document.getElementById('slMsg');
+  btn.disabled=true;msg.className='slot-msg';msg.textContent='';
+  const syms=[0,1,2].map(i=>document.getElementById('sl'+i));
+  const ivs=syms.map(s=>setInterval(()=>{s.textContent=SL_SYM[Math.floor(Math.random()*6)];s.className='reel-sym spinning';},80));
+  const result=[slPick(),slPick(),slPick()];
+  const payout=slCalcPay(result,slBet);
+  [700,1200,1700].forEach((d,i)=>setTimeout(()=>{
+    clearInterval(ivs[i]);
+    syms[i].className='reel-sym';
+    syms[i].textContent=result[i];
+    if(payout>0&&i===2) setTimeout(()=>syms.forEach(s=>s.className='reel-sym win-glow'),80);
+  },d));
+  setTimeout(()=>{
+    const gain=payout-slBet;
+    savePts(pts+gain);
+    if(payout>=slBet*5){
+      msg.className='slot-msg jackpot';msg.textContent='🎉 JACKPOT! +'+payout+' P';
+      toast('JACKPOT! +'+payout+' P 🎰','ok');
+    } else if(payout>0){
+      msg.className='slot-msg win';msg.textContent='WIN! +'+payout+' P';
+      toast('+'+payout+' P 획득!','ok');
+    } else {
+      msg.className='slot-msg lose';msg.textContent='MISS — '+slBet+' P 차감';
+    }
+    slSpinning=false;btn.disabled=false;
+  },2000);
+}
+
+/* ══════════════════════════════════════
+   BLACKJACK
+══════════════════════════════════════ */
+const SUITS=['♠','♥','♦','♣'],RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+let bjShoe=[],bjDealer=[],bjPlayer=[],bjBet=1,bjPhase='bet',bjHidden=true;
+
+function makeShoe(){let d=[];for(let n=0;n<4;n++)SUITS.forEach(s=>RANKS.forEach(r=>d.push({r,s})));return d.sort(()=>Math.random()-.5)}
+function cVal(c){if(['J','Q','K'].includes(c.r))return 10;if(c.r==='A')return 11;return parseInt(c.r)}
+function hVal(h){let v=0,a=0;h.forEach(c=>{v+=cVal(c);if(c.r==='A')a++;});while(v>21&&a>0){v-=10;a--;}return v}
+function deal(){if(bjShoe.length<20)bjShoe=makeShoe();return bjShoe.pop()}
+
+function mkCardEl(c,hidden){
+  const d=document.createElement('div');d.className='bj-card';
+  if(hidden){const f=document.createElement('div');f.className='bj-card-back';f.textContent='🂠';d.appendChild(f);}
+  else{
+    const f=document.createElement('div');f.className='bj-card-face';
+    const red=['♥','♦'].includes(c.s);
+    if(red)f.classList.add('red-card');
+    f.innerHTML=`<div><div class="c-rank">${c.r}</div><div class="c-suit">${c.s}</div></div><div class="c-center">${c.s}</div><div class="c-bot"><div class="c-rank">${c.r}</div><div class="c-suit">${c.s}</div></div>`;
+    d.appendChild(f);
+  }
+  return d;
+}
+function renderCards(hand,elId,hideFirst){
+  const el=document.getElementById(elId);el.innerHTML='';
+  hand.forEach((c,i)=>el.appendChild(mkCardEl(c,hideFirst&&i===0)));
+}
+function bjScoreEl(elId,val,showQ){document.getElementById(elId).textContent=showQ?'?':val}
+
+function bjShowRes(type,msg){
+  const ov=document.getElementById('bjResOv');
+  const lm={win:'WIN',lose:'LOSE',push:'PUSH',blackjack:'BLACKJACK!'};
+  ov.innerHTML=`<div class="bj-res-badge ${type}">${lm[type]||type}</div><div class="bj-res-sub">${msg}</div>`;
+  ov.classList.add('show');
+}
+function bjSetPhase(p){
+  bjPhase=p;
+  document.getElementById('bjDealBtn').style.display=p==='bet'?'':'none';
+  document.getElementById('bjActRow').style.display=p==='play'?'flex':'none';
+  document.querySelectorAll('.bj-chip').forEach(c=>c.style.display=p==='bet'?'':'none');
+  document.getElementById('bjBetRow').style.display=p==='bet'?'flex':'none';
+}
+
+function initBj(wrap){
+  bjPhase='bet';bjDealer=[];bjPlayer=[];bjHidden=true;
+  if(!bjShoe.length)bjShoe=makeShoe();
+  wrap.innerHTML=`
+  <div class="bj-table">
+    <div>
+      <div class="bj-zone-lbl">딜러 <span id="bjDS">0</span></div>
+      <div class="bj-cards" id="bjDCards"></div>
+    </div>
+    <div class="bj-res" id="bjResOv"></div>
+    <div style="flex:1">
+      <div class="bj-zone-lbl">내 패 <span id="bjPS">0</span></div>
+      <div class="bj-cards" id="bjPCards"></div>
+    </div>
+    <div class="bj-controls">
+      <div class="bj-chip-row" id="bjBetRow">
+        <button class="bj-chip active" onclick="bjSetBetV(1)">1p</button>
+        <button class="bj-chip" onclick="bjSetBetV(5)">5p</button>
+        <button class="bj-chip" onclick="bjSetBetV(10)">10p</button>
+        <button class="bj-chip" onclick="bjSetBetV(20)">MAX</button>
+      </div>
+      <div class="bj-bet-disp" id="bjBetRow">베팅: <span id="bjBetTxt">1</span> P</div>
+      <button class="bj-deal-btn" id="bjDealBtn" onclick="bjDeal()">DEAL</button>
+      <div class="bj-act-row" id="bjActRow" style="display:none">
+        <button class="bj-act hit" onclick="bjHit()">HIT</button>
+        <button class="bj-act stand" onclick="bjStand()">STAND</button>
+        <button class="bj-act dbl" id="bjDblBtn" onclick="bjDouble()">DOUBLE</button>
+      </div>
+    </div>
+  </div>`;
+  bjSetPhase('bet');
+}
+
+function bjSetBetV(n){
+  if(bjPhase!=='bet')return;
+  bjBet=Math.min(n,pts);
+  document.querySelectorAll('.bj-chip').forEach((c,i)=>c.classList.toggle('active',[1,5,10,20][i]===bjBet));
+  document.getElementById('bjBetTxt').textContent=bjBet;
+}
+
+function bjDeal(){
+  if(pts<bjBet){toast('포인트 부족','err');return;}
+  document.getElementById('bjResOv').classList.remove('show');
+  bjDealer=[deal(),deal()];bjPlayer=[deal(),deal()];
+  bjHidden=true;
+  renderCards(bjDealer,'bjDCards',true);
+  renderCards(bjPlayer,'bjPCards',false);
+  bjScoreEl('bjDS',hVal(bjDealer),true);
+  bjScoreEl('bjPS',hVal(bjPlayer),false);
+  savePts(pts-bjBet);
+  // check player blackjack
+  if(hVal(bjPlayer)===21){
+    bjHidden=false;
+    renderCards(bjDealer,'bjDCards',false);
+    bjScoreEl('bjDS',hVal(bjDealer),false);
+    const win=Math.floor(bjBet*2.5);
+    savePts(pts+win);
+    bjShowRes('blackjack','+'+win+' P 획득!');
+    toast('BLACKJACK! +'+win+' P','ok');
+    bjSetPhase('bet');
+    setTimeout(()=>document.getElementById('bjResOv').classList.remove('show'),2500);
+    return;
+  }
+  bjSetPhase('play');
+  document.getElementById('bjDblBtn').disabled=pts<bjBet;
+}
+
+function bjHit(){
+  bjPlayer.push(deal());
+  renderCards(bjPlayer,'bjPCards',false);
+  bjScoreEl('bjPS',hVal(bjPlayer),false);
+  document.getElementById('bjDblBtn').disabled=true;
+  if(hVal(bjPlayer)>21){
+    bjHidden=false;
+    renderCards(bjDealer,'bjDCards',false);
+    bjScoreEl('bjDS',hVal(bjDealer),false);
+    bjShowRes('lose','버스트! -'+bjBet+' P');
+    toast('버스트! -'+bjBet+' P','err');
+    bjSetPhase('bet');
+    setTimeout(()=>document.getElementById('bjResOv').classList.remove('show'),2500);
+  }
+}
+
+function bjStand(){doDealer();}
+function bjDouble(){
+  if(pts<bjBet){toast('포인트 부족','err');return;}
+  savePts(pts-bjBet);bjBet*=2;
+  bjPlayer.push(deal());
+  renderCards(bjPlayer,'bjPCards',false);
+  bjScoreEl('bjPS',hVal(bjPlayer),false);
+  doDealer();
+}
+
+function doDealer(){
+  bjHidden=false;
+  while(hVal(bjDealer)<17)bjDealer.push(deal());
+  renderCards(bjDealer,'bjDCards',false);
+  bjScoreEl('bjDS',hVal(bjDealer),false);
+  const pv=hVal(bjPlayer),dv=hVal(bjDealer);
+  let res,msg,gain=0;
+  if(pv>21){res='lose';msg='버스트! -'+bjBet+' P';}
+  else if(dv>21||pv>dv){res='win';gain=Math.floor(bjBet*1.9);savePts(pts+gain);msg='+'+gain+' P 획득!';}
+  else if(pv===dv){res='push';savePts(pts+bjBet);msg='푸시 — 환급';}
+  else{res='lose';msg='-'+bjBet+' P';}
+  bjShowRes(res,msg);
+  if(res==='win')toast('+'+gain+' P 획득!','ok');
+  else if(res==='lose')toast(msg,'err');
+  bjSetPhase('bet');
+  setTimeout(()=>document.getElementById('bjResOv').classList.remove('show'),2500);
+}
+
+/* ══════════════════════════════════════
+   ROULETTE
+══════════════════════════════════════ */
+const RL_ORDER=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const RL_RED=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+let rlBets={},rlChip=1,rlSpin=false,rlAngle=0;
+
+function rlClass(n){return n===0?'g':RL_RED.has(n)?'r':'b'}
+
+function initRl(wrap){
+  rlBets={};rlChip=1;rlSpin=false;
+  wrap.innerHTML=`
+  <div class="rl-wrap">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0">
+      <canvas id="rlC" width="260" height="260"></canvas>
+      <div class="rl-result" id="rlRes">
+        <div class="rl-num-disp" id="rlNum"></div>
+        <div class="rl-num-sub" id="rlSub"></div>
+      </div>
+    </div>
+    <div class="rl-right">
+      <div class="rl-lbl">색상 배팅 (1.8x)</div>
+      <div class="rl-color-row">
+        <div class="rl-cbtn red" id="rlBtnRed" onclick="rlToggle('color','red')">빨강</div>
+        <div class="rl-cbtn blk" id="rlBtnBlk" onclick="rlToggle('color','black')">검정</div>
+      </div>
+      <div class="rl-lbl">홀짝 배팅 (1.8x)</div>
+      <div class="rl-color-row">
+        <div class="rl-cbtn par" id="rlBtnOdd" onclick="rlToggle('parity','odd')">홀수</div>
+        <div class="rl-cbtn par" id="rlBtnEven" onclick="rlToggle('parity','even')">짝수</div>
+      </div>
+      <div class="rl-lbl">번호 배팅 (31.5x)</div>
+      <div class="rl-num-grid" id="rlNG"></div>
+      <div class="rl-lbl">배팅 금액</div>
+      <div class="rl-chip-row">
+        <button class="rl-chip active" onclick="rlSetChip(1)">1p</button>
+        <button class="rl-chip" onclick="rlSetChip(3)">3p</button>
+        <button class="rl-chip" onclick="rlSetChip(5)">5p</button>
+        <button class="rl-chip" onclick="rlSetChip(10)">10p</button>
+      </div>
+      <div class="rl-bets-box" id="rlBL"><span style="color:var(--text-muted);font-size:.75rem">베팅을 선택하세요</span></div>
+      <button class="rl-spin-btn" id="rlSpinBtn" onclick="doRl()">SPIN</button>
+    </div>
+  </div>`;
+  // build num grid
+  const grid=document.getElementById('rlNG');
+  [0,...Array.from({length:36},(_,i)=>i+1)].forEach(n=>{
+    const d=document.createElement('div');
+    d.className='rn '+rlClass(n);d.textContent=n;d.id='rn_'+n;
+    d.onclick=()=>rlToggle('number',n);grid.appendChild(d);
+  });
+  drawRl(0,null);
+}
+
+function drawRl(angle,ball){
+  const cv=document.getElementById('rlC');if(!cv)return;
+  const ctx=cv.getContext('2d'),cx=130,cy=130,R=126,arc=Math.PI*2/37;
+  ctx.clearRect(0,0,260,260);
+  RL_ORDER.forEach((n,i)=>{
+    const a=angle+i*arc-arc/2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,R,a,a+arc);ctx.closePath();
+    ctx.fillStyle=n===0?'#16a34a':RL_RED.has(n)?'#991b1b':'#1a1a2e';
+    ctx.fill();ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(angle+i*arc);ctx.translate(R*.72,0);ctx.rotate(Math.PI/2);
+    ctx.fillStyle='rgba(255,255,255,.85)';ctx.font=`bold ${R*.09}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n,0,0);ctx.restore();
+  });
+  // rim
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=3;ctx.stroke();
+  // center
+  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,R*.17);cg.addColorStop(0,'#2a2a4a');cg.addColorStop(1,'#0f0f1f');
+  ctx.beginPath();ctx.arc(cx,cy,R*.17,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();
+  // ball
+  if(ball!==null){
+    const br=R*.88,bx=cx+Math.cos(ball)*br,by=cy+Math.sin(ball)*br;
+    ctx.beginPath();ctx.arc(bx,by,6,0,Math.PI*2);ctx.fillStyle='#fff';
+    ctx.shadowColor='rgba(255,255,255,.9)';ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;
+  }
+  // pointer
+  ctx.fillStyle='#ffc844';ctx.beginPath();ctx.moveTo(cx,cy-R+2);ctx.lineTo(cx-6,cy-R+14);ctx.lineTo(cx+6,cy-R+14);ctx.closePath();ctx.fill();
+}
+
+function rlSetChip(n){
+  rlChip=n;
+  document.querySelectorAll('.rl-chip').forEach((c,i)=>c.classList.toggle('active',[1,3,5,10][i]===n));
+}
+function rlToggle(type,val){
+  if(rlSpin)return;
+  const key=`${type}_${val}`;
+  const total=Object.values(rlBets).reduce((a,b)=>a+b,0);
+  if(rlBets[key]){delete rlBets[key];}
+  else{if(total+rlChip>20){toast('최대 20P','err');return;}rlBets[key]=rlChip;}
+  if(type==='color'){
+    document.getElementById('rlBtnRed').classList.toggle('sel',!!rlBets['color_red']);
+    document.getElementById('rlBtnBlk').classList.toggle('sel',!!rlBets['color_black']);
+  } else if(type==='parity'){
+    document.getElementById('rlBtnOdd').classList.toggle('sel',!!rlBets['parity_odd']);
+    document.getElementById('rlBtnEven').classList.toggle('sel',!!rlBets['parity_even']);
+  } else if(type==='number'){
+    document.getElementById('rn_'+val)?.classList.toggle('sel',!!rlBets[key]);
+  }
+  rlRenderBets();
+}
+function rlRenderBets(){
+  const el=document.getElementById('rlBL');if(!el)return;
+  const lm={color_red:'빨강',color_black:'검정',parity_odd:'홀수',parity_even:'짝수'};
+  const entries=Object.entries(rlBets);
+  const total=entries.reduce((s,[,v])=>s+v,0);
+  if(!entries.length){el.innerHTML='<span style="color:var(--text-muted);font-size:.75rem">베팅을 선택하세요</span>';return;}
+  el.innerHTML=entries.map(([k,v])=>{
+    const[t,val]=k.split('_');
+    return`<div class="rl-bet-row"><span>${t==='number'?'번호 '+val:(lm[k]||k)}</span><span>${v}P</span></div>`;
+  }).join('')+`<div class="rl-bet-row" style="border-top:1px solid rgba(255,255,255,.06);margin-top:3px;padding-top:3px"><span style="color:var(--text-muted)">합계</span><span style="color:var(--gold)">${total}P</span></div>`;
+}
+
+function doRl(){
+  if(rlSpin)return;
+  const total=Object.values(rlBets).reduce((a,b)=>a+b,0);
+  if(!total){toast('베팅을 선택하세요','err');return;}
+  if(pts<total){toast('포인트 부족','err');return;}
+  rlSpin=true;
+  document.getElementById('rlSpinBtn').disabled=true;
+  document.getElementById('rlNum').textContent='';document.getElementById('rlSub').textContent='';
+
+  // compute result
+  const result=RL_ORDER[Math.floor(Math.random()*37)];
+  const segIdx=RL_ORDER.indexOf(result);
+  const arc=Math.PI*2/37;
+  const startA=rlAngle,spins=5+Math.random()*3;
+  const targetA=startA-Math.PI*2*spins;
+  const ballStart=Math.random()*Math.PI*2;
+  const segCenter=-segIdx*arc-arc/2-targetA;
+  const dur=4000,t0=performance.now();
+
+  function anim(now){
+    const t=Math.min((now-t0)/dur,1),e=1-Math.pow(1-t,4);
+    const wA=startA+(targetA-startA)*e,bA=ballStart+(segCenter-ballStart)*e;
+    drawRl(wA,bA);rlAngle=wA;
+    if(t<1)requestAnimationFrame(anim);
+    else{
+      const fwA=targetA%(Math.PI*2);rlAngle=fwA;
+      const fbA=-segIdx*arc-arc/2-fwA+Math.PI*1.5;
+      drawRl(fwA,fbA);
+      setTimeout(()=>{
+        // calc payout
+        let payout=0;
+        Object.entries(rlBets).forEach(([k,amt])=>{
+          const[type,val]=k.split('_');
+          if(type==='number'&&parseInt(val)===result) payout+=Math.floor(amt*31.5);
+          else if(type==='color'){
+            const isRed=RL_RED.has(result)&&result!==0;
+            if((val==='red'&&isRed)||(val==='black'&&!isRed&&result!==0)) payout+=Math.floor(amt*1.8);
+          } else if(type==='parity'&&result!==0){
+            if((val==='odd'&&result%2===1)||(val==='even'&&result%2===0)) payout+=Math.floor(amt*1.8);
+          }
+        });
+        savePts(pts-total+payout);
+        const cls=result===0?'grn':RL_RED.has(result)?'red':'blk';
+        const labels=result===0?['그린']:[RL_RED.has(result)?'빨강':'검정',result%2===0?'짝수':'홀수'];
+        const nd=document.getElementById('rlNum');
+        nd.textContent=result;nd.className='rl-num-disp '+cls;
+        document.getElementById('rlSub').textContent=labels.join(' · ');
+        if(payout>0)toast('+'+payout+' P 획득! 🎉','ok');
+        else toast('아쉽! -'+total+' P','err');
+        rlBets={};
+        document.querySelectorAll('.rl-cbtn.sel,.rn.sel').forEach(el=>el.classList.remove('sel'));
+        rlRenderBets();
+        rlSpin=false;document.getElementById('rlSpinBtn').disabled=false;
+      },400);
+    }
+  }
+  requestAnimationFrame(anim);
+}
+</script>
+</body>
+</html>
