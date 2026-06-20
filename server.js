@@ -113,7 +113,7 @@ app.get('/api/auth/poll/:token', (req, res) => {
   saveSession(sessionToken, name);
   const { viewers, viewer } = getViewer(name);
   saveViewer(viewers);
-  res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; Max-Age=${30 * 24 * 3600}`);
+  res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; Max-Age=${10 * 365 * 24 * 3600}`);
   res.json({ ok: true, status: 'confirmed', viewer });
 });
 
