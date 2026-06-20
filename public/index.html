@@ -476,14 +476,6 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
         </div>
       </div>
 
-      <div class="login-divider">또는</div>
-
-      <!-- 닉네임 직접 입력 -->
-      <div class="login-field-label">닉네임으로 입장</div>
-      <input class="login-input" id="loginInput" type="text" placeholder="닉네임 입력 (2~16자)" maxlength="16"
-        onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="login-btn" id="loginBtn" onclick="doLogin()">입장하기</button>
-      <div class="login-err" id="loginErr"></div>
     </div>
   </div>
 </div>
@@ -500,7 +492,6 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
       <div class="pts-badge">◈ <span id="navPts">0</span></div>
       <div class="avatar"></div>
       <span id="navName">시청자</span>
-      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
 </nav>
@@ -785,31 +776,6 @@ function showApp(viewer){
   document.getElementById('mainContent').style.display = '';
   loadSnapshot();
   loadAnnouncements();
-}
-
-async function doLogin(){
-  const input = document.getElementById('loginInput');
-  const err = document.getElementById('loginErr');
-  const btn = document.getElementById('loginBtn');
-  const name = input.value.trim();
-  if(!name){ err.textContent='닉네임을 입력해주세요'; return; }
-  btn.disabled = true; err.textContent = '';
-  const r = await fetch('/api/login',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name})
-  }).then(r=>r.json()).catch(()=>({ok:false,error:'서버 연결 실패'}));
-  btn.disabled = false;
-  if(r.ok){ showApp(r.viewer); }
-  else { err.textContent = r.error || '로그인 실패'; }
-}
-
-async function doLogout(){
-  await fetch('/api/logout',{method:'POST'}).catch(()=>{});
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('mainNav').style.display = 'none';
-  document.getElementById('mainContent').style.display = 'none';
-  document.getElementById('loginInput').value = '';
-  pts = 0; myName = '';
 }
 
 // 페이지 로드 시 세션 확인
