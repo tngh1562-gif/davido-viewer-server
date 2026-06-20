@@ -51,6 +51,24 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--ref-blue),var(--ref-purple-start))}
 .pts-badge{background:rgba(255,200,68,.12);border:1px solid rgba(255,200,68,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.5px}
 
+/* ══ INLINE GAME PANEL ══ */
+#gameListSection{}
+#gamePlaySection{display:none;animation:fadeIn .25s ease}
+.game-back-bar{
+  display:flex;align-items:center;gap:14px;margin-bottom:24px;
+}
+.game-back-btn{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:8px 16px;color:var(--text-muted);
+  font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:6px;transition:all .15s;
+}
+.game-back-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+.game-play-title{font-size:1.2rem;font-weight:700}
+.game-play-pts{font-size:.78rem;color:var(--text-muted);margin-left:auto}
+.game-play-pts span{color:var(--gold);font-weight:700}
+#gmContent{width:100%}
+
 /* ══ LOGIN SCREEN ══ */
 #loginScreen{
   position:fixed;inset:0;z-index:500;
@@ -560,64 +578,79 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
 
 <!-- ═══ MINI GAMES ═══ -->
 <div id="page-minigames" class="page">
-  <div class="betting-hero">
-    <div class="card-label" style="color:var(--text-main);margin-bottom:16px">🔥 메인 매치 라이브 배팅 🔥</div>
-    <div class="vs-container">
-      <div class="team blue">TEAM BLUE<br><span style="font-size:18px;color:var(--text-muted)">x 1.85</span></div>
-      <div class="vs-text">VS</div>
-      <div class="team red">TEAM RED<br><span style="font-size:18px;color:var(--text-muted)">x 2.10</span></div>
+
+  <!-- 카드 목록 -->
+  <div id="gameListSection">
+    <div class="betting-hero">
+      <div class="card-label" style="color:var(--text-main);margin-bottom:16px">🔥 메인 매치 라이브 배팅 🔥</div>
+      <div class="vs-container">
+        <div class="team blue">TEAM BLUE<br><span style="font-size:18px;color:var(--text-muted)">x 1.85</span></div>
+        <div class="vs-text">VS</div>
+        <div class="team red">TEAM RED<br><span style="font-size:18px;color:var(--text-muted)">x 2.10</span></div>
+      </div>
+      <div class="slider-container">
+        <div class="slider-labels"><span style="color:#4da3ff">블루팀 승리 배팅</span><span style="color:#ff6b81">레드팀 승리 배팅</span></div>
+        <input type="range" min="1" max="100" value="50">
+        <div style="margin-top:24px"><button style="background:var(--text-main);color:#000;padding:12px 32px;border-radius:8px;border:none;font-weight:bold;font-family:var(--font-family);cursor:pointer">10,000 P 배팅하기</button></div>
+      </div>
     </div>
-    <div class="slider-container">
-      <div class="slider-labels"><span style="color:#4da3ff">블루팀 승리 배팅</span><span style="color:#ff6b81">레드팀 승리 배팅</span></div>
-      <input type="range" min="1" max="100" value="50">
-      <div style="margin-top:24px"><button style="background:var(--text-main);color:#000;padding:12px 32px;border-radius:8px;border:none;font-weight:bold;font-family:var(--font-family);cursor:pointer">10,000 P 배팅하기</button></div>
+    <div class="h-section" style="margin-bottom:24px">미니게임 아케이드</div>
+    <div class="games-grid">
+      <div class="card card-solid-blue game-card" onclick="openGame('slot')">
+        <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
+        <div class="card-label">CASINO</div>
+        <div class="card-title">슬롯머신</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.7)">🍒 🍋 💎<br>릴을 돌려 잭팟을 노려라</div>
+        <div class="card-footer-link" style="color:#fff">Play Game +</div>
+      </div>
+      <div class="card card-solid-green game-card" onclick="openGame('rl')">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div></div>
+        <div class="card-label">CASINO</div>
+        <div class="card-title">룰렛</div>
+        <div class="card-desc" style="color:rgba(0,0,0,.7)">🎡 번호·색상·홀짝 배팅<br>유럽식 룰렛 (37칸)</div>
+        <div class="card-footer-link" style="color:#000">Play Game +</div>
+      </div>
+      <div class="card card-gradient-purple game-card" onclick="openGame('bj')">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash short"></div><div class="dash long active"></div></div>
+        <div class="card-label">CARD</div>
+        <div class="card-title">블랙잭</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">🃏 딜러를 이겨라<br>블랙잭 2.5x 지급</div>
+        <div class="card-footer-link" style="color:#fff">Play Game +</div>
+      </div>
+      <div class="card card-solid-white game-card" onclick="openGame('ms')">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div></div>
+        <div class="card-label">PUZZLE</div>
+        <div class="card-title">지뢰찾기</div>
+        <div class="card-desc" style="color:rgba(0,0,0,.7)">💣 셀을 열고 빠져나와라<br>안전한 칸마다 배당 상승</div>
+        <div class="card-footer-link" style="color:#000">Play Game +</div>
+      </div>
+      <div class="card card-solid-brown game-card" onclick="openGame('ho')">
+        <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
+        <div class="card-label">POKER</div>
+        <div class="card-title">Texas Hold'em</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.85)">🂡 vs 딜러 헤즈업<br>핸드 평가 + 4단계 베팅</div>
+        <div class="card-footer-link" style="color:#fff">Play Game +</div>
+      </div>
+      <div class="card game-card" onclick="openGame('po')" style="background:linear-gradient(135deg,#1a1d3a,#2d1f5e);color:#fff;border:none">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash short"></div><div class="dash long active"></div></div>
+        <div class="card-label">POKER</div>
+        <div class="card-title">5카드 드로우</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">🃏 5장 받고 교체<br>핸드 등급별 페이아웃</div>
+        <div class="card-footer-link" style="color:#fff">Play Game +</div>
+      </div>
     </div>
   </div>
-  <div class="h-section" style="margin-bottom:24px">미니게임 아케이드</div>
-  <div class="games-grid">
-    <div class="card card-solid-blue game-card" onclick="openGame('slot')">
-      <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
-      <div class="card-label">CASINO</div>
-      <div class="card-title">슬롯머신</div>
-      <div class="card-desc" style="color:rgba(255,255,255,.7)">🍒 🍋 💎<br>릴을 돌려 잭팟을 노려라</div>
-      <div class="card-footer-link" style="color:#fff">Play Game +</div>
+
+  <!-- 인라인 게임 패널 -->
+  <div id="gamePlaySection">
+    <div class="game-back-bar">
+      <button class="game-back-btn" onclick="closeGame()">← 목록으로</button>
+      <div class="game-play-title" id="gmTitle"></div>
+      <div class="game-play-pts">보유 포인트 <span id="gmPts">0</span> P</div>
     </div>
-    <div class="card card-solid-green game-card" onclick="openGame('rl')">
-      <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div></div>
-      <div class="card-label">CASINO</div>
-      <div class="card-title">룰렛</div>
-      <div class="card-desc" style="color:rgba(0,0,0,.7)">🎡 번호·색상·홀짝 배팅<br>유럽식 룰렛 (37칸)</div>
-      <div class="card-footer-link" style="color:#000">Play Game +</div>
-    </div>
-    <div class="card card-gradient-purple game-card" onclick="openGame('bj')">
-      <div class="card-dashes"><div class="dash short"></div><div class="dash short"></div><div class="dash long active"></div></div>
-      <div class="card-label">CARD</div>
-      <div class="card-title">블랙잭</div>
-      <div class="card-desc" style="color:rgba(255,255,255,.8)">🃏 딜러를 이겨라<br>블랙잭 2.5x 지급</div>
-      <div class="card-footer-link" style="color:#fff">Play Game +</div>
-    </div>
-    <div class="card card-solid-white game-card" onclick="openGame('ms')">
-      <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div></div>
-      <div class="card-label">PUZZLE</div>
-      <div class="card-title">지뢰찾기</div>
-      <div class="card-desc" style="color:rgba(0,0,0,.7)">💣 셀을 열고 빠져나와라<br>안전한 칸마다 배당 상승</div>
-      <div class="card-footer-link" style="color:#000">Play Game +</div>
-    </div>
-    <div class="card card-solid-brown game-card" onclick="openGame('ho')">
-      <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
-      <div class="card-label">POKER</div>
-      <div class="card-title">Texas Hold'em</div>
-      <div class="card-desc" style="color:rgba(255,255,255,.85)">🂡 vs 딜러 헤즈업<br>핸드 평가 + 4단계 베팅</div>
-      <div class="card-footer-link" style="color:#fff">Play Game +</div>
-    </div>
-    <div class="card game-card" onclick="openGame('po')" style="background:linear-gradient(135deg,#1a1d3a,#2d1f5e);color:#fff;border:none">
-      <div class="card-dashes"><div class="dash short"></div><div class="dash short"></div><div class="dash long active"></div></div>
-      <div class="card-label">POKER</div>
-      <div class="card-title">5카드 드로우</div>
-      <div class="card-desc" style="color:rgba(255,255,255,.8)">🃏 5장 받고 교체<br>핸드 등급별 페이아웃</div>
-      <div class="card-footer-link" style="color:#fff">Play Game +</div>
-    </div>
+    <div id="gmContent"></div>
   </div>
+
 </div>
 
 <!-- ═══ STORE ═══ -->
@@ -672,15 +705,6 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
 </main>
 
 <!-- ═══ GAME MODAL ═══ -->
-<div class="game-modal-bg" id="gameBg">
-  <div class="game-modal" id="gameModal">
-    <button class="modal-close" onclick="closeGame()">✕</button>
-    <div class="modal-title" id="gmTitle"></div>
-    <div class="modal-pts">보유 포인트: <span id="gmPts">0</span> P</div>
-    <div id="gmContent"></div>
-  </div>
-</div>
-
 <!-- ═══ BUY MODAL ═══ -->
 <div class="buy-modal-bg" id="buyBg">
   <div class="buy-modal">
@@ -847,15 +871,16 @@ function openGame(g){
   else if(g==='ms')initMs(content);
   else if(g==='ho')initHo(content);
   else if(g==='po')initPo(content);
-  document.getElementById('gameBg').classList.add('open');
+  document.getElementById('gameListSection').style.display='none';
+  document.getElementById('gamePlaySection').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function closeGame(){
-  document.getElementById('gameBg').classList.remove('open');
+  document.getElementById('gamePlaySection').style.display='none';
+  document.getElementById('gameListSection').style.display='';
+  document.getElementById('gmContent').innerHTML='';
   currentGame=null;
 }
-document.getElementById('gameBg').addEventListener('click',e=>{
-  if(e.target===document.getElementById('gameBg'))closeGame();
-});
 
 /* ══════════════════════════════════════
    SLOT MACHINE
