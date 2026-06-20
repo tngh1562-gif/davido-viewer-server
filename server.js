@@ -367,6 +367,59 @@ app.post('/api/game/roulette',(req,res)=>{
   res.json({ok:true,result,color,wheelIdx,payout,net:payout-totalBet,viewer});
 });
 
+// ── Inhouse Snapshot (for index_5 dashboard) ──
+const ANN_FILE = path.join(DATA_DIR, 'announcements.json');
+if (!fs.existsSync(ANN_FILE)) writeJSON(ANN_FILE, { items: [] });
+
+app.get('/api/inhouse/snapshot', (req, res) => {
+  const viewers  = readJSON(VIEWERS_FILE, {});
+  const betting  = readJSON(BETTING_FILE, {});
+
+  // 등록된 시청자 수
+  const viewers_total = Object.keys(viewers).length;
+
+  // 포인트 랭킹 (상위 10)
+  const ranking = Object.entries(viewers)
+    .map(([name, v]) => ({ name, points: v.points || 0 }))
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 10);
+
+  // 실시간 피드: 최근 배팅 내역
+  const feed = [];
+  if (betting.bets) {
+    Object.entries(betting.bets).slice(-6).reverse().forEach(([viewer, b]) => {
+      feed.push({ kind: 'bet', viewer, amount: b.amount, reason: `${b.team === 'blue' ? '블루' : '레드'}팀 배팅`, at: Date.now() });
+    });
+  }
+
+  // 내전 상태
+  const inhouse = {
+    status: betting.status || 'idle',
+    blueTeam: betting.blueTeam || { name: '블루팀', members: [] },
+    redTeam:  betting.redTeam  || { name: '레드팀',  members: [] },
+  };
+
+  res.json({ ok: true, viewers_total, ranking, feed, vote: null, inhouse });
+});
+
+// ── Announcements ──
+app.get('/api/announcements', (req, res) => {
+  const ann = readJSON(ANN_FILE, { items: [] });
+  res.json({ ok: true, items: ann.items || [] });
+});
+
+app.post('/api/admin/announce', (req, res) => {
+  const secret = req.headers['x-admin-secret'];
+  if (secret !== 'davido-admin') return res.status(403).json({ ok: false });
+  const { title, body, prize } = req.body;
+  if (!title) return res.json({ ok: false, error: '제목 필요' });
+  const ann = readJSON(ANN_FILE, { items: [] });
+  ann.items.unshift({ title, body: body || '', prize: prize || '', at: Date.now() });
+  ann.items = ann.items.slice(0, 10); // 최대 10개
+  writeJSON(ANN_FILE, ann);
+  res.json({ ok: true });
+});
+
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
