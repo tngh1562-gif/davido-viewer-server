@@ -84,6 +84,52 @@ function broadcast(data) {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── 치지직 채팅 인증 ──
+const pendingAuth = {}; // { TOKEN: { name:null, createdAt, expiresAt } }
+
+function cleanPending() {
+  const now = Date.now();
+  Object.keys(pendingAuth).forEach(k => { if (pendingAuth[k].expiresAt < now) delete pendingAuth[k]; });
+}
+
+// 임시 코드 발급
+app.get('/api/auth/pending', (req, res) => {
+  cleanPending();
+  const token = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6자리 HEX (e.g. A3F9C1)
+  pendingAuth[token] = { name: null, createdAt: Date.now(), expiresAt: Date.now() + 5 * 60 * 1000 };
+  res.json({ ok: true, token });
+});
+
+// 프론트가 2초마다 폴링
+app.get('/api/auth/poll/:token', (req, res) => {
+  const p = pendingAuth[req.params.token?.toUpperCase()];
+  if (!p || p.expiresAt < Date.now()) return res.json({ ok: false, status: 'expired' });
+  if (!p.name) return res.json({ ok: false, status: 'pending' });
+  // 확인 완료 → 세션 발급
+  const name = p.name;
+  delete pendingAuth[req.params.token.toUpperCase()];
+  const sessionToken = crypto.randomBytes(32).toString('hex');
+  saveSession(sessionToken, name);
+  const { viewers, viewer } = getViewer(name);
+  saveViewer(viewers);
+  res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; Max-Age=${30 * 24 * 3600}`);
+  res.json({ ok: true, status: 'confirmed', viewer });
+});
+
+// 봇이 채팅 감지 후 호출
+app.post('/api/auth/confirm', (req, res) => {
+  const secret = req.headers['x-admin-secret'];
+  if (secret !== 'davido-admin') return res.status(403).json({ ok: false, error: '권한 없음' });
+  const { token, name } = req.body;
+  if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
+  const key = token.toUpperCase();
+  const p = pendingAuth[key];
+  if (!p) return res.json({ ok: false, error: '코드 없음 또는 만료' });
+  if (p.expiresAt < Date.now()) { delete pendingAuth[key]; return res.json({ ok: false, error: '코드 만료' }); }
+  p.name = name.trim();
+  res.json({ ok: true, message: `${name} 인증 완료` });
+});
+
 // ── Auth: login (nickname only for now) ──
 app.post('/api/login', (req, res) => {
   const { name } = req.body;
