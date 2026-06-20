@@ -464,7 +464,7 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
           <div style="margin-top:16px"></div>
           <div class="code-label">채팅창에 아래 명령어를 입력하세요</div>
           <div class="code-box">
-            <div class="code-command" id="codeText">!로그인 ------</div>
+            <div class="code-command" id="codeText">!인증 -----</div>
             <div class="code-copy" onclick="copyCode()">클릭하여 복사</div>
           </div>
           <div class="code-status">
@@ -721,7 +721,7 @@ async function startChzzkLogin() {
   if (!r.ok) { alert('서버 연결 실패. 잠시 후 다시 시도해주세요.'); return; }
 
   _currentCode = r.token;
-  document.getElementById('codeText').textContent = `!로그인 ${r.token}`;
+  document.getElementById('codeText').textContent = `!인증 ${r.token}`;
   document.getElementById('codePanel').classList.add('show');
   btn.style.display = 'none';
 

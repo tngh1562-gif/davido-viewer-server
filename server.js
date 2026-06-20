@@ -95,7 +95,8 @@ function cleanPending() {
 // 임시 코드 발급
 app.get('/api/auth/pending', (req, res) => {
   cleanPending();
-  const token = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6자리 HEX (e.g. A3F9C1)
+  const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const token = Array.from({length:5}, ()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join(''); // 5자리 (e.g. PK7X9)
   pendingAuth[token] = { name: null, createdAt: Date.now(), expiresAt: Date.now() + 5 * 60 * 1000 };
   res.json({ ok: true, token });
 });
