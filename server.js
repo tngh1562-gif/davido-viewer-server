@@ -217,6 +217,24 @@ app.post('/api/bet/place', (req, res) => {
   res.json({ ok: true, viewer });
 });
 
+// ── 배팅 자동 마감 타이머 ──
+const BET_DURATION_MS = 3 * 60 * 1000; // 3분
+let betAutoLockTimer = null;
+function clearBetTimer() { if (betAutoLockTimer) { clearTimeout(betAutoLockTimer); betAutoLockTimer = null; } }
+function startBetTimer() {
+  clearBetTimer();
+  betAutoLockTimer = setTimeout(() => {
+    const betting = readJSON(BETTING_FILE, {});
+    if (betting.status === 'open') {
+      betting.status = 'locked';
+      betting.lockedAt = Date.now();
+      writeJSON(BETTING_FILE, betting);
+      broadcast({ type: 'bet_update', ...betting });
+      console.log('[BET] 3분 경과 → 배팅 자동 마감');
+    }
+  }, BET_DURATION_MS);
+}
+
 // ── Admin: betting control ──
 app.post('/api/admin/bet', (req, res) => {
   const { action, blueTeam, redTeam, result } = req.body;
@@ -232,7 +250,9 @@ app.post('/api/admin/bet', (req, res) => {
     betting.blueTeam = blueTeam || betting.blueTeam;
     betting.redTeam  = redTeam  || betting.redTeam;
     betting.startedAt = Date.now();
+    betting.betDeadline = Date.now() + BET_DURATION_MS; // 마감 시각
     betting.lockedAt = null;
+    startBetTimer();
   } else if (action === 'lock') {
     betting.status = 'locked';
     betting.lockedAt = Date.now();
@@ -260,8 +280,10 @@ app.post('/api/admin/bet', (req, res) => {
   } else if (action === 'ended') {
     betting.status = 'ended';
     betting.result = null;
+    clearBetTimer();
   } else if (action === 'idle') {
     betting.status = 'idle';
+    clearBetTimer();
   }
 
   writeJSON(BETTING_FILE, betting);

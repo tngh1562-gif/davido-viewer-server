@@ -625,6 +625,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         </div>
       </div>
       <div id="betResultMsg" style="display:none;font-size:22px;font-weight:700;margin:12px 0"></div>
+      <div id="betTimer" style="display:none;font-size:15px;font-weight:700;color:#fbbf24;margin-bottom:8px">⏱ <span id="betTimerVal">3:00</span> 남음</div>
       <!-- 배팅 금액 버튼 -->
       <div id="betAmtSection">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">배팅 금액 선택 (최대 20P)</div>
@@ -868,6 +869,30 @@ async function refreshMe(){
 /* ══════════ LIVE BETTING ══════════ */
 let betAmt = 20;
 let bettingData = { status: 'idle', blueTeam:{name:'BLUE',members:[]}, redTeam:{name:'RED',members:[]}, bets:{}, result:null };
+let betTimerInterval = null;
+
+function startBetCountdown(deadline) {
+  if (betTimerInterval) clearInterval(betTimerInterval);
+  const timerEl = document.getElementById('betTimer');
+  const valEl   = document.getElementById('betTimerVal');
+  timerEl.style.display = '';
+  function tick() {
+    const left = Math.max(0, deadline - Date.now());
+    const m = Math.floor(left / 60000);
+    const s = Math.floor((left % 60000) / 1000);
+    valEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    if (left <= 10000) timerEl.style.color = '#ef4444'; // 10초 이하 빨간색
+    if (left === 0) { clearInterval(betTimerInterval); betTimerInterval = null; }
+  }
+  tick();
+  betTimerInterval = setInterval(tick, 500);
+}
+function stopBetCountdown() {
+  if (betTimerInterval) { clearInterval(betTimerInterval); betTimerInterval = null; }
+  document.getElementById('betTimer').style.display = 'none';
+  document.getElementById('betTimerVal').textContent = '3:00';
+  document.getElementById('betTimer').style.color = '#fbbf24';
+}
 
 function setBetAmt(n) {
   betAmt = n;
@@ -921,12 +946,16 @@ function renderBetting(data) {
     badge.className = 'bet-status-badge open'; badge.textContent = '● 배팅 진행중';
     const alreadyBet = !!(myName && bets[myName]);
     blueBtn.disabled = alreadyBet; redBtn.disabled = alreadyBet;
+    if (d.betDeadline) startBetCountdown(d.betDeadline);
+    else stopBetCountdown();
   } else if (d.status === 'locked') {
     badge.className = 'bet-status-badge locked'; badge.textContent = '🔒 배팅 마감';
     blueBtn.disabled = true; redBtn.disabled = true;
+    stopBetCountdown();
   } else if (d.status === 'ended') {
     badge.className = 'bet-status-badge ended'; badge.textContent = '경기 종료';
     blueBtn.disabled = true; redBtn.disabled = true;
+    stopBetCountdown();
     resultMsg.style.display = '';
     if (d.result) {
       const win = d.result === 'blue' ? (d.blueTeam?.name||'블루') : (d.redTeam?.name||'레드');
