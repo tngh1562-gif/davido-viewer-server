@@ -1828,7 +1828,7 @@ function msUpdateMath() {
   for (let i = 0; i < revealed.size; i++) {
     mult *= (total - mineCount - i) / (total - i);
   }
-  mult = revealed.size > 0 ? Math.max(1.0, (1 / mult) * 0.9) : 1.0;
+  mult = revealed.size > 0 ? Math.min(5.0, Math.max(1.0, (1 / mult) * 0.55)) : 1.0; // 최대 5배, 지급률 55%
   msState.mult = mult;
   const profit = Math.floor(bet * mult) - bet;
   const el = id => document.getElementById(id);
