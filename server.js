@@ -375,7 +375,7 @@ app.get('/api/shop', (req, res) => {
   res.json(readJSON(SHOP_FILE, { items: [] }));
 });
 
-app.post('/api/shop/buy', (req, res) => {
+app.post('/api/shop/buy', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   const { itemId } = req.body;
@@ -384,18 +384,21 @@ app.post('/api/shop/buy', (req, res) => {
   const item = shopData.items.find(i => i.id === itemId);
   if (!item) return res.json({ ok: false, error: '아이템 없음' });
   if (item.stock === 0) return res.json({ ok: false, error: '품절' });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
 
-  const { viewers, viewer } = getViewer(name);
-  if (viewer.points < item.price) return res.json({ ok: false, error: '포인트 부족' });
+  try {
+    // 인하우스 서버에서 포인트 차감 + 보관함봇 추가
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-shop-buy`, {
+      nickname: name, itemName: item.name, price: item.price
+    }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
 
-  viewer.points -= item.price;
-  viewer.purchases.push({ itemId, itemName: item.name, at: Date.now() });
-  if (item.stock > 0) item.stock--;
+    if (!r.ok) return res.json({ ok: false, error: r.error || '구매 실패' });
 
-  saveViewer(viewers);
-  writeJSON(SHOP_FILE, shopData);
-  broadcast({ type: 'shop_update', items: shopData.items });
-  res.json({ ok: true, viewer, item });
+    // 스톡 감소
+    if (item.stock > 0) { item.stock--; writeJSON(SHOP_FILE, shopData); }
+    broadcast({ type: 'shop_update', items: shopData.items });
+    res.json({ ok: true, points: r.points, item });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // ══════════ MINI GAMES ══════════

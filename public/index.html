@@ -1557,13 +1557,24 @@ function openBuy(id){
   document.getElementById('buyBg').classList.add('open');
 }
 function closeBuy(){document.getElementById('buyBg').classList.remove('open');buyTarget=null}
-function doBuy(){
+async function doBuy(){
   if(!buyTarget)return;
   const it=ITEMS[buyTarget];
   if(pts<it.price){toast('포인트 부족','err');return;}
-  savePts(pts-it.price);
-  toast(`${it.name} 구매 완료! 🎉`,'ok');
-  closeBuy();
+  const btn=document.getElementById('bmOk');
+  btn.disabled=true; btn.textContent='처리 중...';
+  const r=await fetch('/api/shop/buy',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({itemId:buyTarget})
+  }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
+  btn.disabled=false; btn.textContent='구매 확정';
+  if(r.ok){
+    if(r.points!=null) savePts(r.points); else savePts(pts-it.price);
+    toast(`${it.name} 구매 완료! 보관함에 추가됐습니다 🎉`,'ok');
+    closeBuy();
+  } else {
+    toast(r.error||'구매 실패','err');
+  }
 }
 
 /* ══════════ GAME MODAL ══════════ */
