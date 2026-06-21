@@ -481,13 +481,26 @@ app.get('/api/announcements', (req, res) => {
 app.post('/api/admin/announce', (req, res) => {
   const secret = req.headers['x-admin-secret'];
   if (secret !== 'davido-admin') return res.status(403).json({ ok: false });
-  const { title, body, prize } = req.body;
+  const { title, body, prize, msg_id } = req.body;
   if (!title) return res.json({ ok: false, error: '제목 필요' });
   const ann = readJSON(ANN_FILE, { items: [] });
-  ann.items.unshift({ title, body: body || '', prize: prize || '', at: Date.now() });
-  ann.items = ann.items.slice(0, 10); // 최대 10개
+  ann.items.unshift({ title, body: body || '', prize: prize || '', at: Date.now(), msg_id: msg_id || null });
+  ann.items = ann.items.slice(0, 10);
   writeJSON(ANN_FILE, ann);
   res.json({ ok: true });
+});
+
+// Discord 메시지 삭제 시 해당 공지 제거
+app.post('/api/admin/announcements/delete', (req, res) => {
+  const secret = req.headers['x-admin-secret'];
+  if (secret !== (process.env.VIEWER_SERVER_SECRET || 'davido-admin')) return res.status(403).json({ ok: false });
+  const { msg_id } = req.body;
+  if (!msg_id) return res.json({ ok: false, error: 'msg_id 필요' });
+  const ann = readJSON(ANN_FILE, { items: [] });
+  const before = ann.items.length;
+  ann.items = ann.items.filter(it => String(it.msg_id) !== String(msg_id));
+  writeJSON(ANN_FILE, ann);
+  res.json({ ok: true, removed: before - ann.items.length });
 });
 
 // 봇 시작 시 공지 일괄 복원 (기존 항목 교체)

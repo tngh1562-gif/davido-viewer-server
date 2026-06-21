@@ -817,6 +817,7 @@ async function refreshMe(){
   if(r.ok && r.viewer && myName){
     savePts(r.inhousePoints != null ? r.inhousePoints : (r.viewer.points || 0));
   }
+  loadAnnouncements();
 }
 
 // 페이지 로드 시 세션 확인
