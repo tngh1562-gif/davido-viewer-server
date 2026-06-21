@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
@@ -154,6 +155,17 @@ app.post('/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+function getJson(url) {
+  return new Promise((resolve, reject) => {
+    const lib = url.startsWith('https') ? https : http;
+    lib.get(url, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => { try { resolve(JSON.parse(raw)); } catch { reject(new Error('parse')); } });
+    }).on('error', reject);
+  });
+}
+
 // ── Viewer info ──
 app.get('/api/me', async (req, res) => {
   const name = getSessionName(req);
@@ -162,8 +174,7 @@ app.get('/api/me', async (req, res) => {
   let inhousePoints = null;
   if (INHOUSE_SERVER_URL) {
     try {
-      const r = await fetch(`${INHOUSE_SERVER_URL}/api/viewer-points?nickname=${encodeURIComponent(name)}`);
-      const data = await r.json();
+      const data = await getJson(`${INHOUSE_SERVER_URL}/api/viewer-points?nickname=${encodeURIComponent(name)}`);
       if (data.ok) inhousePoints = data.points;
     } catch {}
   }
