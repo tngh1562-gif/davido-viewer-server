@@ -25,7 +25,7 @@ const BETTING_FILE  = path.join(DATA_DIR, 'betting.json');
 const SHOP_FILE     = path.join(DATA_DIR, 'shop.json');
 
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
-const SESSION_SECRET = process.env.SESSION_SECRET || 'davido-viewer-secret-key';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'davido-viewer-secret-2025';
 
 function readJSON(file, def) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -56,23 +56,23 @@ if (!fs.existsSync(SHOP_FILE)) writeJSON(SHOP_FILE, {
 });
 
 // ── Session helpers (stateless signed token) ──
+// 토큰 형식: base64(name + ":" + hmac_hex)
 function makeSessionToken(name) {
-  const payload = Buffer.from(JSON.stringify({ name })).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
-  return `${payload}.${sig}`;
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(name).digest('hex');
+  return Buffer.from(name + ':' + sig).toString('base64');
 }
 function getSessionName(req) {
   const cookie = req.headers.cookie || '';
-  const m = cookie.match(/vsession=([^;]+)/);
+  const m = cookie.match(/vsession=([A-Za-z0-9+/=]+)/);
   if (!m) return null;
   try {
-    const [payload, sig] = m[1].split('.');
-    if (!payload || !sig) return null;
-    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
-    if (sig !== expected) return null;
-    const b64 = payload.replace(/-/g,'+').replace(/_/g,'/');
-    const data = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-    return data.name || null;
+    const decoded = Buffer.from(m[1], 'base64').toString('utf8');
+    const sep = decoded.lastIndexOf(':');
+    if (sep < 0) return null;
+    const name = decoded.slice(0, sep);
+    const sig  = decoded.slice(sep + 1);
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(name).digest('hex');
+    return sig === expected ? name : null;
   } catch { return null; }
 }
 
