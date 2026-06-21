@@ -581,8 +581,15 @@ app.get('/api/inhouse-lineup', async (req, res) => {
   } catch(e) { res.json({ ok: false, blue: [], red: [], error: e.message }); }
 });
 
-// ── Announcements ──
-app.get('/api/announcements', (req, res) => {
+// ── Announcements — Bot에서 직접 가져오기 (파일 저장 없음) ──
+app.get('/api/announcements', async (req, res) => {
+  if (BOT_API_URL) {
+    try {
+      const data = await getJson(`${BOT_API_URL}/api/announcements`);
+      if (data.ok) return res.json({ ok: true, items: data.items || [] });
+    } catch {}
+  }
+  // fallback: 로컬 파일
   const ann = readJSON(ANN_FILE, { items: [] });
   res.json({ ok: true, items: ann.items || [] });
 });
