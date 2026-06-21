@@ -818,6 +818,7 @@ let _pollTimer    = null;
 let _currentCode  = null;
 
 async function startChzzkLogin() {
+  alert('[디버그] 버튼 클릭됨 - onclick 작동 확인');
   const btn = document.getElementById('chzzkBtn');
   btn.disabled = true;
   const r = await fetch('/api/auth/pending').then(r=>r.json()).catch(()=>({ok:false}));
