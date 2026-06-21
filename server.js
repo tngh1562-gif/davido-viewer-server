@@ -173,7 +173,8 @@ function getJson(url) {
 app.get('/api/me', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false });
-  const { viewer } = getViewer(name);
+  const { viewers, viewer } = getViewer(name);
+  if (!readJSON(VIEWERS_FILE, {})[name]) saveViewer(viewers); // 배포 후 파일 초기화 시 재등록
   let inhousePoints = null;
   if (INHOUSE_SERVER_URL) {
     try {
