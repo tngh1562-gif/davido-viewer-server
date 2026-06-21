@@ -624,7 +624,7 @@ app.post('/api/game/timing/press', async (req, res) => {
   if (getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
-  if (diff <= 100) { // ±0.1초 (네트워크 지연 감안)
+  if (diff <= 50) { // ±0.05초
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
