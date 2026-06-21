@@ -910,23 +910,30 @@ function renderBetting(data) {
     ? `✅ ${myBet.team==='blue'?'블루':'레드'} ${myBet.amount}P 배팅됨`
     : '';
 
-  // 상태별 UI
+  // 상태별 UI — 배팅 금액/버튼은 항상 표시, 활성화만 상태에 따라 변경
   resultMsg.style.display = 'none';
-  amtSec.style.display = 'none';
+  amtSec.style.display = '';
   if (d.status === 'idle') {
     badge.className = 'bet-status-badge idle'; badge.textContent = '대기중';
+    blueBtn.disabled = true; redBtn.disabled = true;
+    document.getElementById('myBetInfo').textContent = '내전 시작 후 배팅 가능합니다';
   } else if (d.status === 'open') {
     badge.className = 'bet-status-badge open'; badge.textContent = '● 배팅 진행중';
-    amtSec.style.display = '';
     const alreadyBet = !!(myName && bets[myName]);
     blueBtn.disabled = alreadyBet; redBtn.disabled = alreadyBet;
   } else if (d.status === 'locked') {
     badge.className = 'bet-status-badge locked'; badge.textContent = '🔒 배팅 마감';
+    blueBtn.disabled = true; redBtn.disabled = true;
   } else if (d.status === 'ended') {
     badge.className = 'bet-status-badge ended'; badge.textContent = '경기 종료';
-    const win = d.result === 'blue' ? (d.blueTeam?.name||'블루') : (d.redTeam?.name||'레드');
+    blueBtn.disabled = true; redBtn.disabled = true;
     resultMsg.style.display = '';
-    resultMsg.innerHTML = `${d.result==='blue'?'🔵':'🔴'} <span style="color:${d.result==='blue'?'#4da3ff':'#ff6b81'}">${escapeHtml(win)}</span> 승리!`;
+    if (d.result) {
+      const win = d.result === 'blue' ? (d.blueTeam?.name||'블루') : (d.redTeam?.name||'레드');
+      resultMsg.innerHTML = `${d.result==='blue'?'🔵':'🔴'} <span style="color:${d.result==='blue'?'#4da3ff':'#ff6b81'}">${escapeHtml(win)}</span> 승리!`;
+    } else {
+      resultMsg.textContent = '내전이 종료되었습니다';
+    }
   }
 }
 
