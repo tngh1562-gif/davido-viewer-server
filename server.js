@@ -474,6 +474,16 @@ app.get('/api/inhouse/snapshot', (req, res) => {
   res.json({ ok: true, viewers_total, ranking, feed, vote: null, inhouse });
 });
 
+// 인하우스 팀 라인업 프록시
+app.get('/api/inhouse-lineup', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, blue: [], red: [] });
+  try {
+    const data = await getJson(`${INHOUSE_SERVER_URL}/api/inhouse-db`);
+    const toNames = arr => (arr || []).map(p => (p.name || p.chzzk || '?').replace(/#.+$/, '').trim());
+    res.json({ ok: true, blue: toNames(data.curBlue), red: toNames(data.curRed) });
+  } catch(e) { res.json({ ok: false, blue: [], red: [], error: e.message }); }
+});
+
 // ── Announcements ──
 app.get('/api/announcements', (req, res) => {
   const ann = readJSON(ANN_FILE, { items: [] });

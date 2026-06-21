@@ -194,16 +194,33 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .dot{width:8px;height:8px;border-radius:50%}
 
 /* BETTING HERO */
-.betting-hero{background:linear-gradient(to right,rgba(13,82,214,.1),rgba(255,71,87,.1));border:1px solid var(--surface-border);border-radius:var(--radius);padding:40px;text-align:center;margin-bottom:40px}
-.vs-container{display:flex;justify-content:center;align-items:center;gap:40px;margin-bottom:32px}
-.team{font-size:32px;font-weight:700;letter-spacing:-.02em}
+.betting-hero{background:linear-gradient(to right,rgba(13,82,214,.1),rgba(255,71,87,.1));border:1px solid var(--surface-border);border-radius:var(--radius);padding:32px;text-align:center;margin-bottom:40px}
+.vs-container{display:flex;justify-content:center;align-items:flex-start;gap:32px;margin-bottom:24px}
+.team{font-size:26px;font-weight:700;letter-spacing:-.02em}
 .team.blue{color:#4da3ff}.team.red{color:#ff6b81}
-.vs-text{font-size:16px;color:var(--text-muted);font-weight:600}
-.slider-container{max-width:600px;margin:0 auto}
-.slider-labels{display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:600}
-input[type=range]{-webkit-appearance:none;width:100%;background:transparent}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:24px;width:24px;border-radius:50%;background:#fff;cursor:pointer;margin-top:-10px;box-shadow:0 0 10px rgba(0,0,0,.5)}
-input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:pointer;background:linear-gradient(to right,var(--ref-blue) 50%,#ff4757 50%);border-radius:2px}
+.team-members{font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.7;font-weight:500}
+.vs-text{font-size:16px;color:var(--text-muted);font-weight:600;margin-top:6px}
+.bet-amt-row{display:flex;gap:8px;justify-content:center;margin:16px 0 8px}
+.bet-chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--text-main);font-size:.85rem;font-weight:800;padding:8px 18px;cursor:pointer;font-family:inherit;transition:all .15s}
+.bet-chip:hover,.bet-chip.active{background:rgba(255,255,255,.18);border-color:#fff}
+.bet-action-row{display:flex;gap:12px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+.bet-btn{padding:11px 28px;border:none;border-radius:9px;font-weight:900;font-family:inherit;font-size:.9rem;cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.bet-btn.blue{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;box-shadow:0 0 20px rgba(59,130,246,.3)}
+.bet-btn.red{background:linear-gradient(135deg,#be123c,#f43f5e);color:#fff;box-shadow:0 0 20px rgba(244,63,94,.3)}
+.bet-btn:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.bet-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.bet-status-badge{display:inline-block;padding:5px 14px;border-radius:20px;font-size:.78rem;font-weight:800;letter-spacing:.5px;margin-bottom:14px}
+.bet-status-badge.open{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+.bet-status-badge.locked{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25)}
+.bet-status-badge.ended{background:rgba(255,71,87,.12);color:#ff6b81;border:1px solid rgba(255,71,87,.25)}
+.bet-status-badge.idle{background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid rgba(255,255,255,.1)}
+.admin-bet-row{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.admin-btn{padding:8px 20px;border:none;border-radius:7px;font-weight:700;font-family:inherit;font-size:.8rem;cursor:pointer}
+.admin-btn.start{background:#22c55e;color:#000}
+.admin-btn.end-blue{background:#3b82f6;color:#fff}
+.admin-btn.end-red{background:#f43f5e;color:#fff}
+.admin-btn.lock{background:#f59e0b;color:#000}
+.admin-btn.reset{background:rgba(255,255,255,.1);color:var(--text-muted)}
 
 /* GAME CARDS GRID */
 .games-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
@@ -592,16 +609,45 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
   <!-- 카드 목록 -->
   <div id="gameListSection">
     <div class="betting-hero">
-      <div class="card-label" style="color:var(--text-main);margin-bottom:16px">🔥 메인 매치 라이브 배팅 🔥</div>
-      <div class="vs-container">
-        <div class="team blue">TEAM BLUE<br><span style="font-size:18px;color:var(--text-muted)">x 1.85</span></div>
+      <div class="card-label" style="color:var(--text-main);margin-bottom:10px">🔥 메인 매치 라이브 배팅 🔥</div>
+      <div id="betStatusBadge" class="bet-status-badge idle">대기중</div>
+      <div class="vs-container" id="betVsContainer">
+        <div class="team blue">
+          <div id="betBlueName">BLUE</div>
+          <div class="team-members" id="betBlueMembers"></div>
+          <div style="font-size:14px;color:var(--text-muted);margin-top:4px" id="betBlueOdds"></div>
+        </div>
         <div class="vs-text">VS</div>
-        <div class="team red">TEAM RED<br><span style="font-size:18px;color:var(--text-muted)">x 2.10</span></div>
+        <div class="team red">
+          <div id="betRedName">RED</div>
+          <div class="team-members" id="betRedMembers"></div>
+          <div style="font-size:14px;color:var(--text-muted);margin-top:4px" id="betRedOdds"></div>
+        </div>
       </div>
-      <div class="slider-container">
-        <div class="slider-labels"><span style="color:#4da3ff">블루팀 승리 배팅</span><span style="color:#ff6b81">레드팀 승리 배팅</span></div>
-        <input type="range" min="1" max="100" value="50">
-        <div style="margin-top:24px"><button style="background:var(--text-main);color:#000;padding:12px 32px;border-radius:8px;border:none;font-weight:bold;font-family:var(--font-family);cursor:pointer">10,000 P 배팅하기</button></div>
+      <div id="betResultMsg" style="display:none;font-size:22px;font-weight:700;margin:12px 0"></div>
+      <!-- 배팅 금액 버튼 -->
+      <div id="betAmtSection">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">배팅 금액 선택 (최대 20P)</div>
+        <div class="bet-amt-row">
+          <button class="bet-chip" onclick="setBetAmt(5)">5P</button>
+          <button class="bet-chip" onclick="setBetAmt(10)">10P</button>
+          <button class="bet-chip" onclick="setBetAmt(15)">15P</button>
+          <button class="bet-chip active" onclick="setBetAmt(20)">MAX 20P</button>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">선택: <span id="betAmtDisplay" style="color:#fff;font-weight:700">20</span>P</div>
+        <div class="bet-action-row">
+          <button class="bet-btn blue" id="betBlueBtn" onclick="placeBet('blue')">🔵 블루 배팅</button>
+          <button class="bet-btn red" id="betRedBtn" onclick="placeBet('red')">🔴 레드 배팅</button>
+        </div>
+        <div id="myBetInfo" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+      </div>
+      <!-- 관리자 버튼 -->
+      <div class="admin-bet-row" id="adminBetRow">
+        <button class="admin-btn start" onclick="adminBet('open')">▶ 내전 시작</button>
+        <button class="admin-btn lock" onclick="adminBet('lock')">🔒 배팅 마감</button>
+        <button class="admin-btn end-blue" onclick="adminBet('resolve','blue')">🔵 블루 포인트지급</button>
+        <button class="admin-btn end-red" onclick="adminBet('resolve','red')">🔴 레드 포인트지급</button>
+        <button class="admin-btn reset" onclick="adminBet('idle')">↺ 초기화</button>
       </div>
     </div>
     <div class="h-section" style="margin-bottom:24px">미니게임 아케이드</div>
@@ -825,6 +871,114 @@ async function refreshMe(){
   const r = await fetch('/api/me').then(r=>r.json()).catch(()=>({ok:false}));
   if(r.ok && r.viewer){ showApp(r.viewer, r.inhousePoints); setInterval(refreshMe, 3000); }
   else { document.getElementById('loginScreen').style.display = 'flex'; }
+})();
+
+/* ══════════ LIVE BETTING ══════════ */
+let betAmt = 20;
+let bettingData = { status: 'idle', blueTeam:{name:'BLUE',members:[]}, redTeam:{name:'RED',members:[]}, bets:{}, result:null };
+
+function setBetAmt(n) {
+  betAmt = n;
+  document.getElementById('betAmtDisplay').textContent = n;
+  document.querySelectorAll('.bet-chip').forEach(b => b.classList.toggle('active', parseInt(b.textContent) === n || (n===20 && b.textContent.includes('MAX'))));
+}
+
+function renderBetting(data) {
+  if (data) bettingData = data;
+  const d = bettingData;
+  const badge = document.getElementById('betStatusBadge');
+  const amtSec = document.getElementById('betAmtSection');
+  const resultMsg = document.getElementById('betResultMsg');
+  const blueBtn = document.getElementById('betBlueBtn');
+  const redBtn = document.getElementById('betRedBtn');
+
+  // 팀 이름
+  document.getElementById('betBlueName').textContent = d.blueTeam?.name || 'BLUE';
+  document.getElementById('betRedName').textContent = d.redTeam?.name || 'RED';
+
+  // 멤버 라인업
+  const blueMembers = d.blueTeam?.members || [];
+  const redMembers  = d.redTeam?.members  || [];
+  document.getElementById('betBlueMembers').innerHTML = blueMembers.map(m=>`<div>${escapeHtml(m)}</div>`).join('');
+  document.getElementById('betRedMembers').innerHTML  = redMembers.map(m=>`<div>${escapeHtml(m)}</div>`).join('');
+
+  // 배당률
+  const bets = d.bets || {};
+  const blueTotal = Object.values(bets).filter(b=>b.team==='blue').reduce((s,b)=>s+b.amount,0);
+  const redTotal  = Object.values(bets).filter(b=>b.team==='red').reduce((s,b)=>s+b.amount,0);
+  const pool = blueTotal + redTotal;
+  const blueOdds = pool > 0 && blueTotal > 0 ? (pool/blueTotal*0.9).toFixed(2) : '-';
+  const redOdds  = pool > 0 && redTotal  > 0 ? (pool/redTotal *0.9).toFixed(2) : '-';
+  document.getElementById('betBlueOdds').textContent = blueOdds !== '-' ? `x ${blueOdds}` : '';
+  document.getElementById('betRedOdds').textContent  = redOdds  !== '-' ? `x ${redOdds}`  : '';
+
+  // 내 배팅
+  const myBet = myName && bets[myName];
+  document.getElementById('myBetInfo').textContent = myBet
+    ? `✅ ${myBet.team==='blue'?'블루':'레드'} ${myBet.amount}P 배팅됨`
+    : '';
+
+  // 상태별 UI
+  resultMsg.style.display = 'none';
+  amtSec.style.display = 'none';
+  if (d.status === 'idle') {
+    badge.className = 'bet-status-badge idle'; badge.textContent = '대기중';
+  } else if (d.status === 'open') {
+    badge.className = 'bet-status-badge open'; badge.textContent = '● 배팅 진행중';
+    amtSec.style.display = '';
+    const alreadyBet = !!(myName && bets[myName]);
+    blueBtn.disabled = alreadyBet; redBtn.disabled = alreadyBet;
+  } else if (d.status === 'locked') {
+    badge.className = 'bet-status-badge locked'; badge.textContent = '🔒 배팅 마감';
+  } else if (d.status === 'ended') {
+    badge.className = 'bet-status-badge ended'; badge.textContent = '경기 종료';
+    const win = d.result === 'blue' ? (d.blueTeam?.name||'블루') : (d.redTeam?.name||'레드');
+    resultMsg.style.display = '';
+    resultMsg.innerHTML = `${d.result==='blue'?'🔵':'🔴'} <span style="color:${d.result==='blue'?'#4da3ff':'#ff6b81'}">${escapeHtml(win)}</span> 승리!`;
+  }
+}
+
+async function placeBet(team) {
+  if (!myName) { toast('로그인이 필요합니다','err'); return; }
+  const r = await fetch('/api/bet/place', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ team, amount: betAmt })
+  }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
+  if (r.ok) { toast(`${team==='blue'?'🔵 블루':'🔴 레드'} ${betAmt}P 배팅!`, 'ok'); }
+  else { toast(r.error || '배팅 실패', 'err'); }
+}
+
+async function adminBet(action, result) {
+  let blueTeam, redTeam;
+  if (action === 'open') {
+    // 인하우스 라인업 가져오기
+    const lineup = await fetch('/api/inhouse-lineup').then(r=>r.json()).catch(()=>({ok:false,blue:[],red:[]}));
+    blueTeam = { name: '블루팀', members: lineup.blue || [] };
+    redTeam  = { name: '레드팀', members: lineup.red  || [] };
+  }
+  const body = { action, ...(result ? {result} : {}), ...(blueTeam ? {blueTeam, redTeam} : {}) };
+  const r = await fetch('/api/admin/bet', {
+    method:'POST', headers:{'Content-Type':'application/json','x-admin-secret':'davido-admin'},
+    body: JSON.stringify(body)
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if (!r.ok) toast('관리자 요청 실패','err');
+}
+
+// WebSocket 실시간 업데이트
+(function initBettingWS(){
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${proto}//${location.host}`);
+  ws.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'init' && msg.betting) renderBetting(msg.betting);
+      if (msg.type === 'bet_update') renderBetting(msg);
+      if (msg.type === 'points_update' && msg.name === myName) savePts(msg.points);
+    } catch {}
+  };
+  ws.onclose = () => setTimeout(initBettingWS, 2500);
+  // 초기 상태 로드
+  fetch('/api/bet/status').then(r=>r.json()).then(renderBetting).catch(()=>{});
 })();
 
 /* ══════════ NAV ══════════ */
