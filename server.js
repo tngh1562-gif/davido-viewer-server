@@ -23,7 +23,9 @@ const BET_RAKE     = 0.10;  // 하우스 수수료 10% → 실질 최대 1.8x
 const VIEWERS_FILE  = path.join(DATA_DIR, 'viewers.json');
 const BETTING_FILE  = path.join(DATA_DIR, 'betting.json');
 const SHOP_FILE     = path.join(DATA_DIR, 'shop.json');
-const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+
+// ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
+const SESSION_SECRET = process.env.SESSION_SECRET || 'davido-viewer-secret-key';
 
 function readJSON(file, def) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -35,7 +37,6 @@ function writeJSON(file, data) {
 
 // ── Initial data ──
 if (!fs.existsSync(VIEWERS_FILE))  writeJSON(VIEWERS_FILE,  {});
-if (!fs.existsSync(SESSIONS_FILE)) writeJSON(SESSIONS_FILE, {});
 if (!fs.existsSync(BETTING_FILE))  writeJSON(BETTING_FILE, {
   status: 'idle',     // 'idle' | 'open' | 'locked' | 'ended'
   blueTeam: { name: '블루팀', members: [] },
@@ -54,18 +55,25 @@ if (!fs.existsSync(SHOP_FILE)) writeJSON(SHOP_FILE, {
   ]
 });
 
-// ── Session helpers ──
-const sessions = readJSON(SESSIONS_FILE, {});
-function saveSession(token, name) {
-  sessions[token] = { name, createdAt: Date.now() };
-  writeJSON(SESSIONS_FILE, sessions);
+// ── Session helpers (stateless signed token) ──
+function makeSessionToken(name) {
+  const payload = Buffer.from(JSON.stringify({ name })).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+  return `${payload}.${sig}`;
 }
 function getSessionName(req) {
   const cookie = req.headers.cookie || '';
   const m = cookie.match(/vsession=([^;]+)/);
   if (!m) return null;
-  const s = sessions[m[1]];
-  return s ? s.name : null;
+  try {
+    const [payload, sig] = m[1].split('.');
+    if (!payload || !sig) return null;
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+    if (sig !== expected) return null;
+    const b64 = payload.replace(/-/g,'+').replace(/_/g,'/');
+    const data = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+    return data.name || null;
+  } catch { return null; }
 }
 
 // ── Viewer helpers ──
@@ -111,8 +119,7 @@ app.get('/api/auth/poll/:token', (req, res) => {
   // 확인 완료 → 세션 발급
   const name = p.name;
   delete pendingAuth[req.params.token.toUpperCase()];
-  const sessionToken = crypto.randomBytes(32).toString('hex');
-  saveSession(sessionToken, name);
+  const sessionToken = makeSessionToken(name);
   const { viewers, viewer } = getViewer(name);
   saveViewer(viewers);
   res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; Max-Age=${10 * 365 * 24 * 3600}`);
@@ -139,8 +146,7 @@ app.post('/api/login', (req, res) => {
   if (!name || name.trim().length < 2 || name.trim().length > 16)
     return res.json({ ok: false, error: '닉네임은 2~16자로 입력해주세요' });
   const n = name.trim();
-  const token = crypto.randomBytes(32).toString('hex');
-  saveSession(token, n);
+  const token = makeSessionToken(n);
   const { viewers, viewer } = getViewer(n);
   saveViewer(viewers);
   res.setHeader('Set-Cookie', `vsession=${token}; Path=/; HttpOnly; Max-Age=${30*24*3600}`);
@@ -148,9 +154,6 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  const cookie = req.headers.cookie || '';
-  const m = cookie.match(/vsession=([^;]+)/);
-  if (m) { delete sessions[m[1]]; writeJSON(SESSIONS_FILE, sessions); }
   res.setHeader('Set-Cookie', 'vsession=; Path=/; HttpOnly; Max-Age=0');
   res.json({ ok: true });
 });
