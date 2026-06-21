@@ -26,10 +26,12 @@ const BETTING_FILE    = path.join(DATA_DIR, 'betting.json');
 const SHOP_FILE       = path.join(DATA_DIR, 'shop.json');
 const TIMING_WIN_FILE = path.join(DATA_DIR, 'timing-winner.json');
 const POSTS_FILE      = path.join(DATA_DIR, 'posts.json');
+const COMMENTS_FILE   = path.join(DATA_DIR, 'comments.json');
 
 // data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
-if (!fs.existsSync(POSTS_FILE)) writeJSON(POSTS_FILE, { posts: [] });
+if (!fs.existsSync(POSTS_FILE))    writeJSON(POSTS_FILE,    { posts: [] });
+if (!fs.existsSync(COMMENTS_FILE)) writeJSON(COMMENTS_FILE, {});
 
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
 const SESSION_SECRET  = process.env.SESSION_SECRET  || 'davido-viewer-secret-2025';
@@ -762,6 +764,72 @@ app.delete('/api/posts/:id', (req, res) => {
   if (idx < 0) return res.status(403).json({ ok: false, error: '삭제 권한 없음' });
   data.posts.splice(idx, 1);
   writeJSON(POSTS_FILE, data);
+  res.json({ ok: true });
+});
+
+// ── 댓글 API ──
+app.get('/api/comments/:postId', (req, res) => {
+  const all = readJSON(COMMENTS_FILE, {});
+  res.json({ ok: true, comments: all[req.params.postId] || [] });
+});
+
+app.post('/api/comments/:postId', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (!rl(`cmt-min:${name}`, 5, 60)) return res.status(429).json({ ok: false, error: '너무 빠릅니다. 잠시 후 다시 시도하세요.' });
+  const content = String(req.body.content || '').trim().slice(0, 500);
+  if (!content) return res.json({ ok: false, error: '내용을 입력하세요' });
+  const all = readJSON(COMMENTS_FILE, {});
+  const postId = req.params.postId;
+  if (!all[postId]) all[postId] = [];
+  const comment = { id: crypto.randomBytes(8).toString('hex'), author: name, content, createdAt: Date.now(), replies: [] };
+  all[postId].push(comment);
+  writeJSON(COMMENTS_FILE, all);
+  res.json({ ok: true, comment });
+});
+
+app.post('/api/comments/:postId/:commentId/reply', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (!rl(`cmt-min:${name}`, 5, 60)) return res.status(429).json({ ok: false, error: '너무 빠릅니다.' });
+  const content = String(req.body.content || '').trim().slice(0, 500);
+  if (!content) return res.json({ ok: false, error: '내용을 입력하세요' });
+  const all = readJSON(COMMENTS_FILE, {});
+  const comments = all[req.params.postId] || [];
+  const comment = comments.find(c => c.id === req.params.commentId);
+  if (!comment) return res.json({ ok: false, error: '댓글 없음' });
+  const reply = { id: crypto.randomBytes(8).toString('hex'), author: name, content, createdAt: Date.now() };
+  comment.replies.push(reply);
+  all[req.params.postId] = comments;
+  writeJSON(COMMENTS_FILE, all);
+  res.json({ ok: true, reply });
+});
+
+app.delete('/api/comments/:postId/:commentId', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false });
+  const all = readJSON(COMMENTS_FILE, {});
+  const comments = all[req.params.postId] || [];
+  const idx = comments.findIndex(c => c.id === req.params.commentId && c.author === name);
+  if (idx < 0) return res.status(403).json({ ok: false, error: '삭제 권한 없음' });
+  comments.splice(idx, 1);
+  all[req.params.postId] = comments;
+  writeJSON(COMMENTS_FILE, all);
+  res.json({ ok: true });
+});
+
+app.delete('/api/comments/:postId/:commentId/:replyId', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false });
+  const all = readJSON(COMMENTS_FILE, {});
+  const comments = all[req.params.postId] || [];
+  const comment = comments.find(c => c.id === req.params.commentId);
+  if (!comment) return res.status(404).json({ ok: false });
+  const ri = comment.replies.findIndex(r => r.id === req.params.replyId && r.author === name);
+  if (ri < 0) return res.status(403).json({ ok: false, error: '삭제 권한 없음' });
+  comment.replies.splice(ri, 1);
+  all[req.params.postId] = comments;
+  writeJSON(COMMENTS_FILE, all);
   res.json({ ok: true });
 });
 

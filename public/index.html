@@ -274,6 +274,25 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .rte-editor img{max-width:100%;border-radius:6px}
 .comm-yt-embed{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;margin:10px 0}
 .comm-yt-embed iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:10px}
+/* COMMENTS */
+.comm-comments{margin-top:24px;border-top:1px solid rgba(255,255,255,.08);padding-top:20px}
+.comm-comments-title{font-size:.9rem;font-weight:700;margin-bottom:16px;color:var(--text-muted)}
+.cmt-item{display:flex;gap:10px;margin-bottom:16px}
+.cmt-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.cmt-body{flex:1;min-width:0}
+.cmt-meta{font-size:.75rem;color:var(--text-muted);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.cmt-author{font-weight:600;color:#fff}
+.cmt-content{font-size:.88rem;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+.cmt-actions{display:flex;gap:8px;margin-top:4px}
+.cmt-action-btn{background:none;border:none;font-size:.75rem;color:var(--text-muted);cursor:pointer;padding:0;font-family:inherit}
+.cmt-action-btn:hover{color:#fff}
+.cmt-replies{margin-top:10px;padding-left:12px;border-left:2px solid rgba(255,255,255,.08)}
+.cmt-input-row{display:flex;gap:8px;margin-top:16px}
+.cmt-input{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-family:inherit;font-size:.85rem;padding:8px 12px;resize:none;min-height:38px;max-height:120px}
+.cmt-input:focus{outline:none;border-color:rgba(255,255,255,.25)}
+.cmt-send-btn{padding:8px 16px;border:none;border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font-weight:600;font-size:.82rem;cursor:pointer;font-family:inherit;white-space:nowrap;align-self:flex-end}
+.cmt-send-btn:hover{background:rgba(255,255,255,.18)}
+.cmt-reply-form{margin-top:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:8px}
 
 /* SHOP GRID */
 .store-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
@@ -1162,7 +1181,19 @@ async function showPost(id, board) {
       </div>
       <div class="comm-detail-content">${post.isHtml ? renderRichContent(post.content) : renderPostContent(post.content)}</div>
       ${imgsHtml}
+      <div class="comm-comments" id="commentsArea">
+        <div class="comm-comments-title">댓글 <span id="cmtCount">로딩 중...</span></div>
+        <div id="cmtList"></div>
+        ${myName ? `
+        <div class="cmt-input-row" style="margin-top:12px">
+          <textarea class="cmt-input" id="cmtInput" placeholder="댓글을 입력하세요..." rows="1"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            onkeydown="if(event.ctrlKey&&event.key==='Enter')submitComment('${post.id}')"></textarea>
+          <button class="cmt-send-btn" onclick="submitComment('${post.id}')">등록</button>
+        </div>` : '<div style="color:var(--text-muted);font-size:.82rem;margin-top:8px">댓글을 작성하려면 로그인하세요</div>'}
+      </div>
     </div>`;
+  loadComments(post.id);
 }
 
 let pendingImages = [];
@@ -1291,6 +1322,116 @@ async function submitPost(board) {
   }).then(r=>r.json()).catch(()=>({ok:false}));
   if (r.ok) { toast('게시글이 등록됐습니다','ok'); pendingImages = []; loadCommunity(board); }
   else { toast(r.error || '등록 실패','err'); if(btn){btn.disabled=false;btn.textContent='게시하기';} }
+}
+
+/* ══════════ COMMENTS ══════════ */
+let _currentPostId = null;
+
+async function loadComments(postId) {
+  _currentPostId = postId;
+  const r = await fetch(`/api/comments/${postId}`).then(r=>r.json()).catch(()=>({ok:false,comments:[]}));
+  const comments = r.comments || [];
+  const countEl = document.getElementById('cmtCount');
+  const listEl  = document.getElementById('cmtList');
+  if (!countEl || !listEl) return;
+  const total = comments.reduce((s,c)=>s+1+(c.replies||[]).length, 0);
+  countEl.textContent = total;
+
+  listEl.innerHTML = comments.length ? comments.map(c => renderComment(postId, c)).join('') :
+    '<div style="color:var(--text-muted);font-size:.85rem;padding:12px 0">아직 댓글이 없습니다.</div>';
+}
+
+function renderComment(postId, c) {
+  const initial = (c.author||'?')[0].toUpperCase();
+  const canDel = c.author === myName;
+  const repliesHtml = (c.replies||[]).map(r => renderReply(postId, c.id, r)).join('');
+  return `<div class="cmt-item" id="cmt-${c.id}">
+    <div class="cmt-avatar">${initial}</div>
+    <div class="cmt-body">
+      <div class="cmt-meta">
+        <span class="cmt-author">${escapeHtml(c.author)}</span>
+        <span>${relTime(c.createdAt)}</span>
+        ${canDel ? `<button class="cmt-action-btn" onclick="deleteComment('${postId}','${c.id}')">삭제</button>` : ''}
+      </div>
+      <div class="cmt-content">${escapeHtml(c.content)}</div>
+      <div class="cmt-actions">
+        ${myName ? `<button class="cmt-action-btn" onclick="toggleReplyForm('${postId}','${c.id}')">↩ 답글</button>` : ''}
+      </div>
+      <div class="cmt-replies" id="replies-${c.id}">${repliesHtml}</div>
+      <div id="replyForm-${c.id}"></div>
+    </div>
+  </div>`;
+}
+
+function renderReply(postId, commentId, r) {
+  const initial = (r.author||'?')[0].toUpperCase();
+  const canDel = r.author === myName;
+  return `<div class="cmt-item" style="margin-bottom:10px" id="reply-${r.id}">
+    <div class="cmt-avatar" style="width:26px;height:26px;font-size:.65rem">${initial}</div>
+    <div class="cmt-body">
+      <div class="cmt-meta">
+        <span class="cmt-author">${escapeHtml(r.author)}</span>
+        <span>${relTime(r.createdAt)}</span>
+        ${canDel ? `<button class="cmt-action-btn" onclick="deleteReply('${postId}','${commentId}','${r.id}')">삭제</button>` : ''}
+      </div>
+      <div class="cmt-content">${escapeHtml(r.content)}</div>
+    </div>
+  </div>`;
+}
+
+function toggleReplyForm(postId, commentId) {
+  const area = document.getElementById(`replyForm-${commentId}`);
+  if (!area) return;
+  if (area.innerHTML) { area.innerHTML = ''; return; }
+  area.innerHTML = `<div class="cmt-reply-form">
+    <div class="cmt-input-row">
+      <textarea class="cmt-input" id="replyInput-${commentId}" placeholder="답글을 입력하세요..." rows="1"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        onkeydown="if(event.ctrlKey&&event.key==='Enter')submitReply('${postId}','${commentId}')"></textarea>
+      <button class="cmt-send-btn" onclick="submitReply('${postId}','${commentId}')">등록</button>
+    </div>
+  </div>`;
+  document.getElementById(`replyInput-${commentId}`)?.focus();
+}
+
+async function submitComment(postId) {
+  const el = document.getElementById('cmtInput');
+  if (!el) return;
+  const content = el.value.trim();
+  if (!content) { toast('댓글 내용을 입력하세요','err'); return; }
+  const r = await fetch(`/api/comments/${postId}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ content })
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) { el.value = ''; el.style.height = 'auto'; loadComments(postId); }
+  else toast(r.error || '오류','err');
+}
+
+async function submitReply(postId, commentId) {
+  const el = document.getElementById(`replyInput-${commentId}`);
+  if (!el) return;
+  const content = el.value.trim();
+  if (!content) { toast('답글 내용을 입력하세요','err'); return; }
+  const r = await fetch(`/api/comments/${postId}/${commentId}/reply`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ content })
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) { document.getElementById(`replyForm-${commentId}`).innerHTML = ''; loadComments(postId); }
+  else toast(r.error || '오류','err');
+}
+
+async function deleteComment(postId, commentId) {
+  if (!confirm('댓글을 삭제하시겠습니까?')) return;
+  const r = await fetch(`/api/comments/${postId}/${commentId}`, {method:'DELETE'}).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) loadComments(postId);
+  else toast(r.error || '삭제 실패','err');
+}
+
+async function deleteReply(postId, commentId, replyId) {
+  if (!confirm('답글을 삭제하시겠습니까?')) return;
+  const r = await fetch(`/api/comments/${postId}/${commentId}/${replyId}`, {method:'DELETE'}).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) loadComments(postId);
+  else toast(r.error || '삭제 실패','err');
 }
 
 async function deletePost(id, board) {
