@@ -1049,26 +1049,50 @@ async function loadCommunity(board) {
   wrap.innerHTML = html;
 }
 
-function getYoutubeId(text) {
-  const m = text.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
+// ── 링크 자동 임베드 ──
+const ytEmbed = id => `<div class="comm-yt-embed"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe></div>`;
+
+const EMBED_RULES = [
+  // YouTube
+  { name:'youtube', test: u => { const m=u.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/); return m?m[1]:null; },
+    render: id => ytEmbed(id) },
+  // Twitch 클립
+  { name:'twitch-clip', test: u => { const m=u.match(/clips\.twitch\.tv\/([A-Za-z0-9_-]+)/); return m?m[1]:null; },
+    render: slug => `<div class="comm-yt-embed"><iframe src="https://clips.twitch.tv/embed?clip=${slug}&parent=${location.hostname}" allowfullscreen></iframe></div>` },
+  // Twitch 채널 라이브
+  { name:'twitch-live', test: u => { const m=u.match(/twitch\.tv\/([A-Za-z0-9_]+)(?:\s|$)/); return (m&&m[1]!=='clips')?m[1]:null; },
+    render: ch => `<div class="comm-yt-embed"><iframe src="https://player.twitch.tv/?channel=${ch}&parent=${location.hostname}" allowfullscreen></iframe></div>` },
+  // 치지직 클립
+  { name:'chzzk-clip', test: u => { const m=u.match(/chzzk\.naver\.com\/clips\/([A-Za-z0-9_-]+)/); return m?m[1]:null; },
+    render: id => `<div style="margin:8px 0"><a href="https://chzzk.naver.com/clips/${id}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,124,.1);border:1px solid rgba(0,255,124,.3);border-radius:8px;padding:10px 16px;color:#00ff7c;text-decoration:none;font-size:.9rem">▶ 치지직 클립 보기</a></div>` },
+  // 직접 이미지 URL
+  { name:'img-url', test: u => /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i.test(u)?u:null,
+    render: u => `<img src="${u}" style="max-width:100%;max-height:480px;border-radius:8px;margin:6px 0;display:block;cursor:zoom-in" onclick="window.open('${u}','_blank')">` },
+  // 직접 동영상 URL
+  { name:'video-url', test: u => /^https?:\/\/.+\.(mp4|webm|ogg)(\?.*)?$/i.test(u)?u:null,
+    render: u => `<video src="${u}" controls style="max-width:100%;border-radius:8px;margin:6px 0"></video>` },
+];
+
+const isUrl = s => /^https?:\/\//i.test(s);
 
 function renderPostContent(content) {
   if (!content) return '';
-  const lines = content.split('\n');
-  let html = '';
-  const usedYt = new Set();
-  for (const line of lines) {
-    const ytId = getYoutubeId(line.trim());
-    if (ytId && !usedYt.has(ytId)) {
-      usedYt.add(ytId);
-      html += `<div class="comm-yt-embed"><iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe></div>`;
-    } else {
-      html += `<div>${escapeHtml(line)}</div>`;
+  const used = new Set();
+  return content.split('\n').map(line => {
+    const t = line.trim();
+    if (isUrl(t)) {
+      for (const rule of EMBED_RULES) {
+        const key = rule.test(t);
+        if (key && !used.has(rule.name + ':' + key)) {
+          used.add(rule.name + ':' + key);
+          return rule.render(key);
+        }
+      }
+      // 일반 링크
+      return `<div><a href="${t}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;word-break:break-all">${escapeHtml(t)}</a></div>`;
     }
-  }
-  return html;
+    return line ? `<div>${escapeHtml(line)}</div>` : '<br>';
+  }).join('');
 }
 
 async function showPost(id, board) {
