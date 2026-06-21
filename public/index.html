@@ -179,13 +179,14 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .h-section{font-size:18px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
 .stat-val{font-size:36px;font-weight:700;letter-spacing:-.03em;margin-top:8px}
-.main-grid{display:grid;grid-template-columns:2fr 1fr;gap:32px}
+.main-grid{display:grid;grid-template-columns:2fr 1fr;gap:32px;min-width:0}
+.main-grid>*{min-width:0}
 .live-match-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-.ann-section{margin-top:20px}
-.ann-scroll{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+.ann-section{margin-top:20px;min-width:0;overflow:hidden}
+.ann-scroll{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 .ann-scroll::-webkit-scrollbar{height:4px}
-.ann-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
-.ann-card{flex-shrink:0;width:280px;scroll-snap-align:start;display:flex;flex-direction:column;min-height:160px}
+.ann-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:2px}
+.ann-card{flex-shrink:0;width:260px;scroll-snap-align:start;display:flex;flex-direction:column;min-height:160px}
 .side-stack{display:flex;flex-direction:column;gap:24px}
 .list-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .list-item:last-child{border-bottom:none;padding-bottom:0}
@@ -1397,6 +1398,9 @@ async function loadSnapshot(){
   }
 }
 
+function cleanMentions(text){
+  return (text||'').replace(/<@[!&]?\d+>/g,'').replace(/<#\d+>/g,'').replace(/\s+/g,' ').trim();
+}
 async function loadAnnouncements(){
   try{
     const r = await fetch('/api/announcements');
@@ -1413,13 +1417,15 @@ async function loadAnnouncements(){
       return;
     }
     wrap.innerHTML = items.map(it => {
-      let descHtml = escapeHtml(it.body || '');
+      const title = cleanMentions(it.title);
+      const body  = cleanMentions(it.body);
+      let descHtml = escapeHtml(body);
       if(it.prize) descHtml += `<br><b style="color:#ffd700">🏆 ${escapeHtml(it.prize)}</b>`;
       return `<div class="card card-gradient-purple ann-card">
-        <div class="card-label" style="opacity:.9">EVENT MATCH</div>
-        <div class="card-title">${escapeHtml(it.title||'공지사항')}</div>
-        <div class="card-desc">${descHtml||'내용 없음'}</div>
-        <div class="card-footer-link" style="margin-top:auto">${relTime(it.at)} · 디스코드 공지</div>
+        <div class="card-label" style="opacity:.9">공지사항</div>
+        <div class="card-title" style="font-size:15px;word-break:break-word">${escapeHtml(title||'공지')}</div>
+        <div class="card-desc" style="font-size:13px;word-break:break-word">${descHtml||'내용 없음'}</div>
+        <div class="card-footer-link" style="margin-top:auto;font-size:12px">${relTime(it.at)} · 디스코드 공지</div>
       </div>`;
     }).join('');
   }catch(e){
