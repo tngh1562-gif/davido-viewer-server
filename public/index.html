@@ -862,7 +862,7 @@ function cancelChzzkLogin() {
 
 function copyCode() {
   if (!_currentCode) return;
-  navigator.clipboard.writeText(`!로그인 ${_currentCode}`)
+  navigator.clipboard.writeText(`!인증 ${_currentCode}`)
     .then(() => { document.querySelector('.code-copy').textContent = '복사됨!'; setTimeout(()=>document.querySelector('.code-copy').textContent='클릭하여 복사',2000); })
     .catch(() => {});
 }
