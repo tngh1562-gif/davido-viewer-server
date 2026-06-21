@@ -732,12 +732,22 @@ app.post('/api/posts', (req, res) => {
   if (!content?.trim() && !(req.body.images?.length)) return res.json({ ok: false, error: '내용을 입력하세요' });
   if (title.length > 100) return res.json({ ok: false, error: '제목 100자 이내' });
   if ((content||'').length > 3000) return res.json({ ok: false, error: '내용 3000자 이내' });
-  // 이미지 검증: 반드시 data:image/ 로 시작하는 base64만 허용
+  // 이미지 검증
   const images = (req.body.images || [])
     .filter(img => typeof img === 'string' && /^data:image\/(jpeg|jpg|png|gif|webp|bmp);base64,/.test(img) && img.length < 4 * 1024 * 1024)
     .slice(0, 5);
+  const isHtml = !!req.body.isHtml;
+  // HTML 콘텐츠 서버 정제 (XSS 방지)
+  const rawContent = (content || '').slice(0, 30000);
+  const safeContent = isHtml ? rawContent
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe(?!\s+src="https:\/\/(www\.youtube\.com|clips\.twitch\.tv|player\.twitch\.tv))[\s\S]*?>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript:/gi, 'blocked:')
+    .replace(/<(object|embed|applet|meta|link|base)[^>]*>/gi, '')
+    : rawContent;
   const data = readJSON(POSTS_FILE, { posts: [] });
-  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim().slice(0, 100), content: (content||'').trim().slice(0, 3000), images, author: name, createdAt: Date.now() };
+  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim().slice(0, 100), content: safeContent.trim(), isHtml, images, author: name, createdAt: Date.now() };
   data.posts.unshift(post);
   data.posts = data.posts.slice(0, 1000);
   writeJSON(POSTS_FILE, data);
