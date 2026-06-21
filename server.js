@@ -125,6 +125,16 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: https:; " +
+    "media-src 'self' https:; " +
+    "frame-src https://www.youtube.com https://clips.twitch.tv https://player.twitch.tv https://www.tiktok.com; " +
+    "connect-src 'self' wss:;"
+  );
   next();
 });
 // 전체 IP 레이트 리밋 (분당 300회)
@@ -162,7 +172,7 @@ app.get('/api/auth/poll/:token', (req, res) => {
   const sessionToken = makeSessionToken(name);
   const { viewers, viewer } = getViewer(name);
   saveViewer(viewers);
-  res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; Max-Age=${10 * 365 * 24 * 3600}`);
+  res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=${10 * 365 * 24 * 3600}`);
   res.json({ ok: true, status: 'confirmed', viewer });
 });
 
@@ -189,7 +199,7 @@ app.post('/api/login', (req, res) => {
   const token = makeSessionToken(n);
   const { viewers, viewer } = getViewer(n);
   saveViewer(viewers);
-  res.setHeader('Set-Cookie', `vsession=${token}; Path=/; HttpOnly; Max-Age=${30*24*3600}`);
+  res.setHeader('Set-Cookie', `vsession=${token}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=${30*24*3600}`);
   res.json({ ok: true, viewer });
 });
 
