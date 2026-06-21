@@ -13,6 +13,7 @@ const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 4500;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const INHOUSE_SERVER_URL = (process.env.INHOUSE_SERVER_URL || '').replace(/\/+$/, '');
+const BOT_API_URL = (process.env.BOT_API_URL || '').replace(/\/+$/, '');
 
 // ── 배팅 밸런스 상수 ──
 const BET_MAX      = 20;    // 1판 최대 배팅 포인트
@@ -520,4 +521,20 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'init', betting, shop }));
 });
 
-server.listen(PORT, () => console.log(`davido-viewer server on :${PORT}`));
+server.listen(PORT, () => {
+  console.log(`davido-viewer server on :${PORT}`);
+  // 서버 시작 시 봇에 공지 동기화 요청
+  if (BOT_API_URL) {
+    setTimeout(() => {
+      const url = new URL(`${BOT_API_URL}/api/sync-announcements`);
+      const lib = url.protocol === 'https:' ? https : http;
+      const req = lib.request(url, { method: 'POST', headers: { 'Content-Length': '0' } }, res => {
+        let raw = '';
+        res.on('data', c => raw += c);
+        res.on('end', () => console.log('[ANNOUNCE] 시작 시 동기화:', raw.slice(0, 80)));
+      });
+      req.on('error', e => console.log('[ANNOUNCE] 봇 동기화 요청 실패:', e.message));
+      req.end();
+    }, 5000); // 봇 준비 대기
+  }
+});
