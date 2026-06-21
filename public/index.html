@@ -1030,6 +1030,7 @@ async function placeBet(team) {
       if (msg.type === 'init' && msg.betting) renderBetting(msg.betting);
       if (msg.type === 'bet_update') renderBetting(msg);
       if (msg.type === 'points_update' && msg.name === myName) savePts(msg.points);
+      if (msg.type === 'feed_update' && msg.items) renderFeed(msg.items);
       if (msg.type === 'timing_won' && currentGame === 'timing') {
         tgSession = null; if (tgRaf){cancelAnimationFrame(tgRaf);tgRaf=null;}
         const wrap = document.getElementById('tgWrap');
@@ -1866,6 +1867,25 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+function renderFeed(items) {
+  const feedEl = document.getElementById('feedList');
+  if (!feedEl) return;
+  if (!items || !items.length) {
+    feedEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">아직 활동 기록이 없습니다</span></div></div>`;
+    return;
+  }
+  feedEl.innerHTML = items.slice(0,10).map(f => {
+    const t = relTime(f.at);
+    const reason = f.reason || '';
+    return `<div class="list-item">
+      <div class="list-item-left" style="gap:8px">
+        <span class="text-muted" style="font-size:11px;white-space:nowrap;flex-shrink:0">${t}</span>
+        <span style="font-size:13px"><b>${escapeHtml(f.viewer)}</b> ${escapeHtml(reason)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 async function loadRanking(){
   try{
     const d = await fetch('/api/ranking').then(r=>r.json());
@@ -1894,22 +1914,7 @@ async function loadSnapshot(){
     if(svEl) svEl.innerHTML = fmtNum(d.viewers_total)+' <span style="font-size:16px;font-weight:500;opacity:.8">명</span>';
 
     // Feed
-    const feedEl = document.getElementById('feedList');
-    if(d.feed && d.feed.length){
-      feedEl.innerHTML = d.feed.slice(0,6).map(f=>{
-        const t = relTime(f.at);
-        let msg;
-        if(f.kind==='shop'){
-          msg = `<b>${escapeHtml(f.viewer)}</b>님이 <b>${escapeHtml(f.item)}</b> 구매`;
-        } else {
-          const sign = f.amount>=0 ? '+' : '';
-          msg = `<b>${escapeHtml(f.viewer)}</b> ${sign}${fmtNum(f.amount)}P · ${escapeHtml(f.reason||'')}`;
-        }
-        return `<div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px;white-space:nowrap">${t}</span><span style="font-size:13px">${msg}</span></div></div>`;
-      }).join('');
-    } else {
-      feedEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">아직 활동 기록이 없습니다</span></div></div>`;
-    }
+    if(d.feed) renderFeed(d.feed);
 
   }catch(e){
     console.warn('[snapshot]', e.message);
