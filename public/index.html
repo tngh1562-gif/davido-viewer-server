@@ -196,10 +196,13 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 /* BETTING HERO */
 .betting-hero{background:linear-gradient(to right,rgba(13,82,214,.1),rgba(255,71,87,.1));border:1px solid var(--surface-border);border-radius:var(--radius);padding:32px;text-align:center;margin-bottom:40px}
 .vs-container{display:flex;justify-content:center;align-items:flex-start;gap:32px;margin-bottom:24px}
-.team{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.team{font-size:22px;font-weight:700;letter-spacing:-.02em;min-width:180px}
 .team.blue{color:#4da3ff}.team.red{color:#ff6b81}
-.team-members{font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.7;font-weight:500}
-.vs-text{font-size:16px;color:var(--text-muted);font-weight:600;margin-top:6px}
+.team-members{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.team-member-item{font-size:13px;color:#fff;font-weight:600;padding:5px 10px;background:rgba(255,255,255,.07);border-radius:6px;text-align:center}
+.team.blue .team-member-item{border-left:3px solid #4da3ff}
+.team.red .team-member-item{border-left:3px solid #ff6b81}
+.vs-text{font-size:20px;color:var(--text-muted);font-weight:800;padding:0 16px;align-self:flex-start;margin-top:4px}
 .bet-amt-row{display:flex;gap:8px;justify-content:center;margin:16px 0 8px}
 .bet-chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--text-main);font-size:.85rem;font-weight:800;padding:8px 18px;cursor:pointer;font-family:inherit;transition:all .15s}
 .bet-chip:hover,.bet-chip.active{background:rgba(255,255,255,.18);border-color:#fff}
@@ -957,8 +960,8 @@ function renderBetting(data) {
   // 멤버 라인업
   const blueMembers = d.blueTeam?.members || [];
   const redMembers  = d.redTeam?.members  || [];
-  document.getElementById('betBlueMembers').innerHTML = blueMembers.map(m=>`<div>${escapeHtml(m)}</div>`).join('');
-  document.getElementById('betRedMembers').innerHTML  = redMembers.map(m=>`<div>${escapeHtml(m)}</div>`).join('');
+  document.getElementById('betBlueMembers').innerHTML = blueMembers.map(m=>`<div class="team-member-item">${escapeHtml(m)}</div>`).join('');
+  document.getElementById('betRedMembers').innerHTML  = redMembers.map(m=>`<div class="team-member-item">${escapeHtml(m)}</div>`).join('');
 
   // 배당률
   const bets = d.bets || {};
