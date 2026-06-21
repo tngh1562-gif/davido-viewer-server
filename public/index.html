@@ -1113,7 +1113,7 @@ async function tgStart(targetMs) {
     document.getElementById('tgStartBtn').textContent = '도전하기 (1P 차감)';
     return;
   }
-  savePts(r.viewer.points);
+  if (r.points != null) savePts(r.points);
   tgSession = { sessionId: r.sessionId, startedAt: r.startedAt, targetMs };
 
   // 타이머 표시 + STOP 버튼
@@ -1149,7 +1149,7 @@ async function tgStop() {
   if (!resultEl) return;
 
   if (r.won) {
-    savePts((pts||0) + 100);
+    if (r.points != null) savePts(r.points); else savePts((pts||0) + 100);
     resultEl.innerHTML = `<div style="background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(168,85,247,.3));border:1px solid #a855f7;border-radius:12px;padding:20px">
       <div style="font-size:32px">🏆</div>
       <div style="font-size:20px;font-weight:900;color:#c4b5fd">당첨! +100P</div>

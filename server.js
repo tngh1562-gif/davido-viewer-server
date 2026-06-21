@@ -526,23 +526,25 @@ app.get('/api/game/timing/state', (req, res) => {
   res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
 });
 
-app.post('/api/game/timing/start', (req, res) => {
+app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
-  const { viewers, viewer } = getViewer(name);
-  if (viewer.points < 1) return res.json({ ok: false, error: '포인트 부족 (1P 필요)' });
-  viewer.points -= 1;
-  saveViewer(viewers);
-  broadcast({ type: 'points_update', name, points: viewer.points });
-  const sessionId = crypto.randomBytes(16).toString('hex');
-  const startedAt = Date.now();
-  timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
-  setTimeout(() => timingSessions.delete(sessionId), 30000);
-  res.json({ ok: true, sessionId, startedAt, viewer });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount: 1 },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    const startedAt = Date.now();
+    timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
+    setTimeout(() => timingSessions.delete(sessionId), 30000);
+    res.json({ ok: true, sessionId, startedAt, points: r.points });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/game/timing/press', (req, res) => {
+app.post('/api/game/timing/press', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   const { sessionId } = req.body;
@@ -554,14 +556,17 @@ app.post('/api/game/timing/press', (req, res) => {
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
   if (diff <= 10) { // ±0.01초 (표시 숫자 정확 일치)
-    const { viewers, viewer } = getViewer(name);
-    viewer.points += 100;
-    saveViewer(viewers);
-    broadcast({ type: 'points_update', name, points: viewer.points });
+    let newPoints = null;
+    try {
+      const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+        { nickname: name, amount: 100 },
+        { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+      if (r.ok) newPoints = r.points;
+    } catch {}
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     writeJSON(TIMING_WIN_FILE, { date: getTodayKST(), winner });
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
-    return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, viewer });
+    return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
   }
   return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
 });
