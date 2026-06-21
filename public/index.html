@@ -812,7 +812,7 @@ async function refreshMe(){
 // 페이지 로드 시 세션 확인
 (async()=>{
   const r = await fetch('/api/me').then(r=>r.json()).catch(()=>({ok:false}));
-  if(r.ok && r.viewer){ showApp(r.viewer, r.inhousePoints); setInterval(refreshMe, 5000); }
+  if(r.ok && r.viewer){ showApp(r.viewer, r.inhousePoints); setInterval(refreshMe, 3000); }
   else { document.getElementById('loginScreen').style.display = 'flex'; }
 })();
 
