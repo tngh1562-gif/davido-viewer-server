@@ -98,7 +98,7 @@ function broadcast(data) {
 }
 
 // ── Middleware ──
-app.use(express.json());
+app.use(express.json({ limit: '20mb' })); // 이미지 base64 포함
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── 치지직 채팅 인증 ──
@@ -679,11 +679,12 @@ app.post('/api/posts', (req, res) => {
   const { board, title, content } = req.body;
   if (!BOARDS.includes(board)) return res.json({ ok: false, error: '잘못된 게시판' });
   if (!title?.trim()) return res.json({ ok: false, error: '제목을 입력하세요' });
-  if (!content?.trim()) return res.json({ ok: false, error: '내용을 입력하세요' });
+  if (!content?.trim() && !(req.body.images?.length)) return res.json({ ok: false, error: '내용을 입력하세요' });
   if (title.length > 100) return res.json({ ok: false, error: '제목 100자 이내' });
-  if (content.length > 3000) return res.json({ ok: false, error: '내용 3000자 이내' });
+  if ((content||'').length > 3000) return res.json({ ok: false, error: '내용 3000자 이내' });
+  const images = (req.body.images || []).slice(0, 5); // 최대 5장
   const data = readJSON(POSTS_FILE, { posts: [] });
-  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim(), content: content.trim(), author: name, createdAt: Date.now() };
+  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim(), content: (content||'').trim(), images, author: name, createdAt: Date.now() };
   data.posts.unshift(post);
   data.posts = data.posts.slice(0, 1000);
   writeJSON(POSTS_FILE, data);
