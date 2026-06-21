@@ -809,6 +809,7 @@ function showApp(viewer, inhousePoints){
   document.getElementById('mainNav').style.display = '';
   document.getElementById('mainContent').style.display = '';
   loadSnapshot();
+  loadRanking();
   loadAnnouncements();
 }
 
@@ -1173,6 +1174,23 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+async function loadRanking(){
+  try{
+    const d = await fetch('/api/ranking').then(r=>r.json());
+    const rankEl = document.getElementById('rankList');
+    if(!rankEl) return;
+    if(d.ranking && d.ranking.length){
+      const medals = ['#ffd700','#c0c0c0','#cd7f32'];
+      rankEl.innerHTML = d.ranking.slice(0,7).map((r,i)=>{
+        const c = medals[i] || 'var(--text-muted)';
+        return `<div class="list-item"><div class="list-item-left"><span style="color:${c};font-weight:bold;width:20px">${i+1}</span><span style="font-size:14px;font-weight:500">${escapeHtml(r.name)}</span></div><span class="text-green" style="font-weight:600;font-size:14px">${fmtNum(r.points)} P</span></div>`;
+      }).join('');
+    } else {
+      rankEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">랭킹 데이터 없음</span></div></div>`;
+    }
+  }catch{}
+}
+
 async function loadSnapshot(){
   try{
     const r = await fetch('/api/inhouse/snapshot');
@@ -1221,17 +1239,6 @@ async function loadSnapshot(){
       feedEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">아직 활동 기록이 없습니다</span></div></div>`;
     }
 
-    // Ranking
-    const rankEl = document.getElementById('rankList');
-    if(d.ranking && d.ranking.length){
-      const medals = ['#ffd700','#c0c0c0','#cd7f32'];
-      rankEl.innerHTML = d.ranking.slice(0,7).map((r,i)=>{
-        const c = medals[i] || 'var(--text-muted)';
-        return `<div class="list-item"><div class="list-item-left"><span style="color:${c};font-weight:bold;width:20px">${i+1}</span><span style="font-size:14px;font-weight:500">${escapeHtml(r.name)}</span></div><span class="text-green" style="font-weight:600;font-size:14px">${fmtNum(r.points)} P</span></div>`;
-      }).join('');
-    } else {
-      rankEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">랭킹 데이터 없음</span></div></div>`;
-    }
   }catch(e){
     console.warn('[snapshot]', e.message);
     document.getElementById('statViewers').innerHTML = '? <span style="font-size:14px;color:#ff6b81">연결 안됨</span>';
@@ -1277,6 +1284,7 @@ async function loadAnnouncements(){
 loadSnapshot();
 loadAnnouncements();
 setInterval(loadSnapshot, 20000);
+setInterval(loadRanking, 30000);
 setInterval(loadAnnouncements, 30000);
 
 </script>

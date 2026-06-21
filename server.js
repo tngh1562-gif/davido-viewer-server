@@ -472,27 +472,12 @@ app.post('/api/game/roulette',(req,res)=>{
 const ANN_FILE = path.join(DATA_DIR, 'announcements.json');
 if (!fs.existsSync(ANN_FILE)) writeJSON(ANN_FILE, { items: [] });
 
-app.get('/api/inhouse/snapshot', async (req, res) => {
+app.get('/api/inhouse/snapshot', (req, res) => {
   const viewers  = readJSON(VIEWERS_FILE, {});
   const betting  = readJSON(BETTING_FILE, {});
 
-  // 등록된 시청자 수
   const viewers_total = Object.keys(viewers).length;
-
-  // 포인트 랭킹 — 인하우스 DB에서 가져오기
-  let ranking = [];
-  if (INHOUSE_SERVER_URL) {
-    try {
-      const db = await getJson(`${INHOUSE_SERVER_URL}/api/inhouse-db`);
-      if (Array.isArray(db.viewers)) {
-        ranking = db.viewers
-          .map(v => ({ name: (v.name || '').replace(/#.+$/, '').trim(), points: Math.max(0, Number(v.pass) || 0) }))
-          .filter(v => v.name && v.points > 0)
-          .sort((a, b) => b.points - a.points)
-          .slice(0, 10);
-      }
-    } catch {}
-  }
+  const ranking = [];
 
   // 실시간 피드: 최근 배팅 내역
   const feed = [];
@@ -588,6 +573,24 @@ app.get('/api/inhouse-lineup', async (req, res) => {
     const toNames = arr => (arr || []).map(p => (p.name || p.chzzk || '?').replace(/#.+$/, '').trim());
     res.json({ ok: true, blue: toNames(data.curBlue), red: toNames(data.curRed) });
   } catch(e) { res.json({ ok: false, blue: [], red: [], error: e.message }); }
+});
+
+// 포인트 랭킹 — 인하우스 DB에서 가져오기 (별도 엔드포인트, 타임아웃 3초)
+app.get('/api/ranking', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, ranking: [] });
+  try {
+    const db = await Promise.race([
+      getJson(`${INHOUSE_SERVER_URL}/api/inhouse-db`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+    ]);
+    if (!Array.isArray(db.viewers)) return res.json({ ok: false, ranking: [] });
+    const ranking = db.viewers
+      .map(v => ({ name: (v.name || '').replace(/#.+$/, '').trim(), points: Math.max(0, Number(v.pass) || 0) }))
+      .filter(v => v.name && v.points > 0)
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 10);
+    res.json({ ok: true, ranking });
+  } catch(e) { res.json({ ok: false, ranking: [], error: e.message }); }
 });
 
 // ── Announcements — Bot에서 직접 가져오기 (파일 저장 없음) ──
