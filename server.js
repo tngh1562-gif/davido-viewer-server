@@ -32,7 +32,8 @@ try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
 if (!fs.existsSync(POSTS_FILE)) writeJSON(POSTS_FILE, { posts: [] });
 
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
-const SESSION_SECRET = process.env.SESSION_SECRET || 'davido-viewer-secret-2025';
+const SESSION_SECRET  = process.env.SESSION_SECRET  || 'davido-viewer-secret-2025';
+const ADMIN_SECRET    = process.env.ADMIN_SECRET    || 'davido-admin';
 
 function readJSON(file, def) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -97,8 +98,40 @@ function broadcast(data) {
   wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(msg); });
 }
 
+// ── 보안 경고 ──
+if (!process.env.SESSION_SECRET) console.warn('[SECURITY] SESSION_SECRET 환경변수 미설정 — Railway Variables에 추가하세요');
+if (!process.env.VIEWER_SERVER_SECRET) console.warn('[SECURITY] VIEWER_SERVER_SECRET 환경변수 미설정');
+
+// ── 인메모리 레이트 리미터 ──
+const rlStore = new Map();
+function rl(key, limit, windowSec) {
+  const now = Date.now(), win = windowSec * 1000;
+  let rec = rlStore.get(key);
+  if (!rec || now > rec.reset) rec = { count: 0, reset: now + win };
+  rec.count++;
+  rlStore.set(key, rec);
+  return rec.count <= limit;
+}
+// 10분마다 만료된 항목 정리
+setInterval(() => { const now = Date.now(); for (const [k,v] of rlStore) if (now > v.reset + 60000) rlStore.delete(k); }, 600000);
+
+function getIp(req) { return String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim(); }
+
 // ── Middleware ──
 app.use(express.json({ limit: '20mb' })); // 이미지 base64 포함
+// 보안 헤더
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+// 전체 IP 레이트 리밋 (분당 300회)
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && !rl('ip:' + getIp(req), 300, 60)) return res.status(429).json({ ok: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' });
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── 치지직 채팅 인증 ──
@@ -245,7 +278,7 @@ function startBetTimer() {
 app.post('/api/admin/bet', (req, res) => {
   const { action, blueTeam, redTeam, result } = req.body;
   const secret = req.headers['x-admin-secret'];
-  if (secret !== (process.env.ADMIN_SECRET || 'davido-admin')) return res.status(403).json({ ok: false });
+  if (secret !== (ADMIN_SECRET)) return res.status(403).json({ ok: false });
 
   const betting = readJSON(BETTING_FILE, {});
 
@@ -300,7 +333,7 @@ app.post('/api/admin/bet', (req, res) => {
 // ── Admin: give points ──
 app.post('/api/admin/points', (req, res) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== (process.env.ADMIN_SECRET || 'davido-admin')) return res.status(403).json({ ok: false });
+  if (secret !== (ADMIN_SECRET)) return res.status(403).json({ ok: false });
   const { name, delta } = req.body;
   const { viewers, viewer } = getViewer(name);
   viewer.points = Math.max(0, (viewer.points || 0) + delta);
@@ -526,6 +559,10 @@ app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
+  // 하루 50회 제한 (브루트포스 방지)
+  if (!rl(`timing-day:${name}`, 50, 86400)) return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
+  // 분당 5회 제한
+  if (!rl(`timing-min:${name}`, 5, 60)) return res.status(429).json({ ok: false, error: '너무 빠르게 시도하고 있습니다. 잠시 후 다시 시도하세요.' });
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
@@ -676,15 +713,21 @@ app.get('/api/posts', async (req, res) => {
 app.post('/api/posts', (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  // 분당 2회, 하루 20회 제한
+  if (!rl(`post-min:${name}`, 2, 60)) return res.status(429).json({ ok: false, error: '너무 빠르게 게시글을 작성하고 있습니다. 잠시 후 다시 시도하세요.' });
+  if (!rl(`post-day:${name}`, 20, 86400)) return res.status(429).json({ ok: false, error: '오늘 게시글 작성 한도를 초과했습니다 (하루 20개).' });
   const { board, title, content } = req.body;
   if (!BOARDS.includes(board)) return res.json({ ok: false, error: '잘못된 게시판' });
   if (!title?.trim()) return res.json({ ok: false, error: '제목을 입력하세요' });
   if (!content?.trim() && !(req.body.images?.length)) return res.json({ ok: false, error: '내용을 입력하세요' });
   if (title.length > 100) return res.json({ ok: false, error: '제목 100자 이내' });
   if ((content||'').length > 3000) return res.json({ ok: false, error: '내용 3000자 이내' });
-  const images = (req.body.images || []).slice(0, 5); // 최대 5장
+  // 이미지 검증: 반드시 data:image/ 로 시작하는 base64만 허용
+  const images = (req.body.images || [])
+    .filter(img => typeof img === 'string' && /^data:image\/(jpeg|jpg|png|gif|webp|bmp);base64,/.test(img) && img.length < 4 * 1024 * 1024)
+    .slice(0, 5);
   const data = readJSON(POSTS_FILE, { posts: [] });
-  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim(), content: (content||'').trim(), images, author: name, createdAt: Date.now() };
+  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim().slice(0, 100), content: (content||'').trim().slice(0, 3000), images, author: name, createdAt: Date.now() };
   data.posts.unshift(post);
   data.posts = data.posts.slice(0, 1000);
   writeJSON(POSTS_FILE, data);
