@@ -25,6 +25,9 @@ const VIEWERS_FILE  = path.join(DATA_DIR, 'viewers.json');
 const BETTING_FILE  = path.join(DATA_DIR, 'betting.json');
 const SHOP_FILE     = path.join(DATA_DIR, 'shop.json');
 
+// data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
+
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
 const SESSION_SECRET = process.env.SESSION_SECRET || 'davido-viewer-secret-2025';
 
