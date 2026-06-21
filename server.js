@@ -210,6 +210,30 @@ app.post('/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+function postJson(url, payload, extraHeaders) {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const body = Buffer.from(JSON.stringify(payload || {}), 'utf8');
+    const lib = target.protocol === 'https:' ? https : http;
+    const req = lib.request(target, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': body.length, ...(extraHeaders||{}) },
+      timeout: 8000,
+    }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+        catch { reject(new Error('parse_error')); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
 function getJson(url) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http;
