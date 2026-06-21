@@ -553,7 +553,7 @@ app.post('/api/game/timing/press', (req, res) => {
   if (getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
-  if (diff <= 300) { // ±0.3초
+  if (diff <= 10) { // ±0.01초 (표시 숫자 정확 일치)
     const { viewers, viewer } = getViewer(name);
     viewer.points += 100;
     saveViewer(viewers);

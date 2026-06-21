@@ -664,7 +664,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
         <div class="card-label">DAILY JACKPOT</div>
         <div class="card-title">타이밍 복권</div>
-        <div class="card-desc" style="color:rgba(255,255,255,.8)">⏱ 오늘의 시간을 맞춰라<br>선착순 1명 <b>100P</b> 획득 · 도전 1P</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">⏱ 오늘의 시간을 정확히 맞춰라<br>선착순 1명 <b>100P</b> · 도전 1P</div>
         <div class="card-footer-link" style="color:#c4b5fd">도전하기 +</div>
       </div>
     </div>
@@ -1091,7 +1091,7 @@ function renderTiming(wrap, state) {
     <div style="text-align:center;padding:20px" id="tgWrap">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
       <div class="tg-target">${target}초</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP 버튼을 누르세요 · ±0.3초 이내 선착순 1명 100P</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">타이머 숫자가 목표와 정확히 일치할 때 STOP · 선착순 1명 100P</div>
       <div id="tgPhase">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
         <div class="tg-timer" id="tgTimerDisp">00.00</div>
@@ -1165,7 +1165,7 @@ async function tgStop() {
     const sign = elapsed > r.targetMs ? '+' : '-';
     resultEl.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px">
       <div style="font-size:15px;color:var(--text-muted)">나의 기록: <b style="color:#fff">${fmtTG(elapsed)}초</b></div>
-      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초 (목표 ±0.300초)</div>
+      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초 (정확히 맞춰야 당첨)</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:8px">아쉽네요! 다시 도전해보세요</div>
     </div>`;
     document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs})">다시 도전 (1P)</button>`;
