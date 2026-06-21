@@ -490,6 +490,15 @@ app.post('/api/admin/announce', (req, res) => {
   res.json({ ok: true });
 });
 
+// 봇 시작 시 공지 일괄 복원 (기존 항목 교체)
+app.post('/api/admin/announcements/reset', (req, res) => {
+  const secret = req.headers['x-admin-secret'];
+  if (secret !== (process.env.VIEWER_SERVER_SECRET || 'davido-admin')) return res.status(403).json({ ok: false });
+  const items = Array.isArray(req.body) ? req.body : [];
+  writeJSON(ANN_FILE, { items: items.slice(0, 10) });
+  res.json({ ok: true, count: items.length });
+});
+
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
