@@ -181,6 +181,11 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .stat-val{font-size:36px;font-weight:700;letter-spacing:-.03em;margin-top:8px}
 .main-grid{display:grid;grid-template-columns:2fr 1fr;gap:32px}
 .live-match-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.ann-section{margin-top:20px}
+.ann-scroll{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+.ann-scroll::-webkit-scrollbar{height:4px}
+.ann-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+.ann-card{flex-shrink:0;width:280px;scroll-snap-align:start;display:flex;flex-direction:column;min-height:160px}
 .side-stack{display:flex;flex-direction:column;gap:24px}
 .list-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .list-item:last-child{border-bottom:none;padding-bottom:0}
@@ -550,12 +555,16 @@ input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;cursor:po
           <div class="card-desc" id="inhouseStatusDesc">곧 내전이 시작됩니다</div>
           <div class="card-footer-link">상세 보기 +</div>
         </div>
-        <div class="card card-gradient-purple" id="cardAnnouncement">
-          <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
-          <div class="card-label" style="opacity:.9">EVENT MATCH</div>
-          <div class="card-title" id="annTitle">공지사항</div>
-          <div class="card-desc" id="annDesc">새 공지를 기다리는 중...</div>
-          <div class="card-footer-link" id="annFooter">디스코드 공지 연동 대기</div>
+      </div>
+      <div class="ann-section">
+        <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
+        <div class="ann-scroll" id="annScroll">
+          <div class="card card-gradient-purple ann-card">
+            <div class="card-label" style="opacity:.9">EVENT MATCH</div>
+            <div class="card-title">공지사항 대기중</div>
+            <div class="card-desc">아직 등록된 공지가 없습니다</div>
+            <div class="card-footer-link" style="margin-top:auto">관리자가 공지를 등록하면 표시됩니다</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1392,18 +1401,27 @@ async function loadAnnouncements(){
   try{
     const r = await fetch('/api/announcements');
     const d = await r.json();
-    const it = (d.items||[])[0];
-    if(!it){
-      document.getElementById('annTitle').textContent = '공지사항 대기중';
-      document.getElementById('annDesc').textContent = '아직 등록된 공지가 없습니다';
-      document.getElementById('annFooter').textContent = '관리자가 공지를 등록하면 표시됩니다';
+    const items = d.items || [];
+    const wrap = document.getElementById('annScroll');
+    if(!items.length){
+      wrap.innerHTML = `<div class="card card-gradient-purple ann-card">
+        <div class="card-label" style="opacity:.9">EVENT MATCH</div>
+        <div class="card-title">공지사항 대기중</div>
+        <div class="card-desc">아직 등록된 공지가 없습니다</div>
+        <div class="card-footer-link" style="margin-top:auto">관리자가 공지를 등록하면 표시됩니다</div>
+      </div>`;
       return;
     }
-    document.getElementById('annTitle').textContent = it.title || '공지사항';
-    let descHtml = escapeHtml(it.body || '');
-    if(it.prize) descHtml += `<br><b style="color:#ffd700">🏆 ${escapeHtml(it.prize)}</b>`;
-    document.getElementById('annDesc').innerHTML = descHtml || '내용 없음';
-    document.getElementById('annFooter').textContent = relTime(it.at) + ' · 디스코드 공지';
+    wrap.innerHTML = items.map(it => {
+      let descHtml = escapeHtml(it.body || '');
+      if(it.prize) descHtml += `<br><b style="color:#ffd700">🏆 ${escapeHtml(it.prize)}</b>`;
+      return `<div class="card card-gradient-purple ann-card">
+        <div class="card-label" style="opacity:.9">EVENT MATCH</div>
+        <div class="card-title">${escapeHtml(it.title||'공지사항')}</div>
+        <div class="card-desc">${descHtml||'내용 없음'}</div>
+        <div class="card-footer-link" style="margin-top:auto">${relTime(it.at)} · 디스코드 공지</div>
+      </div>`;
+    }).join('');
   }catch(e){
     console.warn('[announcements]', e.message);
   }
