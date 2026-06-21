@@ -11,9 +11,19 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 4500;
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const INHOUSE_SERVER_URL = (process.env.INHOUSE_SERVER_URL || '').replace(/\/+$/, '');
 const BOT_API_URL = (process.env.BOT_API_URL || '').replace(/\/+$/, '');
+
+// Railway Volume 또는 환경변수로 DATA_DIR 결정 (배포해도 데이터 유지)
+const IS_RAILWAY = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
+function resolveDataDir() {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (process.env.RAILWAY_VOLUME_MOUNT_PATH) return process.env.RAILWAY_VOLUME_MOUNT_PATH;
+  if (IS_RAILWAY && fs.existsSync('/data')) return '/data';
+  return path.join(__dirname, 'data');
+}
+const DATA_DIR = resolveDataDir();
+console.log(`[DATA] DATA_DIR: ${DATA_DIR}`);
 
 // ── 배팅 밸런스 상수 ──
 const BET_MAX      = 20;    // 1판 최대 배팅 포인트
