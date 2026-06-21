@@ -34,8 +34,9 @@ if (!fs.existsSync(POSTS_FILE))    writeJSON(POSTS_FILE,    { posts: [] });
 if (!fs.existsSync(COMMENTS_FILE)) writeJSON(COMMENTS_FILE, {});
 
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
-const SESSION_SECRET  = process.env.SESSION_SECRET  || 'davido-viewer-secret-2025';
-const ADMIN_SECRET    = process.env.ADMIN_SECRET    || 'davido-admin';
+const SESSION_SECRET        = process.env.SESSION_SECRET        || 'davido-viewer-secret-2025';
+const ADMIN_SECRET          = process.env.ADMIN_SECRET          || 'davido-admin';
+const VIEWER_SERVER_SECRET  = process.env.VIEWER_SERVER_SECRET  || 'davido-admin';
 
 function readJSON(file, def) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
