@@ -257,6 +257,9 @@ app.post('/api/admin/bet', (req, res) => {
       }
     });
     writeJSON(VIEWERS_FILE, viewers);
+  } else if (action === 'ended') {
+    betting.status = 'ended';
+    betting.result = null;
   } else if (action === 'idle') {
     betting.status = 'idle';
   }

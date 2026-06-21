@@ -641,14 +641,6 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         </div>
         <div id="myBetInfo" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
       </div>
-      <!-- 관리자 버튼 -->
-      <div class="admin-bet-row" id="adminBetRow">
-        <button class="admin-btn start" onclick="adminBet('open')">▶ 내전 시작</button>
-        <button class="admin-btn lock" onclick="adminBet('lock')">🔒 배팅 마감</button>
-        <button class="admin-btn end-blue" onclick="adminBet('resolve','blue')">🔵 블루 포인트지급</button>
-        <button class="admin-btn end-red" onclick="adminBet('resolve','red')">🔴 레드 포인트지급</button>
-        <button class="admin-btn reset" onclick="adminBet('idle')">↺ 초기화</button>
-      </div>
     </div>
     <div class="h-section" style="margin-bottom:24px">미니게임 아케이드</div>
     <div class="games-grid">
@@ -946,22 +938,6 @@ async function placeBet(team) {
   }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
   if (r.ok) { toast(`${team==='blue'?'🔵 블루':'🔴 레드'} ${betAmt}P 배팅!`, 'ok'); }
   else { toast(r.error || '배팅 실패', 'err'); }
-}
-
-async function adminBet(action, result) {
-  let blueTeam, redTeam;
-  if (action === 'open') {
-    // 인하우스 라인업 가져오기
-    const lineup = await fetch('/api/inhouse-lineup').then(r=>r.json()).catch(()=>({ok:false,blue:[],red:[]}));
-    blueTeam = { name: '블루팀', members: lineup.blue || [] };
-    redTeam  = { name: '레드팀', members: lineup.red  || [] };
-  }
-  const body = { action, ...(result ? {result} : {}), ...(blueTeam ? {blueTeam, redTeam} : {}) };
-  const r = await fetch('/api/admin/bet', {
-    method:'POST', headers:{'Content-Type':'application/json','x-admin-secret':'davido-admin'},
-    body: JSON.stringify(body)
-  }).then(r=>r.json()).catch(()=>({ok:false}));
-  if (!r.ok) toast('관리자 요청 실패','err');
 }
 
 // WebSocket 실시간 업데이트
