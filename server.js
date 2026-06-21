@@ -595,12 +595,12 @@ app.get('/api/ranking', async (req, res) => {
   } catch(e) { res.json({ ok: false, ranking: [], error: e.message }); }
 });
 
-// ── Announcements — Bot에서 직접 가져오기 (파일 저장 없음) ──
+// ── Announcements — Bot에서 직접 가져오기 (메인 대시보드용, 최대 10개) ──
 app.get('/api/announcements', async (req, res) => {
   if (BOT_API_URL) {
     try {
-      const data = await getJson(`${BOT_API_URL}/api/announcements`);
-      if (data.ok) return res.json({ ok: true, items: data.items || [] });
+      const data = await getJson(`${BOT_API_URL}/api/announcements?limit=10`);
+      if (data.ok) return res.json({ ok: true, items: (data.items || []).slice(0, 10) });
     } catch {}
   }
   // fallback: 로컬 파일
@@ -648,11 +648,12 @@ const BOARDS = ['free', 'recommend', 'inquiry'];
 app.get('/api/posts', async (req, res) => {
   const { board, page = 1 } = req.query;
   if (board === 'notice') {
-    // 공지사항 = 봇 API에서 직접
+    // 공지사항 = 봇 API에서 직접 (커뮤니티는 전체, 메인은 10개)
+    const annLimit = req.query.limit || 100;
     if (!BOT_API_URL) return res.json({ ok: true, posts: [], total: 0 });
     try {
       const d = await Promise.race([
-        getJson(`${BOT_API_URL}/api/announcements`),
+        getJson(`${BOT_API_URL}/api/announcements?limit=${annLimit}`),
         new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
       ]);
       const posts = (d.items || []).map(it => ({
