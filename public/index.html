@@ -1177,7 +1177,11 @@ async function showPost(id, board) {
       <div class="comm-detail-title">${escapeHtml(post.title)}</div>
       <div class="comm-detail-meta">
         ${escapeHtml(post.author)} · ${relTime(post.createdAt)}
-        ${canDelete ? `<button onclick="deletePost('${post.id}','${board}')" style="float:right;background:none;border:none;color:#ff6b81;cursor:pointer;font-size:.78rem">삭제</button>` : ''}
+        ${canDelete ? `
+          <span style="float:right;display:flex;gap:10px">
+            <button onclick="editPost('${post.id}','${board}')" style="background:none;border:none;color:#a78bfa;cursor:pointer;font-size:.78rem">수정</button>
+            <button onclick="deletePost('${post.id}','${board}')" style="background:none;border:none;color:#ff6b81;cursor:pointer;font-size:.78rem">삭제</button>
+          </span>` : ''}
       </div>
       <div class="comm-detail-content">${post.isHtml ? renderRichContent(post.content) : renderPostContent(post.content)}</div>
       ${imgsHtml}
@@ -1432,6 +1436,77 @@ async function deleteReply(postId, commentId, replyId) {
   const r = await fetch(`/api/comments/${postId}/${commentId}/${replyId}`, {method:'DELETE'}).then(r=>r.json()).catch(()=>({ok:false}));
   if (r.ok) loadComments(postId);
   else toast(r.error || '삭제 실패','err');
+}
+
+async function editPost(id, board) {
+  const r = await fetch(`/api/posts?board=${board}&limit=100`).then(r=>r.json()).catch(()=>({ok:false,posts:[]}));
+  const post = (r.posts||[]).find(p => p.id === id);
+  if (!post) { toast('게시글을 찾을 수 없습니다','err'); return; }
+
+  pendingImages = post.images || [];
+  document.getElementById('commContent').innerHTML = `
+    <button class="comm-back-btn" onclick="showPost('${id}','${board}')">← 돌아가기</button>
+    <div class="comm-write-form">
+      <div style="font-weight:600;margin-bottom:12px">게시글 수정</div>
+      <input class="comm-input" id="wtitle" placeholder="제목" maxlength="100" value="${escapeHtml(post.title)}">
+      <div class="rte-wrap">
+        <div class="rte-toolbar">
+          <div class="rte-group">
+            <select class="rte-select" onchange="rteCmd('fontSize',this.value)">
+              <option value="">크기</option>
+              <option value="1">아주 작게</option><option value="2">작게</option>
+              <option value="3">보통</option><option value="4">크게</option>
+              <option value="5">아주 크게</option><option value="6">제목 크기</option>
+            </select>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="rteCmd('bold')"><b>B</b></button>
+            <button class="rte-btn" onclick="rteCmd('italic')"><i>I</i></button>
+            <button class="rte-btn" onclick="rteCmd('underline')"><u>U</u></button>
+            <button class="rte-btn" onclick="rteCmd('strikeThrough')"><s>S</s></button>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="rteCmd('justifyLeft')">◀</button>
+            <button class="rte-btn" onclick="rteCmd('justifyCenter')">↔</button>
+            <button class="rte-btn" onclick="rteCmd('justifyRight')">▶</button>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="rteCmd('insertUnorderedList')">• 목록</button>
+            <button class="rte-btn" onclick="rteCmd('insertOrderedList')">1. 목록</button>
+          </div>
+          <div class="rte-group">
+            <label class="rte-btn rte-color-wrap" title="글자 색"><span>A</span><input type="color" value="#ffffff" onchange="rteCmd('foreColor',this.value)"></label>
+            <label class="rte-btn rte-color-wrap" title="형광펜"><span style="background:#facc15;padding:0 3px;border-radius:2px;color:#000">HI</span><input type="color" value="#facc15" onchange="rteCmd('hiliteColor',this.value)"></label>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="document.getElementById('editImgInput').click()">📷</button>
+          </div>
+        </div>
+        <div class="rte-editor" id="rteditor" contenteditable="true" data-placeholder="내용을 입력하세요...">${post.isHtml ? post.content : escapeHtml(post.content||'')}</div>
+      </div>
+      <input type="file" id="editImgInput" accept="image/*" multiple style="display:none" onchange="handleImgSelect(event)">
+      <div id="imgPreviewArea" class="comm-img-preview"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="comm-submit-btn" onclick="submitEditPost('${id}','${board}')">수정 완료</button>
+        <button onclick="showPost('${id}','${board}')" style="padding:10px 16px;background:rgba(255,255,255,.08);border:none;border-radius:8px;color:var(--text-muted);cursor:pointer;font-family:inherit">취소</button>
+      </div>
+    </div>`;
+  renderImgPreviews();
+}
+
+async function submitEditPost(id, board) {
+  const title = document.getElementById('wtitle')?.value?.trim();
+  const edEl = document.getElementById('rteditor');
+  const content = edEl ? edEl.innerHTML : '';
+  if (!title) { toast('제목을 입력하세요','err'); return; }
+  const btn = document.querySelector('.comm-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '수정 중...'; }
+  const r = await fetch(`/api/posts/${id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title, content, isHtml: true, images: pendingImages })
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) { toast('수정됐습니다','ok'); pendingImages = []; showPost(id, board); }
+  else { toast(r.error||'수정 실패','err'); if(btn){btn.disabled=false;btn.textContent='수정 완료';} }
 }
 
 async function deletePost(id, board) {

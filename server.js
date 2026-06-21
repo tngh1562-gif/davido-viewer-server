@@ -756,6 +756,26 @@ app.post('/api/posts', (req, res) => {
   res.json({ ok: true, post });
 });
 
+app.put('/api/posts/:id', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false });
+  const { title, content, isHtml } = req.body;
+  if (!title?.trim()) return res.json({ ok: false, error: '제목을 입력하세요' });
+  const data = readJSON(POSTS_FILE, { posts: [] });
+  const post = data.posts.find(p => p.id === req.params.id && p.author === name);
+  if (!post) return res.status(403).json({ ok: false, error: '수정 권한 없음' });
+  const safeContent = isHtml ? (content||'')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript:/gi, 'blocked:') : (content||'');
+  post.title = title.trim().slice(0, 100);
+  post.content = safeContent.trim().slice(0, 30000);
+  post.isHtml = !!isHtml;
+  post.updatedAt = Date.now();
+  writeJSON(POSTS_FILE, data);
+  res.json({ ok: true, post });
+});
+
 app.delete('/api/posts/:id', (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.status(401).json({ ok: false });
