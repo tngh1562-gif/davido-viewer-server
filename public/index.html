@@ -1198,28 +1198,8 @@ async function loadSnapshot(){
     if(!d.ok) throw new Error(d.error||'snapshot_failed');
 
     // Stats row
-    document.getElementById('statViewers').innerHTML = fmtNum(d.viewers_total)+' <span style="font-size:16px;font-weight:500;opacity:.8">명</span>';
-
-    // Vote card
-    const v = d.vote;
-    const vt = document.getElementById('voteTitle');
-    const vd = document.getElementById('voteDesc');
-    const vr = document.getElementById('voteResults');
-    if(v && Array.isArray(v.items) && v.items.length){
-      vt.textContent = v.title || '채팅 투표 진행중';
-      const total = v.items.reduce((s,it)=>s+(Number(it.count)||0),0);
-      vd.innerHTML = `진행중 · 총 <b>${fmtNum(total)}</b>표`;
-      vr.style.display = '';
-      vr.innerHTML = v.items.slice(0,4).map((it,i)=>{
-        const cnt = Number(it.count)||0;
-        const pct = total>0 ? Math.round(cnt*100/total) : 0;
-        return `<div style="color:${['#4da3ff','#ff6b81','#facc15','#a855f7'][i]||'#fff'};font-weight:600;font-size:13px">${i+1}. ${escapeHtml(it.label||'')} (${pct}%)</div>`;
-      }).join('');
-    } else {
-      vt.textContent = '투표 대기중';
-      vd.textContent = '진행중인 채팅 투표가 없습니다';
-      vr.style.display = 'none';
-    }
+    const svEl = document.getElementById('statViewers');
+    if(svEl) svEl.innerHTML = fmtNum(d.viewers_total)+' <span style="font-size:16px;font-weight:500;opacity:.8">명</span>';
 
     // Feed
     const feedEl = document.getElementById('feedList');
