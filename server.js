@@ -21,9 +21,10 @@ const BET_MAX_MULT = 2.0;   // 배당 상한 (풀 쏠려도 최대 2배)
 const BET_RAKE     = 0.10;  // 하우스 수수료 10% → 실질 최대 1.8x
 
 // ── Data files ──
-const VIEWERS_FILE  = path.join(DATA_DIR, 'viewers.json');
-const BETTING_FILE  = path.join(DATA_DIR, 'betting.json');
-const SHOP_FILE     = path.join(DATA_DIR, 'shop.json');
+const VIEWERS_FILE    = path.join(DATA_DIR, 'viewers.json');
+const BETTING_FILE    = path.join(DATA_DIR, 'betting.json');
+const SHOP_FILE       = path.join(DATA_DIR, 'shop.json');
+const TIMING_WIN_FILE = path.join(DATA_DIR, 'timing-winner.json');
 
 // data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
@@ -500,6 +501,69 @@ app.get('/api/inhouse/snapshot', (req, res) => {
   };
 
   res.json({ ok: true, viewers_total, ranking, feed, vote: null, inhouse });
+});
+
+// ── 타이밍 복권 ──
+const timingSessions = new Map(); // sessionId → { targetMs, startedAt, name, date }
+
+function getTodayKST() {
+  return new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+}
+function getDailyTargetMs() {
+  const today = getTodayKST();
+  const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
+  return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
+}
+function getTimingWinner() {
+  const saved = readJSON(TIMING_WIN_FILE, {});
+  if (saved.date !== getTodayKST()) return null;
+  return saved.winner || null;
+}
+
+app.get('/api/game/timing/state', (req, res) => {
+  const targetMs = getDailyTargetMs();
+  const winner = getTimingWinner();
+  res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
+});
+
+app.post('/api/game/timing/start', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
+  const { viewers, viewer } = getViewer(name);
+  if (viewer.points < 1) return res.json({ ok: false, error: '포인트 부족 (1P 필요)' });
+  viewer.points -= 1;
+  saveViewer(viewers);
+  broadcast({ type: 'points_update', name, points: viewer.points });
+  const sessionId = crypto.randomBytes(16).toString('hex');
+  const startedAt = Date.now();
+  timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
+  setTimeout(() => timingSessions.delete(sessionId), 30000);
+  res.json({ ok: true, sessionId, startedAt, viewer });
+});
+
+app.post('/api/game/timing/press', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { sessionId } = req.body;
+  const session = timingSessions.get(sessionId);
+  if (!session || session.name !== name) return res.json({ ok: false, error: '세션 만료' });
+  timingSessions.delete(sessionId);
+  if (session.date !== getTodayKST()) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
+  if (getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
+  const elapsed = Date.now() - session.startedAt;
+  const diff = Math.abs(elapsed - session.targetMs);
+  if (diff <= 300) { // ±0.3초
+    const { viewers, viewer } = getViewer(name);
+    viewer.points += 100;
+    saveViewer(viewers);
+    broadcast({ type: 'points_update', name, points: viewer.points });
+    const winner = { name, hitMs: elapsed, diff, at: Date.now() };
+    writeJSON(TIMING_WIN_FILE, { date: getTodayKST(), winner });
+    broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
+    return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, viewer });
+  }
+  return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
 });
 
 // 인하우스 팀 라인업 프록시

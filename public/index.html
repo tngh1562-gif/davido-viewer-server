@@ -421,6 +421,14 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .sync-pill.bad{background:rgba(255,71,87,.1);border-color:rgba(255,71,87,.3);color:#ff6b81}
 .sync-pill.bad::before{background:#ff6b81;box-shadow:0 0 6px #ff6b81}
 
+/* TIMING GAME */
+.tg-target{font-size:56px;font-weight:900;letter-spacing:-2px;color:#c4b5fd;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.tg-timer{font-size:40px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:20px}
+.tg-stop-btn{width:100%;padding:18px;font-size:1.3rem;font-weight:900;border:none;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:2px;box-shadow:0 0 30px rgba(168,85,247,.4);transition:all .1s}
+.tg-stop-btn:active{transform:scale(.96)}
+.tg-start-btn{width:100%;padding:14px;font-size:1rem;font-weight:900;border:none;border-radius:10px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:1px}
+.tg-won-box{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(168,85,247,.2));border:1px solid rgba(168,85,247,.4);border-radius:12px;padding:20px;margin-top:16px;text-align:center}
+
 /* MINESWEEPER */
 .ms-stats{display:flex;justify-content:space-around;gap:12px;background:rgba(0,0,0,.4);border-radius:12px;padding:10px;margin-bottom:14px}
 .ms-stat{text-align:center;flex:1}
@@ -651,6 +659,13 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-title">지뢰찾기</div>
         <div class="card-desc" style="color:rgba(0,0,0,.7)">💣 셀을 열고 빠져나와라<br>안전한 칸마다 배당 상승</div>
         <div class="card-footer-link" style="color:#000">Play Game +</div>
+      </div>
+      <div class="card game-card" style="background:linear-gradient(135deg,#1a0533,#4c1d95);color:#fff;border:none" onclick="openGame('timing')">
+        <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
+        <div class="card-label">DAILY JACKPOT</div>
+        <div class="card-title">타이밍 복권</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">⏱ 오늘의 시간을 맞춰라<br>선착순 1명 <b>100P</b> 획득 · 도전 1P</div>
+        <div class="card-footer-link" style="color:#c4b5fd">도전하기 +</div>
       </div>
     </div>
   </div>
@@ -947,6 +962,18 @@ async function placeBet(team) {
       if (msg.type === 'init' && msg.betting) renderBetting(msg.betting);
       if (msg.type === 'bet_update') renderBetting(msg);
       if (msg.type === 'points_update' && msg.name === myName) savePts(msg.points);
+      if (msg.type === 'timing_won' && currentGame === 'timing') {
+        tgSession = null; if (tgRaf){cancelAnimationFrame(tgRaf);tgRaf=null;}
+        const wrap = document.getElementById('tgWrap');
+        if (wrap) {
+          const t = fmtTG(msg.targetMs);
+          wrap.innerHTML = `<div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
+            <div class="tg-target">${t}초</div>
+            <div class="tg-won-box"><div style="font-size:28px">🏆</div>
+            <div style="font-size:18px;font-weight:700;color:#c4b5fd">${escapeHtml(msg.winner?.name||'?')}님이 당첨!</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차 ${msg.winner?.diff||0}ms · +100P 지급</div></div>`;
+        }
+      }
     } catch {}
   };
   ws.onclose = () => setTimeout(initBettingWS, 2500);
@@ -1005,11 +1032,13 @@ function doBuy(){
 let currentGame=null;
 function openGame(g){
   currentGame=g;
-  document.getElementById('gmTitle').textContent='💣 지뢰찾기';
+  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권'};
+  document.getElementById('gmTitle').textContent=titles[g]||g;
   document.getElementById('gmPts').textContent=pts.toLocaleString();
   const content=document.getElementById('gmContent');
   content.innerHTML='';
   if(g==='ms')initMs(content);
+  else if(g==='timing')initTiming(content);
   document.getElementById('gameListSection').style.display='none';
   document.getElementById('gamePlaySection').style.display='block';
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1021,6 +1050,127 @@ function closeGame(){
   currentGame=null;
 }
 
+
+/* ══════════════════════════════════════
+   TIMING JACKPOT
+══════════════════════════════════════ */
+let tgSession = null;
+let tgRaf = null;
+
+function fmtTG(ms) {
+  const s = Math.floor(ms / 1000);
+  const cs = Math.floor((ms % 1000) / 10);
+  return `${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
+
+async function initTiming(wrap) {
+  const r = await fetch('/api/game/timing/state').then(r=>r.json()).catch(()=>({ok:false}));
+  renderTiming(wrap, r);
+}
+
+function renderTiming(wrap, state) {
+  if (!state || !state.ok) { wrap.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:40px">로딩 실패</div>'; return; }
+  const target = fmtTG(state.targetMs);
+
+  if (state.status === 'won') {
+    wrap.innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">오늘의 목표 시간</div>
+        <div class="tg-target">${target}초</div>
+        <div class="tg-won-box">
+          <div style="font-size:28px;margin-bottom:8px">🏆</div>
+          <div style="font-size:18px;font-weight:700;color:#c4b5fd">${escapeHtml(state.winner?.name||'?')}님이 당첨!</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차 ${(state.winner?.diff||0)}ms · +100P 지급</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:12px">내일 새로운 타이밍이 공개됩니다 🎲</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div style="text-align:center;padding:20px" id="tgWrap">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
+      <div class="tg-target">${target}초</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP 버튼을 누르세요 · ±0.3초 이내 선착순 1명 100P</div>
+      <div id="tgPhase">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
+        <div class="tg-timer" id="tgTimerDisp">00.00</div>
+        <button class="tg-start-btn" id="tgStartBtn" onclick="tgStart(${state.targetMs})">도전하기 (1P 차감)</button>
+      </div>
+      <div id="tgResult" style="margin-top:16px"></div>
+    </div>`;
+}
+
+async function tgStart(targetMs) {
+  if (tgRaf) cancelAnimationFrame(tgRaf);
+  document.getElementById('tgStartBtn').disabled = true;
+  document.getElementById('tgStartBtn').textContent = '시작 중...';
+
+  const r = await fetch('/api/game/timing/start', {method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).catch(()=>({ok:false}));
+  if (!r.ok) {
+    toast(r.error || '오류 발생', 'err');
+    document.getElementById('tgStartBtn').disabled = false;
+    document.getElementById('tgStartBtn').textContent = '도전하기 (1P 차감)';
+    return;
+  }
+  savePts(r.viewer.points);
+  tgSession = { sessionId: r.sessionId, startedAt: r.startedAt, targetMs };
+
+  // 타이머 표시 + STOP 버튼
+  document.getElementById('tgPhase').innerHTML = `
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
+    <div class="tg-timer" id="tgTimerDisp">00.00</div>
+    <button class="tg-stop-btn" onclick="tgStop()">⏹ STOP!</button>`;
+
+  const tick = () => {
+    const el = document.getElementById('tgTimerDisp');
+    if (!el || !tgSession) return;
+    el.textContent = fmtTG(Date.now() - tgSession.startedAt);
+    tgRaf = requestAnimationFrame(tick);
+  };
+  tgRaf = requestAnimationFrame(tick);
+}
+
+async function tgStop() {
+  if (!tgSession) return;
+  if (tgRaf) { cancelAnimationFrame(tgRaf); tgRaf = null; }
+  const { sessionId } = tgSession;
+  tgSession = null;
+
+  const r = await fetch('/api/game/timing/press', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sessionId })
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+
+  const timerEl = document.getElementById('tgTimerDisp');
+  if (timerEl && r.elapsed) timerEl.textContent = fmtTG(r.elapsed);
+
+  const resultEl = document.getElementById('tgResult');
+  if (!resultEl) return;
+
+  if (r.won) {
+    savePts((pts||0) + 100);
+    resultEl.innerHTML = `<div style="background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(168,85,247,.3));border:1px solid #a855f7;border-radius:12px;padding:20px">
+      <div style="font-size:32px">🏆</div>
+      <div style="font-size:20px;font-weight:900;color:#c4b5fd">당첨! +100P</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차: ${r.diff}ms (목표: ${fmtTG(r.targetMs)}초)</div>
+    </div>`;
+    document.getElementById('tgPhase').innerHTML = '<div style="color:var(--text-muted);font-size:14px">오늘의 당첨자가 나왔습니다 🎉</div>';
+  } else if (r.error) {
+    resultEl.innerHTML = `<div style="color:#ff6b81;font-size:14px">${escapeHtml(r.error)}</div>`;
+    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs||0})">다시 도전 (1P)</button>`;
+  } else {
+    const diff = r.diff || 0;
+    const elapsed = r.elapsed || 0;
+    const sign = elapsed > r.targetMs ? '+' : '-';
+    resultEl.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px">
+      <div style="font-size:15px;color:var(--text-muted)">나의 기록: <b style="color:#fff">${fmtTG(elapsed)}초</b></div>
+      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초 (목표 ±0.300초)</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px">아쉽네요! 다시 도전해보세요</div>
+    </div>`;
+    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs})">다시 도전 (1P)</button>`;
+  }
+}
 
 /* ══════════════════════════════════════
    DATA SYNC — Inhouse + Announcements
