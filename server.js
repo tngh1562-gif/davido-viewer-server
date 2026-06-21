@@ -11,6 +11,7 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 4500;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const INHOUSE_SERVER_URL = (process.env.INHOUSE_SERVER_URL || '').replace(/\/+$/, '');
 
 // ── 배팅 밸런스 상수 ──
 const BET_MAX      = 20;    // 1판 최대 배팅 포인트
@@ -154,11 +155,19 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ── Viewer info ──
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false });
   const { viewer } = getViewer(name);
-  res.json({ ok: true, viewer });
+  let inhousePoints = null;
+  if (INHOUSE_SERVER_URL) {
+    try {
+      const r = await fetch(`${INHOUSE_SERVER_URL}/api/viewer-points?nickname=${encodeURIComponent(name)}`);
+      const data = await r.json();
+      if (data.ok) inhousePoints = data.points;
+    } catch {}
+  }
+  res.json({ ok: true, viewer, inhousePoints });
 });
 
 // ── Betting ──
