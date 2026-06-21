@@ -127,16 +127,7 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Content-Security-Policy',
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline'; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "img-src 'self' data: https:; " +
-    "media-src 'self' https:; " +
-    "frame-src https://www.youtube.com https://clips.twitch.tv https://player.twitch.tv https://www.tiktok.com; " +
-    "connect-src 'self' wss:;"
-  );
+  // CSP 임시 비활성화 (로그인 버튼 반응 없음 진단 중)
   next();
 });
 // 전체 IP 레이트 리밋 (분당 300회)
