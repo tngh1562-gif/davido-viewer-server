@@ -257,6 +257,21 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .comm-img-preview-item img{width:100%;height:100%;object-fit:cover;border-radius:6px}
 .comm-img-preview-item .del-img{position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#ef4444;color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0}
 .comm-add-img-btn{background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.2);border-radius:7px;color:var(--text-muted);font-size:.8rem;cursor:pointer;padding:8px 14px;font-family:inherit}
+/* RTE */
+.rte-wrap{border:1px solid rgba(255,255,255,.12);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.rte-toolbar{display:flex;flex-wrap:wrap;gap:2px;padding:6px 8px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08)}
+.rte-group{display:flex;gap:2px;align-items:center;padding-right:6px;margin-right:4px;border-right:1px solid rgba(255,255,255,.1)}
+.rte-group:last-child{border-right:none}
+.rte-btn{background:none;border:none;color:var(--text-muted);font-size:.82rem;font-family:inherit;cursor:pointer;padding:4px 7px;border-radius:4px;transition:all .12s;min-width:28px;text-align:center}
+.rte-btn:hover,.rte-btn.active{background:rgba(255,255,255,.12);color:#fff}
+.rte-select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:#fff;font-size:.78rem;padding:3px 6px;cursor:pointer}
+.rte-select option{background:#1a1a2e;color:#fff}
+.rte-color-wrap{position:relative;display:inline-flex;align-items:center}
+.rte-color-wrap input[type=color]{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer;border:none;padding:0}
+.rte-editor{min-height:160px;max-height:500px;overflow-y:auto;padding:12px 14px;color:#fff;font-size:.92rem;line-height:1.7;outline:none;background:rgba(255,255,255,.03)}
+.rte-editor:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,.3);pointer-events:none}
+.rte-editor *{max-width:100%}
+.rte-editor img{max-width:100%;border-radius:6px}
 .comm-yt-embed{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;margin:10px 0}
 .comm-yt-embed iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:10px}
 
@@ -1075,6 +1090,38 @@ const EMBED_RULES = [
 
 const isUrl = s => /^https?:\/\//i.test(s);
 
+function renderRichContent(html) {
+  if (!html) return '';
+  // 클라이언트 XSS 정제
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const ALLOWED = new Set(['b','strong','i','em','u','s','del','br','p','div','span','h1','h2','h3','ul','ol','li','font','a','hr']);
+  function clean(node) {
+    if (node.nodeType === 3) return true;
+    if (node.nodeType !== 1) return false;
+    const tag = node.tagName.toLowerCase();
+    if (!ALLOWED.has(tag)) { node.replaceWith(...node.childNodes); return true; }
+    Array.from(node.attributes).forEach(a => {
+      if (a.name.startsWith('on') || (a.name === 'href' && /^javascript:/i.test(a.value))) node.removeAttribute(a.name);
+    });
+    Array.from(node.childNodes).forEach(clean);
+    return true;
+  }
+  Array.from(tmp.childNodes).forEach(clean);
+  // 텍스트만 있는 블록이 URL이면 임베드
+  tmp.querySelectorAll('p,div,li').forEach(el => {
+    const t = el.textContent.trim();
+    if (isUrl(t) && el.children.length === 0) {
+      for (const rule of EMBED_RULES) {
+        const key = rule.test(t);
+        if (key) { el.outerHTML = rule.render(key); return; }
+      }
+      el.innerHTML = `<a href="${t}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;word-break:break-all">${escapeHtml(t)}</a>`;
+    }
+  });
+  return tmp.innerHTML;
+}
+
 function renderPostContent(content) {
   if (!content) return '';
   const used = new Set();
@@ -1113,12 +1160,24 @@ async function showPost(id, board) {
         ${escapeHtml(post.author)} · ${relTime(post.createdAt)}
         ${canDelete ? `<button onclick="deletePost('${post.id}','${board}')" style="float:right;background:none;border:none;color:#ff6b81;cursor:pointer;font-size:.78rem">삭제</button>` : ''}
       </div>
-      <div class="comm-detail-content">${renderPostContent(post.content)}</div>
+      <div class="comm-detail-content">${post.isHtml ? renderRichContent(post.content) : renderPostContent(post.content)}</div>
       ${imgsHtml}
     </div>`;
 }
 
-let pendingImages = []; // base64 배열
+let pendingImages = [];
+
+function rteCmd(cmd, val) {
+  const ed = document.getElementById('rteditor');
+  if (!ed) return;
+  ed.focus();
+  document.execCommand(cmd, false, val || null);
+}
+function rteToggleBtn(cmd) {
+  document.querySelectorAll('.rte-btn[data-cmd]').forEach(b => {
+    try { b.classList.toggle('active', document.queryCommandState(b.dataset.cmd)); } catch {}
+  });
+}
 
 function showWriteForm(board) {
   const area = document.getElementById('writeFormArea');
@@ -1129,10 +1188,57 @@ function showWriteForm(board) {
     <div class="comm-write-form">
       <div style="font-weight:600;margin-bottom:12px">새 글 작성</div>
       <input class="comm-input" id="wtitle" placeholder="제목 (100자 이내)" maxlength="100">
-      <textarea class="comm-input comm-textarea" id="wcontent" placeholder="내용을 입력하세요 (유튜브 링크 붙여넣기 시 자동 임베드)" maxlength="3000"></textarea>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <button class="comm-add-img-btn" onclick="document.getElementById('imgFileInput').click()">📷 사진 추가 (최대 5장)</button>
-        <span style="font-size:.75rem;color:var(--text-muted)">장당 3MB 이하</span>
+      <div class="rte-wrap">
+        <div class="rte-toolbar">
+          <div class="rte-group">
+            <select class="rte-select" title="글씨 크기" onchange="rteCmd('fontSize',this.value)">
+              <option value="">크기</option>
+              <option value="1">아주 작게</option>
+              <option value="2">작게</option>
+              <option value="3">보통</option>
+              <option value="4">크게</option>
+              <option value="5">아주 크게</option>
+              <option value="6">제목 크기</option>
+            </select>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" data-cmd="bold" onclick="rteCmd('bold')" title="굵게 (Ctrl+B)"><b>B</b></button>
+            <button class="rte-btn" data-cmd="italic" onclick="rteCmd('italic')" title="기울임 (Ctrl+I)"><i>I</i></button>
+            <button class="rte-btn" data-cmd="underline" onclick="rteCmd('underline')" title="밑줄 (Ctrl+U)"><u>U</u></button>
+            <button class="rte-btn" data-cmd="strikeThrough" onclick="rteCmd('strikeThrough')" title="취소선"><s>S</s></button>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="rteCmd('justifyLeft')" title="왼쪽 정렬">
+              <svg width="14" height="12" viewBox="0 0 14 12"><rect y="0" width="14" height="2" fill="currentColor"/><rect y="4" width="10" height="2" fill="currentColor"/><rect y="8" width="14" height="2" fill="currentColor"/></svg>
+            </button>
+            <button class="rte-btn" onclick="rteCmd('justifyCenter')" title="가운데 정렬">
+              <svg width="14" height="12" viewBox="0 0 14 12"><rect y="0" width="14" height="2" fill="currentColor"/><rect x="2" y="4" width="10" height="2" fill="currentColor"/><rect y="8" width="14" height="2" fill="currentColor"/></svg>
+            </button>
+            <button class="rte-btn" onclick="rteCmd('justifyRight')" title="오른쪽 정렬">
+              <svg width="14" height="12" viewBox="0 0 14 12"><rect y="0" width="14" height="2" fill="currentColor"/><rect x="4" y="4" width="10" height="2" fill="currentColor"/><rect y="8" width="14" height="2" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="rteCmd('insertUnorderedList')" title="글머리 목록">• 목록</button>
+            <button class="rte-btn" onclick="rteCmd('insertOrderedList')" title="번호 목록">1. 목록</button>
+          </div>
+          <div class="rte-group">
+            <label class="rte-btn rte-color-wrap" title="글자 색">
+              <span>A</span>
+              <input type="color" value="#ffffff" onchange="rteCmd('foreColor',this.value)">
+            </label>
+            <label class="rte-btn rte-color-wrap" title="형광펜">
+              <span style="background:#facc15;padding:0 3px;border-radius:2px;color:#000">HI</span>
+              <input type="color" value="#facc15" onchange="rteCmd('hiliteColor',this.value)">
+            </label>
+          </div>
+          <div class="rte-group">
+            <button class="rte-btn" onclick="document.getElementById('imgFileInput').click()" title="사진 추가">📷</button>
+          </div>
+        </div>
+        <div class="rte-editor" id="rteditor" contenteditable="true"
+             data-placeholder="내용을 입력하세요... (유튜브/이미지 링크를 줄 단위로 붙여넣으면 자동 임베드)"
+             onkeyup="rteToggleBtn()" onmouseup="rteToggleBtn()"></div>
       </div>
       <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none" onchange="handleImgSelect(event)">
       <div id="imgPreviewArea" class="comm-img-preview"></div>
@@ -1172,14 +1278,16 @@ function renderImgPreviews() {
 
 async function submitPost(board) {
   const title = document.getElementById('wtitle')?.value?.trim();
-  const content = document.getElementById('wcontent')?.value?.trim();
+  const edEl = document.getElementById('rteditor');
+  const content = edEl ? edEl.innerHTML : '';
+  const textLen = edEl ? edEl.textContent.trim().length : 0;
   if (!title) { toast('제목을 입력하세요','err'); return; }
-  if (!content && !pendingImages.length) { toast('내용 또는 사진을 추가하세요','err'); return; }
+  if (!textLen && !pendingImages.length) { toast('내용 또는 사진을 추가하세요','err'); return; }
   const btn = document.querySelector('.comm-submit-btn');
   if (btn) { btn.disabled = true; btn.textContent = '등록 중...'; }
   const r = await fetch('/api/posts', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ board, title, content, images: pendingImages })
+    body: JSON.stringify({ board, title, content, isHtml: true, images: pendingImages })
   }).then(r=>r.json()).catch(()=>({ok:false}));
   if (r.ok) { toast('게시글이 등록됐습니다','ok'); pendingImages = []; loadCommunity(board); }
   else { toast(r.error || '등록 실패','err'); if(btn){btn.disabled=false;btn.textContent='게시하기';} }
