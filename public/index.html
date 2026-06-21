@@ -1730,7 +1730,7 @@ function initMs(wrap) {
     </div>`;
 }
 
-function msInit(mines) {
+async function msInit(mines) {
   const name = myName;
   if (!name) { toast('로그인이 필요합니다','err'); return; }
   const BET = 1;
