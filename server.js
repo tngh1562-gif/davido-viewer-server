@@ -37,11 +37,24 @@ const SHOP_FILE       = path.join(DATA_DIR, 'shop.json');
 const TIMING_WIN_FILE = path.join(DATA_DIR, 'timing-winner.json');
 const POSTS_FILE      = path.join(DATA_DIR, 'posts.json');
 const COMMENTS_FILE   = path.join(DATA_DIR, 'comments.json');
+const FEED_FILE       = path.join(DATA_DIR, 'feed.json');
 
 // data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
 if (!fs.existsSync(POSTS_FILE))    writeJSON(POSTS_FILE,    { posts: [] });
 if (!fs.existsSync(COMMENTS_FILE)) writeJSON(COMMENTS_FILE, {});
+if (!fs.existsSync(FEED_FILE))     writeJSON(FEED_FILE,     { items: [] });
+
+// ── 피드 헬퍼 ──
+function addFeed(kind, viewer, data) {
+  try {
+    const feed = readJSON(FEED_FILE, { items: [] });
+    feed.items.unshift({ kind, viewer, at: Date.now(), ...data });
+    feed.items = feed.items.slice(0, 50); // 최대 50개 유지
+    writeJSON(FEED_FILE, feed);
+    broadcast({ type: 'feed_update', items: feed.items.slice(0, 10) });
+  } catch {}
+}
 
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
 const SESSION_SECRET        = process.env.SESSION_SECRET        || 'davido-viewer-secret-2025';
@@ -291,6 +304,7 @@ app.post('/api/bet/place', (req, res) => {
   writeJSON(BETTING_FILE, betting);
 
   broadcast({ type: 'bet_update', bets: betting.bets, status: betting.status });
+  addFeed('bet', name, { team, amount: amt, reason: `${team === 'blue' ? '🔵 블루' : '🔴 레드'}팀에 ${amt}P 배팅` });
   res.json({ ok: true, viewer });
 });
 
@@ -407,6 +421,7 @@ app.post('/api/shop/buy', async (req, res) => {
     // 스톡 감소
     if (item.stock > 0) { item.stock--; writeJSON(SHOP_FILE, shopData); }
     broadcast({ type: 'shop_update', items: shopData.items });
+    addFeed('shop', name, { item: item.name, price: item.price, reason: `🛒 ${item.name} 구매 (-${item.price}P)` });
     res.json({ ok: true, points: r.points, item });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
@@ -555,13 +570,8 @@ app.get('/api/inhouse/snapshot', (req, res) => {
   const viewers_total = Object.keys(viewers).length;
   const ranking = [];
 
-  // 실시간 피드: 최근 배팅 내역
-  const feed = [];
-  if (betting.bets) {
-    Object.entries(betting.bets).slice(-6).reverse().forEach(([viewer, b]) => {
-      feed.push({ kind: 'bet', viewer, amount: b.amount, reason: `${b.team === 'blue' ? '블루' : '레드'}팀 배팅`, at: Date.now() });
-    });
-  }
+  // 실시간 피드: feed.json에서 최근 10개
+  const feed = readJSON(FEED_FILE, { items: [] }).items.slice(0, 10);
 
   // 내전 상태
   const inhouse = {
@@ -640,6 +650,7 @@ app.post('/api/game/timing/press', async (req, res) => {
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     writeJSON(TIMING_WIN_FILE, { date: getTodayKST(), winner });
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
+    addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
   }
   return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
@@ -837,9 +848,10 @@ app.post('/api/game/ms/end', async (req, res) => {
   const { result, payout } = req.body;
   if (result === 'win' && payout > 1 && INHOUSE_SERVER_URL) {
     try {
-      await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
         { nickname: name, amount: payout },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+      if (r.ok) addFeed('game', name, { game: '지뢰찾기', payout, reason: `💣 지뢰찾기 성공 (+${payout}P)` });
     } catch {}
   }
   res.json({ ok: true });
