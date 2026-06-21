@@ -472,18 +472,27 @@ app.post('/api/game/roulette',(req,res)=>{
 const ANN_FILE = path.join(DATA_DIR, 'announcements.json');
 if (!fs.existsSync(ANN_FILE)) writeJSON(ANN_FILE, { items: [] });
 
-app.get('/api/inhouse/snapshot', (req, res) => {
+app.get('/api/inhouse/snapshot', async (req, res) => {
   const viewers  = readJSON(VIEWERS_FILE, {});
   const betting  = readJSON(BETTING_FILE, {});
 
   // 등록된 시청자 수
   const viewers_total = Object.keys(viewers).length;
 
-  // 포인트 랭킹 (상위 10)
-  const ranking = Object.entries(viewers)
-    .map(([name, v]) => ({ name, points: v.points || 0 }))
-    .sort((a, b) => b.points - a.points)
-    .slice(0, 10);
+  // 포인트 랭킹 — 인하우스 DB에서 가져오기
+  let ranking = [];
+  if (INHOUSE_SERVER_URL) {
+    try {
+      const db = await getJson(`${INHOUSE_SERVER_URL}/api/inhouse-db`);
+      if (Array.isArray(db.viewers)) {
+        ranking = db.viewers
+          .map(v => ({ name: (v.name || '').replace(/#.+$/, '').trim(), points: Math.max(0, Number(v.pass) || 0) }))
+          .filter(v => v.name && v.points > 0)
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 10);
+      }
+    } catch {}
+  }
 
   // 실시간 피드: 최근 배팅 내역
   const feed = [];
