@@ -1708,6 +1708,135 @@ async function tgStop() {
 }
 
 /* ══════════════════════════════════════
+   MINESWEEPER (지뢰찾기)
+══════════════════════════════════════ */
+let msState = null;
+
+function initMs(wrap) {
+  wrap.innerHTML = `
+    <div style="text-align:center;padding:8px 0 4px;font-size:.8rem;color:var(--text-muted)">지뢰 개수 선택</div>
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px">
+      ${[3,4,5,6,7].map(n=>`<button class="s-chip" onclick="msInit(${n})">${n}개</button>`).join('')}
+    </div>
+    <div class="ms-stats" id="msStats" style="display:none">
+      <div class="ms-stat"><div class="ms-stat-l">지뢰</div><div id="msMineCount">-</div></div>
+      <div class="ms-stat"><div class="ms-stat-l">배당</div><div id="msMulti">1.00x</div></div>
+      <div class="ms-stat"><div class="ms-stat-l">수익</div><div id="msProfit">0P</div></div>
+    </div>
+    <div class="ms-grid" id="msGrid"></div>
+    <div id="msMsg" style="text-align:center;font-size:.85rem;color:var(--text-muted);min-height:20px"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button class="s-chip" id="msCashBtn" onclick="msCashOut()" style="display:none">💰 현금화</button>
+    </div>`;
+}
+
+function msInit(mines) {
+  const name = myName;
+  if (!name) { toast('로그인이 필요합니다','err'); return; }
+  const BET = 1;
+  if (pts < BET) { toast('포인트가 부족합니다','err'); return; }
+  const COLS = 5, ROWS = 5, TOTAL = COLS * ROWS;
+  const mineSet = new Set();
+  while (mineSet.size < mines) mineSet.add(Math.floor(Math.random() * TOTAL));
+  const startBtn = document.querySelector(`button[onclick^="msInit"]`);
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '시작 중...'; }
+  const sr = await fetch('/api/game/ms/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({bet:BET}) })
+    .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
+  if (!sr.ok) { toast(sr.error||'시작 실패','err'); if(startBtn){startBtn.disabled=false;startBtn.textContent=`${mines}개`;} return; }
+  if (sr.points != null) savePts(sr.points); else savePts(pts - BET);
+  msState = { mines: mineSet, cols: COLS, rows: ROWS, total: TOTAL,
+    revealed: new Set(), bet: BET, mineCount: mines,
+    mult: 1.0, alive: true, cashed: false };
+  msRender();
+  document.getElementById('msStats').style.display = '';
+  document.getElementById('msCashBtn').style.display = 'none';
+  msUpdateMath();
+}
+
+function msRender() {
+  const g = document.getElementById('msGrid');
+  if (!g || !msState) return;
+  const { cols, rows, total, revealed, alive, mines, cashed } = msState;
+  g.style.gridTemplateColumns = `repeat(${cols}, 52px)`;
+  g.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'width:52px;height:52px;border-radius:8px;border:none;font-size:1.4rem;cursor:pointer;transition:all .12s;font-family:inherit;';
+    if (revealed.has(i)) {
+      if (mines.has(i)) {
+        btn.textContent = '💣'; btn.style.background = '#7f1d1d';
+      } else {
+        btn.textContent = '💎'; btn.style.background = 'rgba(34,197,94,.25)'; btn.style.color='#4ade80';
+      }
+      btn.disabled = true;
+    } else if (!alive || cashed) {
+      btn.textContent = mines.has(i) ? '💣' : '·';
+      btn.style.background = mines.has(i) ? 'rgba(127,29,29,.4)' : 'rgba(255,255,255,.05)';
+      btn.style.color = 'rgba(255,255,255,.3)'; btn.disabled = true;
+    } else {
+      btn.textContent = '?'; btn.style.background = 'rgba(255,255,255,.08)';
+      btn.style.color = 'rgba(255,255,255,.6)';
+      btn.onmouseover = () => btn.style.background='rgba(255,255,255,.16)';
+      btn.onmouseout  = () => btn.style.background='rgba(255,255,255,.08)';
+      btn.onclick = () => msReveal(i);
+    }
+    g.appendChild(btn);
+  }
+}
+
+function msReveal(idx) {
+  if (!msState || !msState.alive || msState.cashed) return;
+  msState.revealed.add(idx);
+  if (msState.mines.has(idx)) {
+    msState.alive = false;
+    document.getElementById('msMsg').innerHTML = '<span style="color:#f87171">💥 지뢰를 밟았습니다!</span>';
+    document.getElementById('msCashBtn').style.display = 'none';
+    msRender(); msUpdateMath();
+    fetch('/api/game/ms/end', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({result:'lose',payout:0}) });
+    return;
+  }
+  msUpdateMath();
+  msRender();
+  const safeLeft = msState.total - msState.mineCount - msState.revealed.size;
+  if (safeLeft === 0) {
+    msCashOut(); return;
+  }
+  document.getElementById('msMsg').textContent = `안전! ${msState.revealed.size}칸 열었습니다`;
+  document.getElementById('msCashBtn').style.display = '';
+}
+
+function msUpdateMath() {
+  if (!msState) return;
+  const { total, mineCount, revealed, bet, alive } = msState;
+  const safe = total - mineCount;
+  let mult = 1.0;
+  for (let i = 0; i < revealed.size; i++) {
+    mult *= (total - mineCount - i) / (total - i);
+  }
+  mult = revealed.size > 0 ? Math.max(1.0, (1 / mult) * 0.9) : 1.0;
+  msState.mult = mult;
+  const profit = Math.floor(bet * mult) - bet;
+  const el = id => document.getElementById(id);
+  if (el('msMineCount')) el('msMineCount').textContent = mineCount + '개';
+  if (el('msMulti')) el('msMulti').textContent = mult.toFixed(2) + 'x';
+  if (el('msProfit')) el('msProfit').style.color = profit >= 0 ? '#4ade80' : '#f87171';
+  if (el('msProfit')) el('msProfit').textContent = (profit >= 0 ? '+' : '') + profit + 'P';
+}
+
+async function msCashOut() {
+  if (!msState || !msState.alive || msState.cashed) return;
+  if (msState.revealed.size === 0) { toast('최소 1칸 이상 열어야 합니다','err'); return; }
+  msState.cashed = true;
+  const payout = Math.floor(msState.bet * msState.mult);
+  document.getElementById('msCashBtn').style.display = 'none';
+  msRender();
+  const er = await fetch('/api/game/ms/end', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({result:'win', payout}) })
+    .then(r=>r.json()).catch(()=>({}));
+  document.getElementById('msMsg').innerHTML = `<span style="color:#4ade80">✅ ${payout}P 획득! (+${payout - msState.bet}P)</span>`;
+  if (er.points != null) savePts(er.points); else savePts(pts + payout);
+}
+
+/* ══════════════════════════════════════
    DATA SYNC — Inhouse + Announcements
 ══════════════════════════════════════ */
 const fmtNum = n => Number(n||0).toLocaleString();

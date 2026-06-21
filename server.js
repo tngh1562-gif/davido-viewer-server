@@ -811,6 +811,35 @@ app.delete('/api/posts/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── 지뢰찾기 결과 처리 ──
+app.post('/api/game/ms/start', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (!rl(`ms-min:${name}`, 20, 60)) return res.status(429).json({ ok: false, error: '너무 빠릅니다' });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: true }); // 환경변수 없으면 그냥 통과
+  try {
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount: 1 },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
+    res.json({ ok: true, points: r.points });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/game/ms/end', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false });
+  const { result, payout } = req.body;
+  if (result === 'win' && payout > 1 && INHOUSE_SERVER_URL) {
+    try {
+      await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+        { nickname: name, amount: payout },
+        { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    } catch {}
+  }
+  res.json({ ok: true });
+});
+
 // ── 댓글 API ──
 app.get('/api/comments/:postId', (req, res) => {
   const all = readJSON(COMMENTS_FILE, {});
