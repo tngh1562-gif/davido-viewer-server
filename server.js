@@ -25,9 +25,11 @@ const VIEWERS_FILE    = path.join(DATA_DIR, 'viewers.json');
 const BETTING_FILE    = path.join(DATA_DIR, 'betting.json');
 const SHOP_FILE       = path.join(DATA_DIR, 'shop.json');
 const TIMING_WIN_FILE = path.join(DATA_DIR, 'timing-winner.json');
+const POSTS_FILE      = path.join(DATA_DIR, 'posts.json');
 
 // data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
+if (!fs.existsSync(POSTS_FILE)) writeJSON(POSTS_FILE, { posts: [] });
 
 // ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
 const SESSION_SECRET = process.env.SESSION_SECRET || 'davido-viewer-secret-2025';
@@ -638,6 +640,64 @@ app.post('/api/admin/announcements/reset', (req, res) => {
   const items = Array.isArray(req.body) ? req.body : [];
   writeJSON(ANN_FILE, { items: items.slice(0, 10) });
   res.json({ ok: true, count: items.length });
+});
+
+// ── 커뮤니티 게시판 ──
+const BOARDS = ['free', 'recommend', 'inquiry'];
+
+app.get('/api/posts', async (req, res) => {
+  const { board, page = 1 } = req.query;
+  if (board === 'notice') {
+    // 공지사항 = 봇 API에서 직접
+    if (!BOT_API_URL) return res.json({ ok: true, posts: [], total: 0 });
+    try {
+      const d = await Promise.race([
+        getJson(`${BOT_API_URL}/api/announcements`),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
+      ]);
+      const posts = (d.items || []).map(it => ({
+        id: it.msg_id || String(it.at),
+        board: 'notice', title: it.title || '공지', content: it.body || '',
+        author: '관리자', createdAt: it.at, readonly: true,
+      }));
+      return res.json({ ok: true, posts, total: posts.length });
+    } catch { return res.json({ ok: true, posts: [], total: 0 }); }
+  }
+  const data = readJSON(POSTS_FILE, { posts: [] });
+  let posts = data.posts;
+  if (board) posts = posts.filter(p => p.board === board);
+  posts = posts.sort((a, b) => b.createdAt - a.createdAt);
+  const PAGE = 15;
+  const total = posts.length;
+  res.json({ ok: true, posts: posts.slice((page-1)*PAGE, page*PAGE), total, page: Number(page) });
+});
+
+app.post('/api/posts', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { board, title, content } = req.body;
+  if (!BOARDS.includes(board)) return res.json({ ok: false, error: '잘못된 게시판' });
+  if (!title?.trim()) return res.json({ ok: false, error: '제목을 입력하세요' });
+  if (!content?.trim()) return res.json({ ok: false, error: '내용을 입력하세요' });
+  if (title.length > 100) return res.json({ ok: false, error: '제목 100자 이내' });
+  if (content.length > 3000) return res.json({ ok: false, error: '내용 3000자 이내' });
+  const data = readJSON(POSTS_FILE, { posts: [] });
+  const post = { id: crypto.randomBytes(8).toString('hex'), board, title: title.trim(), content: content.trim(), author: name, createdAt: Date.now() };
+  data.posts.unshift(post);
+  data.posts = data.posts.slice(0, 1000);
+  writeJSON(POSTS_FILE, data);
+  res.json({ ok: true, post });
+});
+
+app.delete('/api/posts/:id', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false });
+  const data = readJSON(POSTS_FILE, { posts: [] });
+  const idx = data.posts.findIndex(p => p.id === req.params.id && p.author === name);
+  if (idx < 0) return res.status(403).json({ ok: false, error: '삭제 권한 없음' });
+  data.posts.splice(idx, 1);
+  writeJSON(POSTS_FILE, data);
+  res.json({ ok: true });
 });
 
 // ── WebSocket ──

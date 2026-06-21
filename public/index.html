@@ -227,6 +227,30 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .game-card{aspect-ratio:16/10;cursor:pointer}
 .game-card:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
 
+/* COMMUNITY */
+.comm-nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.comm-tab{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-muted);font-size:.85rem;font-weight:600;padding:8px 16px;cursor:pointer;font-family:inherit;transition:all .15s}
+.comm-tab.active{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff}
+.comm-write-btn{float:right;padding:8px 18px;border:none;border-radius:8px;background:var(--ref-green);color:#000;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit}
+.comm-post-list{display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,.05);border-radius:10px;overflow:hidden}
+.comm-post-item{background:rgba(9,9,11,.6);padding:14px 18px;cursor:pointer;transition:background .12s;border-bottom:1px solid rgba(255,255,255,.04)}
+.comm-post-item:last-child{border-bottom:none}
+.comm-post-item:hover{background:rgba(255,255,255,.06)}
+.comm-post-title{font-size:.95rem;font-weight:600;color:#fff;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.comm-post-meta{font-size:.75rem;color:var(--text-muted)}
+.comm-post-preview{font-size:.82rem;color:rgba(255,255,255,.5);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.comm-detail{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:24px}
+.comm-detail-title{font-size:1.2rem;font-weight:700;margin-bottom:8px}
+.comm-detail-meta{font-size:.78rem;color:var(--text-muted);margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.comm-detail-content{font-size:.9rem;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.comm-write-form{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:20px;margin-bottom:20px}
+.comm-input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;font-family:inherit;font-size:.9rem;padding:10px 12px;margin-bottom:10px;box-sizing:border-box}
+.comm-input:focus{outline:none;border-color:rgba(255,255,255,.3)}
+.comm-textarea{min-height:120px;resize:vertical}
+.comm-submit-btn{padding:10px 24px;border:none;border-radius:8px;background:var(--ref-green);color:#000;font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit}
+.comm-back-btn{background:none;border:none;color:var(--text-muted);font-size:.85rem;cursor:pointer;font-family:inherit;padding:0;margin-bottom:16px}
+.comm-empty{text-align:center;color:var(--text-muted);padding:48px 0;font-size:.9rem}
+
 /* SHOP GRID */
 .store-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
 .rarity-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:4px;text-transform:uppercase;margin-bottom:8px}
@@ -534,6 +558,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     <div class="logo">DAVIDO INHOUSE</div>
     <div class="nav-links">
       <div class="nav-item active" onclick="switchTab('page-home',this)">메인 대시보드</div>
+      <div class="nav-item" onclick="switchTab('page-community',this);loadCommunity('notice')">커뮤니티</div>
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
     </div>
@@ -665,6 +690,17 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     <div id="gmContent"></div>
   </div>
 
+</div>
+
+<!-- ═══ COMMUNITY ═══ -->
+<div id="page-community" class="page">
+  <div class="comm-nav">
+    <button class="comm-tab active" id="ctab-notice"   onclick="loadCommunity('notice')">📢 공지사항</button>
+    <button class="comm-tab"        id="ctab-free"     onclick="loadCommunity('free')">💬 자유게시판</button>
+    <button class="comm-tab"        id="ctab-recommend" onclick="loadCommunity('recommend')">👍 추천게시판</button>
+    <button class="comm-tab"        id="ctab-inquiry"  onclick="loadCommunity('inquiry')">❓ 문의게시판</button>
+  </div>
+  <div id="commContent"></div>
 </div>
 
 <!-- ═══ STORE ═══ -->
@@ -966,6 +1002,98 @@ async function placeBet(team) {
   // 초기 상태 로드
   fetch('/api/bet/status').then(r=>r.json()).then(renderBetting).catch(()=>{});
 })();
+
+/* ══════════ COMMUNITY ══════════ */
+let commBoard = 'notice';
+const BOARD_LABELS = { notice:'공지사항', free:'자유게시판', recommend:'추천게시판', inquiry:'문의게시판' };
+
+async function loadCommunity(board) {
+  commBoard = board;
+  document.querySelectorAll('.comm-tab').forEach(t => t.classList.remove('active'));
+  const tab = document.getElementById(`ctab-${board}`);
+  if (tab) tab.classList.add('active');
+
+  const wrap = document.getElementById('commContent');
+  wrap.innerHTML = '<div class="comm-empty">불러오는 중...</div>';
+
+  const r = await fetch(`/api/posts?board=${board}`).then(r=>r.json()).catch(()=>({ok:false,posts:[]}));
+  const posts = r.posts || [];
+  const readonly = board === 'notice';
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="font-size:1rem;font-weight:600">${BOARD_LABELS[board]} <span style="color:var(--text-muted);font-size:.85rem">(${r.total||posts.length})</span></div>
+    ${!readonly ? `<button class="comm-write-btn" onclick="showWriteForm('${board}')">✏️ 글쓰기</button>` : ''}
+  </div>
+  <div id="writeFormArea"></div>`;
+
+  if (!posts.length) {
+    html += `<div class="comm-empty">게시글이 없습니다${readonly ? '' : '<br><br><button class="comm-write-btn" onclick="showWriteForm(\''+board+'\')">첫 글을 작성해보세요</button>'}</div>`;
+  } else {
+    html += `<div class="comm-post-list">${posts.map(p => `
+      <div class="comm-post-item" onclick="showPost('${p.id}','${board}')">
+        <div class="comm-post-title">${escapeHtml(p.title)}</div>
+        <div class="comm-post-preview">${escapeHtml((p.content||'').slice(0,80))}</div>
+        <div class="comm-post-meta">${escapeHtml(p.author)} · ${relTime(p.createdAt)}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  wrap.innerHTML = html;
+}
+
+async function showPost(id, board) {
+  const r = await fetch(`/api/posts?board=${board}`).then(r=>r.json()).catch(()=>({ok:false,posts:[]}));
+  const post = (r.posts||[]).find(p => p.id === id);
+  if (!post) { toast('게시글을 찾을 수 없습니다','err'); return; }
+
+  const canDelete = post.author === myName && board !== 'notice';
+  document.getElementById('commContent').innerHTML = `
+    <button class="comm-back-btn" onclick="loadCommunity('${board}')">← ${BOARD_LABELS[board]}으로 돌아가기</button>
+    <div class="comm-detail">
+      <div class="comm-detail-title">${escapeHtml(post.title)}</div>
+      <div class="comm-detail-meta">
+        ${escapeHtml(post.author)} · ${relTime(post.createdAt)}
+        ${canDelete ? `<button onclick="deletePost('${post.id}','${board}')" style="float:right;background:none;border:none;color:#ff6b81;cursor:pointer;font-size:.78rem">삭제</button>` : ''}
+      </div>
+      <div class="comm-detail-content">${escapeHtml(post.content)}</div>
+    </div>`;
+}
+
+function showWriteForm(board) {
+  const area = document.getElementById('writeFormArea');
+  if (!myName) { toast('로그인이 필요합니다','err'); return; }
+  if (area.innerHTML) { area.innerHTML = ''; return; }
+  area.innerHTML = `
+    <div class="comm-write-form">
+      <div style="font-weight:600;margin-bottom:12px">새 글 작성</div>
+      <input class="comm-input" id="wtitle" placeholder="제목 (100자 이내)" maxlength="100">
+      <textarea class="comm-input comm-textarea" id="wcontent" placeholder="내용 (3000자 이내)" maxlength="3000"></textarea>
+      <div style="display:flex;gap:8px">
+        <button class="comm-submit-btn" onclick="submitPost('${board}')">게시하기</button>
+        <button onclick="document.getElementById('writeFormArea').innerHTML=''" style="padding:10px 16px;background:rgba(255,255,255,.08);border:none;border-radius:8px;color:var(--text-muted);cursor:pointer;font-family:inherit">취소</button>
+      </div>
+    </div>`;
+  document.getElementById('wtitle').focus();
+}
+
+async function submitPost(board) {
+  const title = document.getElementById('wtitle')?.value?.trim();
+  const content = document.getElementById('wcontent')?.value?.trim();
+  if (!title) { toast('제목을 입력하세요','err'); return; }
+  if (!content) { toast('내용을 입력하세요','err'); return; }
+  const r = await fetch('/api/posts', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ board, title, content })
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) { toast('게시글이 등록됐습니다','ok'); loadCommunity(board); }
+  else toast(r.error || '등록 실패','err');
+}
+
+async function deletePost(id, board) {
+  if (!confirm('정말 삭제하시겠습니까?')) return;
+  const r = await fetch(`/api/posts/${id}`, {method:'DELETE'}).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) { toast('삭제됐습니다','ok'); loadCommunity(board); }
+  else toast(r.error || '삭제 실패','err');
+}
 
 /* ══════════ NAV ══════════ */
 function switchTab(pageId, el){
