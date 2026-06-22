@@ -997,7 +997,7 @@ app.delete('/api/comments/:postId/:commentId/:replyId', (req, res) => {
 // CRASH GAME — 서버 루프 (항상 실행)
 // ══════════════════════════════════════════════════════════
 const CRASH_BET_MIN     = 10;   // 최소 베팅
-const CRASH_BET_MAX     = 50;   // 최대 베팅
+const CRASH_BET_MAX     = 30;   // 최대 베팅 (50→30 하향)
 const CRASH_BETTING_SEC = 7;    // 베팅 구간 (초)
 const CRASH_TICK_MS     = 100;  // 배당 업데이트 간격
 
@@ -1015,11 +1015,11 @@ let crash = {
 };
 
 function genCrashPoint() {
-  // 8% house edge: 즉시 폭발
   const r = crypto.randomBytes(4).readUInt32BE() / 0xFFFFFFFF;
-  if (r < 0.08) return 1.00;
-  // geometric: 0.99 / (1-r) → 중앙값 ~2x, 10% 확률로 10x 이상
-  return Math.round(Math.min(0.99 / (1 - r), 1000) * 100) / 100;
+  // 20% 즉시 폭발 (하우스 엣지 강화)
+  if (r < 0.20) return 1.00;
+  // 분포 계수 0.90, 최대 15x 캡 → 기대수익 72%, 하우스 엣지 28%
+  return Math.round(Math.min(0.90 / (1 - r), 15) * 100) / 100;
 }
 
 function crashMult(elapsedMs) {
