@@ -596,7 +596,7 @@ function getTodayKST() {
 function getDailyTargetMs() {
   const today = getTodayKST();
   const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
-  return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
+  return (parseInt(hash.slice(0, 8), 16) % 40000) + 5000; // 5.00 ~ 44.99초 (난이도 상향)
 }
 
 // 인메모리 캐시에서 먼저 확인 (동기 → 레이스 없음)
@@ -691,7 +691,7 @@ app.post('/api/game/timing/press', async (req, res) => {
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
 
-  if (diff <= 50) { // ±0.05초
+  if (diff <= 15) { // ±0.015초 (15ms, 난이도 상향)
     // ══ 인메모리 즉시 잠금 (다른 동시 요청 차단) ══
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     _timingWinner = { date: today, winner }; // await 전에 동기적으로 설정
