@@ -2191,8 +2191,8 @@ function initCrash(wrap) {
           <rect x="97" y="78" width="8" height="20" fill="#3d4754"/>
         </svg>
       </div>
-      <!-- 로켓 -->
-      <div class="cs-rocket-wrap" id="csRocket" style="bottom:26%">
+      <!-- 로켓 (초기값은 CSS로, JS가 이후 제어) -->
+      <div class="cs-rocket-wrap" id="csRocket" style="bottom:38%">
         ${ROCKET_SVG}
         <div id="csFlame" style="display:none">${FLAME_SVG}</div>
       </div>
@@ -2310,21 +2310,45 @@ function _updateBg(alt){
 
 function lerp(a,b,t){return Math.round(a+(b-a)*Math.min(1,t));}
 
-/* ── 로켓 위치 업데이트 ── */
+/* ── 카메라 팔로우: 로켓 고정, 세계가 내려감 ── */
 function _updateRocket(m,phase){
-  const el=$c('csRocket');if(!el)return;
-  const scene=$c('crashScene');
-  const H=scene?scene.offsetHeight:340;
-  const groundH=H*.18;
-  // 발사대 위 = bottom: 18% + pad height (90px scaled)
-  const padTop=groundH+88; // px from bottom
-  const topPos=H*.08;
-  const progress=Math.min(1,1-1/Math.max(m,1));
-  const bottom=padTop+(H-padTop-topPos)*progress;
-  el.style.bottom=bottom+'px';
-  // 화염
-  const flame=$c('csFlame');
-  if(flame)flame.style.display=(phase==='running')?'block':'none';
+  const scene=$c('crashScene');if(!scene)return;
+  const H=scene.offsetHeight;
+
+  // 로켓은 항상 화면 중앙 아래쪽에 고정
+  const rocketFixedBottom=H*.38;
+  const el=$c('csRocket');
+  if(el){
+    el.style.bottom=rocketFixedBottom+'px';
+    el.style.transition='none';
+    // 화염
+    const flame=$c('csFlame');
+    if(flame)flame.style.display=(phase==='running')?'block':'none';
+  }
+
+  // 세계 스크롤 오프셋 (배당이 오를수록 배경이 아래로)
+  const progress=1-1/Math.max(m,1); // 0~1
+  const worldY=H*progress*1.6;
+
+  // 지면
+  const gr=$c('csGround');
+  if(gr){
+    gr.style.transform=`translateY(${worldY}px)`;
+    gr.style.opacity=Math.max(0,1-progress/.12).toFixed(2);
+  }
+  // 발사대
+  const pad=$c('csPad');
+  if(pad){
+    pad.style.transform=`translateY(${worldY}px)`;
+    pad.style.opacity=Math.max(0,1-progress/.08).toFixed(2);
+  }
+  // 구름 (절반 속도 시차)
+  document.querySelectorAll('#csClouds .cs-cloud').forEach(c=>{
+    c.style.marginTop=`${worldY*.45}px`;
+  });
+  // 별 (느린 시차)
+  const stars=$c('csStars');
+  if(stars)stars.style.transform=`translateY(${worldY*.12}px)`;
 }
 
 /* ── 파티클 루프 ── */
@@ -2356,9 +2380,10 @@ function _crashLoop(){
     m=_cCrashMult||1;
   }
 
-  const alt=crashPhase==='betting'?0:Math.min(1,Math.log(Math.max(m,1))/Math.log(20));
+  const dispM=crashPhase==='betting'?1:m;
+  const alt=Math.min(1,Math.log(Math.max(dispM,1))/Math.log(20));
   _updateBg(alt);
-  _updateRocket(m,crashPhase);
+  _updateRocket(dispM,crashPhase);
 
   // 배당 숫자 업데이트
   const mt=$c('csMultText');
@@ -2373,9 +2398,9 @@ function _crashLoop(){
   if(st){
     if(crashPhase==='betting'){
       const left=Math.max(0,crashBetEndAt-now);
-      st.textContent=`🕐 ${(left/1000).toFixed(1)}초 후 발사`;
+      st.textContent=`🕐 ${(left/1000).toFixed(1)}초 후 발사 · 지금 베팅하세요`;
     } else if(crashPhase==='running'){
-      st.textContent='원하는 배당에서 현금화 버튼을 누르세요';
+      st.textContent='🚀 발사! 원하는 배당에서 현금화하세요';
     } else {
       st.textContent=`💥 ${(_cCrashMult||m).toFixed(2)}x 에서 폭발!`;
     }
