@@ -846,12 +846,13 @@ app.post('/api/game/ms/end', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false });
   const { result, payout } = req.body;
-  if (result === 'win' && payout > 1 && INHOUSE_SERVER_URL) {
+  const safePayout = Math.min(payout, 4); // 서버에서도 최대 4배 강제
+  if (result === 'win' && safePayout > 1 && INHOUSE_SERVER_URL) {
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-        { nickname: name, amount: payout },
+        { nickname: name, amount: safePayout },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-      if (r.ok) addFeed('game', name, { game: '지뢰찾기', payout, reason: `💣 지뢰찾기 성공 (+${payout}P)` });
+      if (r.ok) addFeed('game', name, { game: '지뢰찾기', payout: safePayout, reason: `💣 지뢰찾기 성공 (+${safePayout}P)` });
     } catch {}
   }
   res.json({ ok: true });

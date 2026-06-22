@@ -1823,12 +1823,10 @@ function msReveal(idx) {
 function msUpdateMath() {
   if (!msState) return;
   const { total, mineCount, revealed, bet, alive } = msState;
-  const safe = total - mineCount;
-  let mult = 1.0;
-  for (let i = 0; i < revealed.size; i++) {
-    mult *= (total - mineCount - i) / (total - i);
-  }
-  mult = revealed.size > 0 ? Math.min(5.0, Math.max(1.0, (1 / mult) * 0.55)) : 1.0; // 최대 5배, 지급률 55%
+  // 배율 = 1 + (열린칸 × 지뢰수) / (전체칸 × 0.8), 최대 4배
+  const k = revealed.size;
+  const rawMult = k > 0 ? 1 + (k * mineCount) / (total * 0.8) : 1.0;
+  const mult = Math.min(4.0, Math.max(1.0, +rawMult.toFixed(2))); // 최대 4배
   msState.mult = mult;
   const profit = Math.floor(bet * mult) - bet;
   const el = id => document.getElementById(id);
