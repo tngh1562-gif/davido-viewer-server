@@ -636,7 +636,7 @@ app.post('/api/game/timing/start', async (req, res) => {
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1 },
+      { nickname: name, amount: 1, reason: '⏱ 타이밍 복권 도전 (-1P)' },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
     const sessionId = crypto.randomBytes(16).toString('hex');
@@ -662,7 +662,7 @@ app.post('/api/game/timing/press', async (req, res) => {
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-        { nickname: name, amount: 100 },
+        { nickname: name, amount: 100, reason: '🏆 타이밍 복권 당첨! (+100P)' },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
       if (r.ok) newPoints = r.points;
     } catch {}
@@ -859,7 +859,7 @@ async function msGrantPayout(name, payout) {
   if (payout <= 1 || !INHOUSE_SERVER_URL) return null;
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-      { nickname: name, amount: payout },
+      { nickname: name, amount: payout, reason: `💣 지뢰찾기 성공 (+${payout}P)` },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (r.ok) { addFeed('game', name, { reason: `💣 지뢰찾기 성공 (+${payout}P)` }); return r.points; }
   } catch {}
@@ -875,7 +875,7 @@ app.post('/api/game/ms/start', async (req, res) => {
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
     const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1 },
+      { nickname: name, amount: 1, reason: '💣 지뢰찾기 시작 (-1P)' },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
     // 지뢰 위치 서버에서 생성 — 클라이언트에 절대 안 보냄
@@ -1088,7 +1088,7 @@ function endRound() {
 }
 
 // Crash 베팅 API
-app.post('/api/game/crash/bet', (req, res) => {
+app.post('/api/game/crash/bet', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (crash.phase !== 'betting') return res.json({ ok: false, error: '베팅 시간이 아닙니다' });
@@ -1098,18 +1098,22 @@ app.post('/api/game/crash/bet', (req, res) => {
   if (amount < CRASH_BET_MIN || amount > CRASH_BET_MAX)
     return res.json({ ok: false, error: `베팅: ${CRASH_BET_MIN}~${CRASH_BET_MAX}p` });
 
-  const { viewers, viewer } = getViewer(name);
-  if (viewer.points < amount) return res.json({ ok: false, error: '포인트 부족' });
-
-  viewer.points -= amount;
-  saveViewer(viewers);
-  crash.bets[name] = { amount, cashedOut: false, cashMult: null };
-  crashBroadcast();
-  res.json({ ok: true, viewer, roundId: crash.roundId });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
+  try {
+    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount, reason: `💥 배당폭발 베팅 (-${amount}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
+    const { viewers, viewer } = getViewer(name);
+    viewer.points = dr.points; saveViewer(viewers);
+    crash.bets[name] = { amount, cashedOut: false, cashMult: null };
+    crashBroadcast();
+    res.json({ ok: true, viewer, roundId: crash.roundId });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // 현금화 API
-app.post('/api/game/crash/cashout', (req, res) => {
+app.post('/api/game/crash/cashout', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (crash.phase !== 'running') return res.json({ ok: false, error: '게임 진행 중이 아닙니다' });
@@ -1118,17 +1122,23 @@ app.post('/api/game/crash/cashout', (req, res) => {
   if (!bet) return res.json({ ok: false, error: '이번 판 베팅 없음' });
   if (bet.cashedOut) return res.json({ ok: false, error: '이미 현금화함' });
 
-  const mult   = crash.mult;
-  const gain   = Math.floor(bet.amount * mult);
+  const mult = crash.mult;
+  const gain = Math.floor(bet.amount * mult);
+  const net  = gain - bet.amount; // 순이익
   bet.cashedOut = true;
   bet.cashMult  = mult;
 
-  const { viewers, viewer } = getViewer(name);
-  viewer.points += gain;
-  saveViewer(viewers);
-  addFeed('crash', name, { mult, gain, bet: bet.amount });
-  crashBroadcast();
-  res.json({ ok: true, mult, gain, viewer });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
+  try {
+    const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      { nickname: name, amount: gain, reason: `💥 배당폭발 현금화 ${mult.toFixed(2)}x (+${gain}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    const { viewers, viewer } = getViewer(name);
+    if (gr.ok) viewer.points = gr.points; saveViewer(viewers);
+    addFeed('crash', name, { mult, gain, bet: bet.amount });
+    crashBroadcast();
+    res.json({ ok: true, mult, gain, viewer });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // 현재 Crash 상태 (처음 접속 시)
