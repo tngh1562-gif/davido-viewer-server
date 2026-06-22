@@ -993,15 +993,180 @@ app.delete('/api/comments/:postId/:commentId/:replyId', (req, res) => {
   res.json({ ok: true });
 });
 
+// ══════════════════════════════════════════════════════════
+// CRASH GAME — 서버 루프 (항상 실행)
+// ══════════════════════════════════════════════════════════
+const CRASH_BET_MIN     = 10;   // 최소 베팅
+const CRASH_BET_MAX     = 50;   // 최대 베팅
+const CRASH_BETTING_SEC = 7;    // 베팅 구간 (초)
+const CRASH_TICK_MS     = 100;  // 배당 업데이트 간격
+
+let crash = {
+  phase:     'betting',  // 'betting' | 'running' | 'crashed'
+  roundId:   0,
+  crashAt:   1.00,       // 이번 라운드 폭발 배당 (비공개)
+  startTime: 0,          // running 시작 시각
+  betEndAt:  0,          // 베팅 마감 시각
+  mult:      1.00,       // 현재 배당
+  bets:      {},         // { name: { amount, cashedOut, cashMult } }
+  history:   [],         // 최근 20판 결과
+  tickTimer: null,
+  phaseTimer: null,
+};
+
+function genCrashPoint() {
+  // 8% house edge: 즉시 폭발
+  const r = crypto.randomBytes(4).readUInt32BE() / 0xFFFFFFFF;
+  if (r < 0.08) return 1.00;
+  // geometric: 0.99 / (1-r) → 중앙값 ~2x, 10% 확률로 10x 이상
+  return Math.round(Math.min(0.99 / (1 - r), 1000) * 100) / 100;
+}
+
+function crashMult(elapsedMs) {
+  // e^(0.0001 * ms) → 10s=2.72x, 20s=7.39x, 30s=20.09x
+  return Math.round(Math.pow(Math.E, 0.0001 * elapsedMs) * 100) / 100;
+}
+
+function crashBroadcast(extra = {}) {
+  const pub = {
+    type:    'crash_state',
+    phase:   crash.phase,
+    roundId: crash.roundId,
+    mult:    crash.mult,
+    betEndAt: crash.betEndAt,
+    history: crash.history,
+    // 베팅 현황 (금액은 숨기고 이름+캐시아웃 여부만)
+    players: Object.entries(crash.bets).map(([name, b]) => ({
+      name,
+      cashedOut: b.cashedOut,
+      cashMult:  b.cashedOut ? b.cashMult : null,
+    })),
+    ...extra,
+  };
+  broadcast(pub);
+}
+
+function startBetting() {
+  crash.phase    = 'betting';
+  crash.roundId += 1;
+  crash.crashAt  = genCrashPoint();
+  crash.bets     = {};
+  crash.mult     = 1.00;
+  crash.betEndAt = Date.now() + CRASH_BETTING_SEC * 1000;
+  crashBroadcast();
+  crash.phaseTimer = setTimeout(startRunning, CRASH_BETTING_SEC * 1000);
+}
+
+function startRunning() {
+  crash.phase     = 'running';
+  crash.startTime = Date.now();
+  crashBroadcast();
+
+  crash.tickTimer = setInterval(() => {
+    const elapsed = Date.now() - crash.startTime;
+    crash.mult = crashMult(elapsed);
+
+    if (crash.mult >= crash.crashAt) {
+      crash.mult = crash.crashAt;
+      clearInterval(crash.tickTimer);
+      endRound();
+    } else {
+      crashBroadcast();
+    }
+  }, CRASH_TICK_MS);
+}
+
+function endRound() {
+  crash.phase = 'crashed';
+
+  // 캐시아웃 못 한 사람 포인트 이미 차감됨 → 추가 처리 없음
+  crash.history.unshift({ mult: crash.crashAt, roundId: crash.roundId });
+  if (crash.history.length > 20) crash.history.pop();
+
+  crashBroadcast({ crashed: true });
+  crash.phaseTimer = setTimeout(startBetting, 4000); // 4초 후 다음 라운드
+}
+
+// Crash 베팅 API
+app.post('/api/game/crash/bet', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (crash.phase !== 'betting') return res.json({ ok: false, error: '베팅 시간이 아닙니다' });
+  if (crash.bets[name]) return res.json({ ok: false, error: '이미 베팅했습니다' });
+
+  const amount = parseInt(req.body.amount || 0);
+  if (amount < CRASH_BET_MIN || amount > CRASH_BET_MAX)
+    return res.json({ ok: false, error: `베팅: ${CRASH_BET_MIN}~${CRASH_BET_MAX}p` });
+
+  const { viewers, viewer } = getViewer(name);
+  if (viewer.points < amount) return res.json({ ok: false, error: '포인트 부족' });
+
+  viewer.points -= amount;
+  saveViewer(viewers);
+  crash.bets[name] = { amount, cashedOut: false, cashMult: null };
+  crashBroadcast();
+  res.json({ ok: true, viewer, roundId: crash.roundId });
+});
+
+// 현금화 API
+app.post('/api/game/crash/cashout', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (crash.phase !== 'running') return res.json({ ok: false, error: '게임 진행 중이 아닙니다' });
+
+  const bet = crash.bets[name];
+  if (!bet) return res.json({ ok: false, error: '이번 판 베팅 없음' });
+  if (bet.cashedOut) return res.json({ ok: false, error: '이미 현금화함' });
+
+  const mult   = crash.mult;
+  const gain   = Math.floor(bet.amount * mult);
+  bet.cashedOut = true;
+  bet.cashMult  = mult;
+
+  const { viewers, viewer } = getViewer(name);
+  viewer.points += gain;
+  saveViewer(viewers);
+  addFeed('crash', name, { mult, gain, bet: bet.amount });
+  crashBroadcast();
+  res.json({ ok: true, mult, gain, viewer });
+});
+
+// 현재 Crash 상태 (처음 접속 시)
+app.get('/api/game/crash/state', (req, res) => {
+  res.json({
+    phase:   crash.phase,
+    roundId: crash.roundId,
+    mult:    crash.mult,
+    betEndAt: crash.betEndAt,
+    history: crash.history,
+    players: Object.entries(crash.bets).map(([name, b]) => ({
+      name, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
+    })),
+  });
+});
+
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
   const shop = readJSON(SHOP_FILE, { items: [] });
   ws.send(JSON.stringify({ type: 'init', betting, shop }));
+  // 접속 시 현재 Crash 상태 전송
+  ws.send(JSON.stringify({
+    type:    'crash_state',
+    phase:   crash.phase,
+    roundId: crash.roundId,
+    mult:    crash.mult,
+    betEndAt: crash.betEndAt,
+    history: crash.history,
+    players: Object.entries(crash.bets).map(([name, b]) => ({
+      name, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
+    })),
+  }));
 });
 
 server.listen(PORT, () => {
   console.log(`davido-viewer server on :${PORT}`);
+  startBetting(); // Crash 게임 루프 시작
   // 서버 시작 시 봇에 공지 동기화 요청
   if (BOT_API_URL) {
     setTimeout(() => {
