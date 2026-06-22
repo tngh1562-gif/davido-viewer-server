@@ -1754,11 +1754,6 @@ function fmtTG(ms) {
   return `${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
 }
 // 목표 시간 표시용 — 소수점 숨김 (약 XX초로만 표시)
-// 목표 시간을 ±3초 범위로만 표시 (정확한 순간 비공개)
-function fmtTGRange(ms) {
-  const s = Math.floor(ms / 1000);
-  return `${Math.max(1,s-3)}초 ~ ${s+3}초`;
-}
 
 async function initTiming(wrap) {
   const r = await fetch('/api/game/timing/state').then(r=>r.json()).catch(()=>({ok:false}));
@@ -1768,17 +1763,17 @@ async function initTiming(wrap) {
 function renderTiming(wrap, state) {
   if (!state || !state.ok) { wrap.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:40px">로딩 실패</div>'; return; }
   // ±3초 범위로만 표시 (정확한 순간 비공개)
-  const targetRange = fmtTGRange(state.targetMs);
+  const target = fmtTG(state.targetMs);
 
   if (state.status === 'won') {
     wrap.innerHTML = `
       <div style="text-align:center;padding:20px">
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">오늘의 목표 범위</div>
-        <div class="tg-target">${targetRange}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">오늘의 목표 시간</div>
+        <div class="tg-target">${target}초</div>
         <div class="tg-won-box">
           <div style="font-size:28px;margin-bottom:8px">🏆</div>
           <div style="font-size:18px;font-weight:700;color:#c4b5fd">${escapeHtml(state.winner?.name||'?')}님이 당첨!</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">정확한 시간: ${fmtTG(state.targetMs)}초 · 오차 ${(state.winner?.diff||0)}ms · +100P</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차 ${(state.winner?.diff||0)}ms · +100P 지급</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:12px">내일 새로운 타이밍이 공개됩니다 🎲</div>
         </div>
       </div>`;
@@ -1787,9 +1782,9 @@ function renderTiming(wrap, state) {
 
   wrap.innerHTML = `
     <div style="text-align:center;padding:20px" id="tgWrap">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">이 범위 안 어딘가에 정확한 시간이 숨어있습니다</div>
-      <div class="tg-target">${targetRange}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">±0.015초(15ms) 이내 선착순 1명 · 100P</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
+      <div class="tg-target">${target}초</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · <b style="color:#f87171">±0.005초(5ms) 이내</b> 선착순 1명 100P</div>
       <div id="tgPhase">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
         <div class="tg-timer" id="tgTimerDisp">00.00</div>
@@ -1863,7 +1858,7 @@ async function tgStop() {
     const sign = elapsed > r.targetMs ? '+' : '-';
     resultEl.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px">
       <div style="font-size:15px;color:var(--text-muted)">나의 기록: <b style="color:#fff">${fmtTG(elapsed)}초</b></div>
-      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초 (±0.015초 이내여야 당첨)</div>
+      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초 (±0.005초 이내여야 당첨)</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:8px">아쉽네요! 다시 도전해보세요</div>
     </div>`;
     document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs})">다시 도전 (1P)</button>`;

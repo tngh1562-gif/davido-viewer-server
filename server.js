@@ -691,7 +691,7 @@ app.post('/api/game/timing/press', async (req, res) => {
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
 
-  if (diff <= 15) { // ±0.015초 (15ms, 난이도 상향)
+  if (diff <= 5) { // ±0.005초 (5ms — 브라우저 이벤트 지연 수준, 사실상 불가능)
     // ══ 인메모리 즉시 잠금 (다른 동시 요청 차단) ══
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     _timingWinner = { date: today, winner }; // await 전에 동기적으로 설정
