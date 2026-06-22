@@ -1125,12 +1125,19 @@ function startRunning() {
 function endRound() {
   crash.phase = 'crashed';
 
-  // 캐시아웃 못 한 사람 포인트 이미 차감됨 → 추가 처리 없음
+  // 폭발 시 캐시아웃 못 한 사람들 피드 추가
+  Object.entries(crash.bets).forEach(([name, b]) => {
+    if (!b.cashedOut) {
+      addFeed('crash', name, { mult: crash.crashAt, gain: 0, bet: b.amount,
+        reason: `💥 배당폭발 폭발 ${crash.crashAt}x (-${b.amount}P)` });
+    }
+  });
+
   crash.history.unshift({ mult: crash.crashAt, roundId: crash.roundId });
   if (crash.history.length > 20) crash.history.pop();
 
   crashBroadcast({ crashed: true });
-  crash.phaseTimer = setTimeout(startBetting, 4000); // 4초 후 다음 라운드
+  crash.phaseTimer = setTimeout(startBetting, 4000);
 }
 
 // Crash 베팅 API
@@ -1181,7 +1188,7 @@ app.post('/api/game/crash/cashout', async (req, res) => {
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     const { viewers, viewer } = getViewer(name);
     if (gr.ok) viewer.points = gr.points; saveViewer(viewers);
-    addFeed('crash', name, { mult, gain, bet: bet.amount });
+    addFeed('crash', name, { mult, gain, bet: bet.amount, reason: `💥 배당폭발 ${mult.toFixed(2)}x 현금화 (+${gain}P)` });
     crashBroadcast();
     res.json({ ok: true, mult, gain, viewer });
   } catch(e) { res.json({ ok: false, error: e.message }); }
