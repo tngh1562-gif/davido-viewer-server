@@ -827,35 +827,85 @@ app.delete('/api/posts/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── 지뢰찾기 결과 처리 ──
+// ── 지뢰찾기 (완전 서버사이드 — 클라이언트 조작 불가) ──
+const msSessions = new Map(); // sessionId → game state
+
+function calcMsPayout(session) {
+  const k = session.revealed.size;
+  const rawMult = k > 0 ? 1 + (k * session.mineCount) / (session.total * 0.8) : 1.0;
+  return Math.floor(session.bet * Math.min(4.0, Math.max(1.0, rawMult)));
+}
+
+async function msGrantPayout(name, payout) {
+  if (payout <= 1 || !INHOUSE_SERVER_URL) return null;
+  try {
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      { nickname: name, amount: payout },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (r.ok) { addFeed('game', name, { reason: `💣 지뢰찾기 성공 (+${payout}P)` }); return r.points; }
+  } catch {}
+  return null;
+}
+
 app.post('/api/game/ms/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (!rl(`ms-min:${name}`, 20, 60)) return res.status(429).json({ ok: false, error: '너무 빠릅니다' });
-  if (!INHOUSE_SERVER_URL) return res.json({ ok: true }); // 환경변수 없으면 그냥 통과
+  const mineCount = Math.max(3, Math.min(7, parseInt(req.body.mineCount) || 5));
+  const TOTAL = 25;
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
-    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
       { nickname: name, amount: 1 },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-    if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
-    res.json({ ok: true, points: r.points });
+    if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
+    // 지뢰 위치 서버에서 생성 — 클라이언트에 절대 안 보냄
+    const mineSet = new Set();
+    while (mineSet.size < mineCount) mineSet.add(Math.floor(Math.random() * TOTAL));
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    msSessions.set(sessionId, { name, mineSet, revealed: new Set(), bet: 1, mineCount, total: TOTAL, alive: true, cashed: false });
+    setTimeout(() => msSessions.delete(sessionId), 30 * 60 * 1000);
+    res.json({ ok: true, sessionId, total: TOTAL, mineCount, points: dr.points });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/game/ms/end', async (req, res) => {
+app.post('/api/game/ms/reveal', async (req, res) => {
   const name = getSessionName(req);
-  if (!name) return res.json({ ok: false });
-  const { result, payout } = req.body;
-  const safePayout = Math.min(payout, 4); // 서버에서도 최대 4배 강제
-  if (result === 'win' && safePayout > 1 && INHOUSE_SERVER_URL) {
-    try {
-      const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-        { nickname: name, amount: safePayout },
-        { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-      if (r.ok) addFeed('game', name, { game: '지뢰찾기', payout: safePayout, reason: `💣 지뢰찾기 성공 (+${safePayout}P)` });
-    } catch {}
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { sessionId, cellIdx } = req.body;
+  const s = msSessions.get(sessionId);
+  if (!s || s.name !== name) return res.json({ ok: false, error: '세션 없음' });
+  if (!s.alive || s.cashed) return res.json({ ok: false, error: '게임 종료됨' });
+  const idx = parseInt(cellIdx);
+  if (isNaN(idx) || idx < 0 || idx >= s.total || s.revealed.has(idx)) return res.json({ ok: false, error: '잘못된 셀' });
+  if (s.mineSet.has(idx)) {
+    s.alive = false;
+    msSessions.delete(sessionId);
+    return res.json({ ok: true, hit: true, mines: [...s.mineSet] });
   }
-  res.json({ ok: true });
+  s.revealed.add(idx);
+  const payout = calcMsPayout(s);
+  const safeLeft = s.total - s.mineCount - s.revealed.size;
+  if (safeLeft === 0) { // 전부 열면 자동 정산
+    s.cashed = true; msSessions.delete(sessionId);
+    const pts = await msGrantPayout(name, payout);
+    return res.json({ ok: true, hit: false, autoWin: true, payout, mines: [...s.mineSet], points: pts });
+  }
+  res.json({ ok: true, hit: false, payout, safeLeft, revealedCount: s.revealed.size });
+});
+
+app.post('/api/game/ms/cashout', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { sessionId } = req.body;
+  const s = msSessions.get(sessionId);
+  if (!s || s.name !== name) return res.json({ ok: false, error: '세션 없음' });
+  if (!s.alive || s.cashed) return res.json({ ok: false, error: '게임 종료됨' });
+  if (s.revealed.size === 0) return res.json({ ok: false, error: '최소 1칸 이상 열어야 합니다' });
+  s.cashed = true; msSessions.delete(sessionId);
+  const payout = calcMsPayout(s);
+  const pts = await msGrantPayout(name, payout);
+  res.json({ ok: true, payout, mines: [...s.mineSet], points: pts });
 });
 
 // ── 댓글 API ──
