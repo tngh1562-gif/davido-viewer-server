@@ -1749,15 +1749,31 @@ function initMs(wrap) {
     </div>`;
 }
 
+function msSetBtns(disabled, text) {
+  [3,4,5,6,7].forEach(n => {
+    const b = document.getElementById(`msBtn${n}`);
+    if (!b) return;
+    b.disabled = disabled;
+    b.textContent = text || `${n}개`;
+  });
+}
+
+function msShowNewGame() {
+  const area = document.getElementById('msCashBtn')?.parentElement;
+  if (!area) return;
+  area.innerHTML = `<button class="s-chip" onclick="initMs(document.getElementById('gmContent'))" style="background:rgba(255,255,255,.12);color:#fff">↺ 새 게임</button>`;
+}
+
 async function msStart(mines) {
   if (!myName) { toast('로그인이 필요합니다','err'); return; }
-  const btn = document.getElementById(`msBtn${mines}`);
-  if (btn) { btn.disabled = true; btn.textContent = '시작 중...'; }
+  if (msSession?.alive && !msSession?.cashed) { toast('진행 중인 게임이 있습니다','err'); return; }
+  msSetBtns(true, '시작 중...');
   const r = await fetch('/api/game/ms/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mineCount: mines }) })
     .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
-  if (!r.ok) { toast(r.error||'시작 실패','err'); if(btn){btn.disabled=false;btn.textContent=`${mines}개`;} return; }
+  if (!r.ok) { toast(r.error||'시작 실패','err'); msSetBtns(false); return; }
   if (r.points != null) savePts(r.points);
   msSession = { sessionId: r.sessionId, total: r.total, mineCount: r.mineCount, revealed: new Set(), alive: true, cashed: false };
+  msSetBtns(true, '진행중');
   msRenderGrid();
   document.getElementById('msStats').style.display = '';
   document.getElementById('msMineCount').textContent = mines + '개';
@@ -1802,6 +1818,7 @@ async function msReveal(idx) {
     document.getElementById('msMsg').innerHTML = '<span style="color:#f87171">💥 지뢰를 밟았습니다!</span>';
     document.getElementById('msCashBtn').style.display = 'none';
     msRenderGrid(r.mines);
+    msShowNewGame();
   } else {
     msSession.revealed.add(idx);
     msRenderGrid();
@@ -1815,6 +1832,7 @@ async function msReveal(idx) {
       document.getElementById('msMsg').innerHTML = `<span style="color:#4ade80">🏆 전체 클리어! ${r.payout}P 획득!</span>`;
       document.getElementById('msCashBtn').style.display = 'none';
       if (r.points != null) savePts(r.points);
+      msShowNewGame();
       msRenderGrid(r.mines);
     } else {
       document.getElementById('msMsg').textContent = `안전! ${msSession.revealed.size}칸 열었습니다`;
@@ -1835,6 +1853,7 @@ async function msCashOut() {
   document.getElementById('msCashBtn').style.display = 'none';
   if (r.points != null) savePts(r.points);
   msRenderGrid(r.mines);
+  msShowNewGame();
 }
 
 /* ══════════════════════════════════════
