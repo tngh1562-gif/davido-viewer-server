@@ -594,22 +594,41 @@ function getDailyTargetMs() {
   const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
   return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
 }
-function getTimingWinner() {
+// 당첨자 조회 — 인하우스 서버 우선, fallback 로컬
+async function getTimingWinner() {
+  if (INHOUSE_SERVER_URL) {
+    try {
+      const d = await getJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`);
+      if (d.date === getTodayKST()) return d.winner || null;
+      return null;
+    } catch {}
+  }
   const saved = readJSON(TIMING_WIN_FILE, {});
-  if (saved.date !== getTodayKST()) return null;
-  return saved.winner || null;
+  return saved.date === getTodayKST() ? (saved.winner || null) : null;
 }
 
-app.get('/api/game/timing/state', (req, res) => {
+// 당첨자 저장 — 인하우스 서버 + 로컬 동시
+async function saveTimingWinner(date, winner) {
+  const data = { date, winner };
+  writeJSON(TIMING_WIN_FILE, data); // 로컬 백업
+  if (INHOUSE_SERVER_URL) {
+    try {
+      await postJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`, data,
+        { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    } catch {}
+  }
+}
+
+app.get('/api/game/timing/state', async (req, res) => {
   const targetMs = getDailyTargetMs();
-  const winner = getTimingWinner();
+  const winner = await getTimingWinner();
   res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
 });
 
 app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  if (getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
+  if (await getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
   // 하루 50회 제한 (브루트포스 방지)
   if (!rl(`timing-day:${name}`, 50, 86400)) return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
   // 분당 5회 제한
@@ -636,7 +655,7 @@ app.post('/api/game/timing/press', async (req, res) => {
   if (!session || session.name !== name) return res.json({ ok: false, error: '세션 만료' });
   timingSessions.delete(sessionId);
   if (session.date !== getTodayKST()) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
-  if (getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
+  if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
   if (diff <= 50) { // ±0.05초
@@ -648,7 +667,7 @@ app.post('/api/game/timing/press', async (req, res) => {
       if (r.ok) newPoints = r.points;
     } catch {}
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
-    writeJSON(TIMING_WIN_FILE, { date: getTodayKST(), winner });
+    await saveTimingWinner(getTodayKST(), winner);
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
     addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
