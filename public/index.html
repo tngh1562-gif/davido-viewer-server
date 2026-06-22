@@ -2058,7 +2058,7 @@ function initCrash(wrap) {
     </div>
     <div class="crash-main" style="flex-direction:column;gap:14px">
       <!-- 캔버스 그래프 -->
-      <canvas id="crashCanvas" style="width:100%;height:260px;border-radius:12px;background:#05020f;display:block"></canvas>
+      <canvas id="crashCanvas" style="width:100%;height:320px;border-radius:14px;background:#04020c;display:block"></canvas>
       <!-- 하단 컨트롤 -->
       <div style="display:flex;gap:16px;align-items:flex-start">
         <div class="crash-bet-box" id="crashBetBox" style="flex:1">
@@ -2082,7 +2082,7 @@ function initCrash(wrap) {
 
   // 캔버스 실제 픽셀 크기 맞추기
   const cv=$c('crashCanvas');
-  if(cv){cv.width=cv.offsetWidth||700;cv.height=260;}
+  if(cv){cv.width=cv.offsetWidth||700;cv.height=320;_initScene(cv.width,cv.height);}
 
   // rAF 루프 시작
   _cRaf=requestAnimationFrame(_crashDraw);
@@ -2092,129 +2092,268 @@ function initCrash(wrap) {
 
 function _crashMult(ms){ return Math.pow(Math.E, 0.0001*ms); }
 
+/* ── Scene 초기화 ── */
+let _cStars=[], _cClouds=[], _cFrame=0;
+function _initScene(W,H){
+  _cStars=Array.from({length:220},()=>({
+    x:Math.random()*W, y:Math.random()*H,
+    r:Math.random()*1.4+.3,
+    twinkle:Math.random()*Math.PI*2,
+    speed:Math.random()*.5+.5
+  }));
+  _cClouds=[
+    {x:W*.15, y:H*.52, w:160, h:55, speed:.4},
+    {x:W*.55, y:H*.44, w:220, h:65, speed:.25},
+    {x:W*.8,  y:H*.58, w:130, h:45, speed:.35},
+    {x:W*.35, y:H*.62, w:100, h:38, speed:.55},
+    {x:W*.7,  y:H*.38, w:180, h:50, speed:.2},
+    {x:W*.05, y:H*.35, w:140, h:42, speed:.3},
+  ];
+}
+
+/* ── 하늘 배경 ── */
+function _drawSky(ctx,W,H,alt){
+  // alt: 0=발사대, 1=우주
+  const top=alt<.35
+    ? lerpCol([10,8,40],[5,15,80],alt/.35)
+    : alt<.7
+    ? lerpCol([5,15,80],[2,5,30],(alt-.35)/.35)
+    : lerpCol([2,5,30],[0,0,8],(alt-.7)/.3);
+  const bot=alt<.3
+    ? lerpCol([255,160,60],[120,200,255],alt/.3)
+    : alt<.6
+    ? lerpCol([120,200,255],[30,80,200],(alt-.3)/.3)
+    : lerpCol([30,80,200],[0,0,15],(alt-.6)/.4);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,`rgb(${top})`);
+  g.addColorStop(1,`rgb(${bot})`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+  // 지평선 glow (낮은 고도)
+  if(alt<.4){
+    const glow=ctx.createRadialGradient(W/2,H,0,W/2,H,W*.8);
+    const a=Math.max(0,(0.4-alt)/.4);
+    glow.addColorStop(0,`rgba(255,140,40,${a*.35})`);
+    glow.addColorStop(1,'transparent');
+    ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+  }
+}
+function lerpCol(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t))}
+
+/* ── 별 ── */
+function _drawStars(ctx,alt,frame){
+  const alpha=Math.max(0,(alt-.25)/.35);
+  if(alpha<.01)return;
+  _cStars.forEach(s=>{
+    const tw=.6+.4*Math.sin(s.twinkle+frame*.03*s.speed);
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${(alpha*tw).toFixed(2)})`;ctx.fill();
+    if(s.r>1){// 큰 별 십자 빛
+      ctx.strokeStyle=`rgba(255,255,255,${(alpha*tw*.4).toFixed(2)})`;ctx.lineWidth=.5;
+      const len=s.r*3;
+      ctx.beginPath();ctx.moveTo(s.x-len,s.y);ctx.lineTo(s.x+len,s.y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(s.x,s.y-len);ctx.lineTo(s.x,s.y+len);ctx.stroke();
+    }
+  });
+}
+
+/* ── 구름 ── */
+function _drawClouds(ctx,W,H,alt,frame){
+  const alpha=Math.max(0,alt<.15?alt/.15:alt<.5?1:(1-(alt-.5)/.25));
+  if(alpha<.01)return;
+  _cClouds.forEach(cl=>{
+    cl.x-=cl.speed;if(cl.x+cl.w<0)cl.x=W+cl.w;
+    _drawCloud(ctx,cl.x,cl.y,cl.w,cl.h,alpha);
+  });
+}
+function _drawCloud(ctx,x,y,w,h,alpha){
+  ctx.save();ctx.globalAlpha=alpha*.85;
+  const g=ctx.createRadialGradient(x+w/2,y+h/2,0,x+w/2,y+h/2,Math.max(w,h));
+  g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(1,'rgba(220,235,255,0)');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.ellipse(x+w*.5,y+h*.6,w*.5,h*.4,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x+w*.3,y+h*.45,w*.28,h*.35,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x+w*.72,y+h*.5,w*.22,h*.3,0,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+/* ── 지면 + 발사대 ── */
+function _drawGround(ctx,W,H,alt){
+  const a=Math.max(0,1-alt/.12);if(a<.01)return;
+  ctx.save();ctx.globalAlpha=a;
+  // 지면
+  const gg=ctx.createLinearGradient(0,H*.82,0,H);
+  gg.addColorStop(0,'#1a2e1a');gg.addColorStop(1,'#0d1a0d');
+  ctx.fillStyle=gg;ctx.fillRect(0,H*.82,W,H*.18);
+  // 발사대 기둥
+  const px=W/2, py=H*.82;
+  ctx.fillStyle='#5a6070';
+  ctx.fillRect(px-40,py-60,80,60);// 플랫폼 기반
+  ctx.fillStyle='#4a5060';
+  ctx.fillRect(px-6,py-140,12,80);// 중앙 기둥
+  [-28,28].forEach(ox=>{
+    ctx.fillStyle='#606878';
+    ctx.fillRect(px+ox-4,py-120,8,60);
+  });
+  // 발사대 상단 플랫폼
+  const pg=ctx.createLinearGradient(px-50,0,px+50,0);
+  pg.addColorStop(0,'#404855');pg.addColorStop(.5,'#6a7888');pg.addColorStop(1,'#404855');
+  ctx.fillStyle=pg;ctx.fillRect(px-50,py-65,100,10);
+  // 지지 암
+  ctx.strokeStyle='#5a6878';ctx.lineWidth=4;
+  [[-45,-130],[45,-130]].forEach(([ox,oy])=>{
+    ctx.beginPath();ctx.moveTo(px+ox,py-60);ctx.lineTo(px+ox*.3,py+oy);ctx.stroke();
+  });
+  ctx.restore();
+}
+
+/* ── 로켓 (캔버스 직접 드로잉) ── */
+function _drawRocket(ctx,x,y,flame,crashed){
+  if(crashed)return;
+  ctx.save();ctx.translate(x,y);
+
+  // 화염
+  const fh=28+Math.sin(flame*4.5)*10;
+  const fg2=ctx.createLinearGradient(0,0,0,fh+10);
+  fg2.addColorStop(0,'rgba(255,255,220,.95)');
+  fg2.addColorStop(.35,'rgba(255,140,20,.8)');
+  fg2.addColorStop(1,'rgba(255,60,0,0)');
+  ctx.fillStyle=fg2;
+  ctx.beginPath();
+  ctx.moveTo(-9,2);
+  ctx.bezierCurveTo(-12,fh*.4,-4+Math.sin(flame*7)*3,fh*.7,0,fh+Math.sin(flame*5)*6);
+  ctx.bezierCurveTo(4+Math.sin(flame*7)*3,fh*.7,12,fh*.4,9,2);
+  ctx.closePath();ctx.fill();
+  // 보조 화염 2개
+  [[-14,0.55],[14,0.55]].forEach(([ox,sc])=>{
+    const bfh=fh*sc;
+    ctx.fillStyle=fg2;
+    ctx.beginPath();
+    ctx.moveTo(ox-5,2);
+    ctx.bezierCurveTo(ox-6,bfh*.4,ox+Math.sin(flame*6)*2,bfh*.8,ox,bfh);
+    ctx.bezierCurveTo(ox+6,bfh*.4,ox+5,bfh*.4,ox+5,2);
+    ctx.closePath();ctx.fill();
+  });
+
+  // 동체 그라디언트
+  const bg=ctx.createLinearGradient(-14,0,14,0);
+  bg.addColorStop(0,'#9aa0b0');bg.addColorStop(.25,'#d8dce8');
+  bg.addColorStop(.5,'#ffffff');bg.addColorStop(.75,'#d0d4e0');bg.addColorStop(1,'#808898');
+  ctx.fillStyle=bg;
+  // 동체 (둥근 직사각형)
+  ctx.beginPath();ctx.roundRect(-11,-52,22,54,4);ctx.fill();
+
+  // 빨간 줄무늬
+  ctx.fillStyle='#dc2626';ctx.fillRect(-11,-28,22,9);
+
+  // 창문
+  const wg=ctx.createRadialGradient(-3,-36,0,0,-34,7);
+  wg.addColorStop(0,'#bae6fd');wg.addColorStop(.6,'#38bdf8');wg.addColorStop(1,'#0369a1');
+  ctx.beginPath();ctx.arc(0,-34,6,0,Math.PI*2);ctx.fillStyle=wg;ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.stroke();
+  ctx.beginPath();ctx.arc(-2,-36,2.5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
+
+  // 노즈콘
+  const ng=ctx.createLinearGradient(-11,-52,11,-52);
+  ng.addColorStop(0,'#9aa0b0');ng.addColorStop(.4,'#e8ecf8');ng.addColorStop(1,'#707888');
+  ctx.fillStyle=ng;
+  ctx.beginPath();ctx.moveTo(-11,-52);ctx.lineTo(0,-90);ctx.lineTo(11,-52);ctx.closePath();ctx.fill();
+
+  // 날개 (핀)
+  ctx.fillStyle='#dc2626';
+  [[-11,-1],[11,1]].forEach(([bx,dir])=>{
+    ctx.beginPath();
+    ctx.moveTo(bx,2);ctx.lineTo(bx+dir*20,22);ctx.lineTo(bx+dir*14,2);ctx.closePath();
+    ctx.fill();
+  });
+  // 하단 노즐
+  ctx.fillStyle='#4a5060';ctx.fillRect(-8,2,16,6);
+
+  ctx.restore();
+}
+
+/* ── 폭발 파티클 ── */
+function _spawnExplosion(x,y){
+  const cols=['255,80,50','255,180,30','255,255,100','200,80,255','255,255,255'];
+  for(let i=0;i<80;i++){
+    const ang=Math.random()*Math.PI*2, spd=3+Math.random()*9;
+    _cParticles.push({
+      x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-4,
+      r:2+Math.random()*4,life:50+Math.random()*40,maxLife:90,
+      color:cols[Math.floor(Math.random()*cols.length)]
+    });
+  }
+}
+
 function _crashDraw(){
   const cv=$c('crashCanvas');
   if(!cv){_cRaf=null;return;}
   const ctx=cv.getContext('2d');
-  const W=cv.width, H=cv.height;
+  const W=cv.width,H=cv.height;
   const now=Date.now();
+  _cFrame++;
 
-  /* ── 현재 배당 ── */
+  /* ── 현재 배당 계산 ── */
   let m=1.00;
   if(crashPhase==='running'&&_cStart>0){
-    const el=now-_cStart;
-    m=_crashMult(el);
-    _cPoints.push({t:el,m});
-    if(_cPoints.length>1200)_cPoints.shift();
+    m=_crashMult(now-_cStart);
+    _cPoints.push({t:now-_cStart,m});
+    if(_cPoints.length>1500)_cPoints.shift();
     const btn=$c('crashActionBtn');
     if(btn&&btn.classList.contains('cashout'))btn.textContent=`현금화  ${m.toFixed(2)}x`;
   } else if(crashPhase==='crashed'){
-    m=_cCrashMult||(_cPoints.length?_cPoints[_cPoints.length-1].m:1);
+    m=_cCrashMult||1;
   }
 
+  /* ── 고도 진행도 (0=발사대 / 1=우주) ── */
+  const alt=crashPhase==='betting'?0:Math.min(1,Math.log(Math.max(m,1))/Math.log(18));
+
   /* ── 흔들림 ── */
-  const sx=_cShake>0?(Math.random()-.5)*10:0, sy=_cShake>0?(Math.random()-.5)*10:0;
+  const sx=_cShake>0?(Math.random()-.5)*12:0,sy=_cShake>0?(Math.random()-.5)*12:0;
   if(_cShake>0)_cShake--;
-  ctx.save(); ctx.translate(sx,sy);
+  ctx.save();ctx.translate(sx,sy);
 
   /* ── 배경 ── */
-  ctx.fillStyle='#06030f'; ctx.fillRect(0,0,W,H);
-  // 하단 Ambient glow
-  const aGlow=ctx.createRadialGradient(W*.15,H,0,W*.15,H,W*.7);
-  aGlow.addColorStop(0,'rgba(120,60,220,.18)');aGlow.addColorStop(1,'transparent');
-  ctx.fillStyle=aGlow;ctx.fillRect(0,0,W,H);
+  _drawSky(ctx,W,H,alt);
+  _drawStars(ctx,alt,_cFrame);
+  _drawClouds(ctx,W,H,alt,_cFrame);
 
-  /* ── 레이아웃 마진 ── */
-  const ML=58,MB=36,MR=18,MT=18;
-  const GW=W-ML-MR, GH=H-MT-MB;
+  /* ── 지면 + 발사대 ── */
+  _drawGround(ctx,W,H,alt);
 
-  /* ── Y 스케일 (로그) ── */
-  const maxM=crashPhase==='betting'?3:Math.max(m*1.25,2.2);
-  const mapY=v=>MT+GH*(1-Math.log(Math.max(v,1))/Math.log(maxM));
-  // X: elapsed time → screen x
-  const totalT=_cPoints.length>0?_cPoints[_cPoints.length-1].t:1;
-  const mapX=t=>ML+GW*(t/Math.max(totalT,1));
+  /* ── 로켓 위치 계산 ── */
+  // 1x=발사대 위(H*0.74), 높아질수록 캔버스 상단
+  const rocketX=W/2;
+  const rocketBase=H*0.74; // 발사대 높이
+  const rocketTop=H*0.12;
+  const rocketProgress=1-1/Math.max(m,1);
+  const rocketY=rocketBase-(rocketBase-rocketTop)*Math.min(rocketProgress*1.15,1);
 
-  /* ── 그리드 + Y축 레이블 ── */
-  const yTicks=[1,1.5,2,3,5,10,20,50,100].filter(v=>v<=maxM*1.05);
-  ctx.font='11px Inter,system-ui,sans-serif';
-  ctx.textAlign='right'; ctx.textBaseline='middle';
-  yTicks.forEach(v=>{
-    const y=mapY(v);
-    if(y<MT-2||y>H-MB+2)return;
-    // 점선 그리드
-    ctx.setLineDash([3,5]);
-    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(ML,y);ctx.lineTo(W-MR,y);ctx.stroke();
-    ctx.setLineDash([]);
-    // 레이블
-    ctx.fillStyle='rgba(255,255,255,.28)';
-    ctx.fillText(v+'x',ML-7,y);
-  });
-  // 축 테두리
-  ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;ctx.setLineDash([]);
-  ctx.beginPath();ctx.moveTo(ML,MT);ctx.lineTo(ML,H-MB);ctx.lineTo(W-MR,H-MB);ctx.stroke();
+  /* ── 로켓 그리기 ── */
+  const flamePhase=_cFrame*.08;
+  const scale=crashPhase==='betting'?1.15:1;
+  _drawRocket(ctx,rocketX,rocketY,flamePhase,scale,crashPhase==='crashed');
 
-  /* ── 곡선 그리기 ── */
-  if((_cPoints.length>1&&(crashPhase==='running'||crashPhase==='crashed'))){
-    const col=crashPhase==='crashed'?'#f87171':m>=10?'#c084fc':m>=4?'#fbbf24':m>=2?'#4ade80':'#a855f7';
-    const colDim=col+'22';
-
-    // 곡선 경로
-    ctx.beginPath();
-    ctx.moveTo(ML,H-MB);
-    _cPoints.forEach(p=>ctx.lineTo(mapX(p.t),mapY(p.m)));
-    const lastX=mapX(totalT), lastY=mapY(m);
-    // 채우기
-    ctx.lineTo(lastX,H-MB);ctx.closePath();
-    const fg=ctx.createLinearGradient(0,MT,0,H-MB);
-    fg.addColorStop(0,col+'35');fg.addColorStop(0.7,col+'10');fg.addColorStop(1,col+'00');
-    ctx.fillStyle=fg;ctx.fill();
-
-    // 선 (3겹 glow)
-    [18,8,3].forEach((blur,i)=>{
-      ctx.beginPath();
-      ctx.moveTo(ML,H-MB);
-      _cPoints.forEach(p=>ctx.lineTo(mapX(p.t),mapY(p.m)));
-      ctx.strokeStyle=i===2?col:col+(i===0?'30':'60');
-      ctx.lineWidth=i===2?2.5:i===1?5:10;
-      ctx.shadowColor=col;ctx.shadowBlur=blur;
-      ctx.stroke();
-    });
-    ctx.shadowBlur=0;
-
-    /* ── 로켓 ── */
-    if(crashPhase==='running'){
-      // 꼬리 잔광
-      for(let i=0;i<5;i++){
-        const p=_cPoints[Math.max(0,_cPoints.length-1-i*8)];
-        if(!p)continue;
-        const alpha=(5-i)/5*0.4;
-        ctx.beginPath();ctx.arc(mapX(p.t),mapY(p.m),4-i*.5,0,Math.PI*2);
-        ctx.fillStyle=`${col}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
-        ctx.fill();
-      }
-      // 발광 점
-      ctx.beginPath();ctx.arc(lastX,lastY,7,0,Math.PI*2);
-      ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=30;ctx.fill();
-      ctx.shadowBlur=0;
-      // 로켓 이모지
-      ctx.save();
-      const angle=_cPoints.length>2
-        ?Math.atan2(mapY(_cPoints[_cPoints.length-1].m)-mapY(_cPoints[Math.max(0,_cPoints.length-10)].m),
-                    mapX(totalT)-mapX(_cPoints[Math.max(0,_cPoints.length-10)].t))
-        :-Math.PI/4;
-      ctx.translate(lastX,lastY-20);
-      ctx.rotate(angle-Math.PI/2);
-      ctx.font='26px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('🚀',0,0);
-      ctx.restore();
+  /* ── 연기 흔적 (running) ── */
+  if(crashPhase==='running'&&_cPoints.length>3){
+    const trailLen=Math.min(12,Math.floor(_cPoints.length/4));
+    for(let i=0;i<trailLen;i++){
+      const pIdx=_cPoints.length-1-i*4;
+      if(pIdx<0)break;
+      const pt=_cPoints[pIdx];
+      const py=rocketBase-(rocketBase-rocketTop)*Math.min((1-1/Math.max(pt.m,1))*1.15,1);
+      const a=(trailLen-i)/trailLen*.25;
+      ctx.beginPath();ctx.arc(rocketX+(Math.sin(i*1.7)*6),py+30,5+i*1.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,200,220,${a.toFixed(2)})`;ctx.fill();
     }
   }
 
   /* ── 파티클 ── */
   _cParticles=_cParticles.filter(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.vy+=0.25;p.life--;
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.3;p.life--;
     const a=p.life/p.maxLife;
     if(p.life<=0)return false;
     ctx.beginPath();ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
@@ -2222,50 +2361,38 @@ function _crashDraw(){
     return true;
   });
 
-  /* ── 중앙 배당 숫자 ── */
-  const phase=crashPhase;
-  const multCol=phase==='crashed'?'#f87171':m>=10?'#c084fc':m>=4?'#fbbf24':m>=2?'#4ade80':'#ffffff';
-  const fs=m>=100?52:m>=10?62:72;
+  /* ── HUD: 배당 숫자 ── */
+  const multCol=crashPhase==='crashed'?'#f87171':m>=10?'#c084fc':m>=4?'#fbbf24':m>=2?'#4ade80':'#ffffff';
+  const fs=m>=100?48:m>=10?58:66;
   ctx.textAlign='center';ctx.textBaseline='middle';
-
-  // 바깥 glow
+  // 배경 pill
+  ctx.fillStyle='rgba(0,0,0,.45)';
+  ctx.beginPath();ctx.roundRect(W/2-110,H*.18-36,220,72,16);ctx.fill();
+  // 숫자
   ctx.font=`900 ${fs}px Inter,system-ui,sans-serif`;
-  ctx.fillStyle=multCol+'20';ctx.shadowColor=multCol;ctx.shadowBlur=60;
-  ctx.fillText(m.toFixed(2)+'x',W/2,H/2);
-
-  // 실제 텍스트
-  ctx.shadowBlur=20;ctx.fillStyle=multCol;
-  ctx.fillText(m.toFixed(2)+'x',W/2,H/2);
+  ctx.shadowColor=multCol;ctx.shadowBlur=35;ctx.fillStyle=multCol;
+  ctx.fillText(m.toFixed(2)+'x',W/2,H*.18);
   ctx.shadowBlur=0;
 
-  // 서브 메시지
-  ctx.font='500 13px Inter,system-ui,sans-serif';
-  if(phase==='betting'){
+  /* ── 상태 텍스트 ── */
+  ctx.font='600 13px Inter,system-ui,sans-serif';
+  if(crashPhase==='betting'){
     const left=Math.max(0,crashBetEndAt-now);
-    const sec=(left/1000).toFixed(1);
-    ctx.fillStyle='rgba(255,255,255,.3)';
-    ctx.fillText(`${sec}초 후 시작 · 지금 베팅하세요`,W/2,H/2+50);
-    // 베팅 구간 카운트다운 바 (캔버스 하단)
-    const barW=200, barX=(W-barW)/2, barY=H-MB+10;
-    ctx.fillStyle='rgba(255,255,255,.06)';
-    ctx.beginPath();roundRect(ctx,barX,barY,barW,5,3);ctx.fill();
-    ctx.fillStyle=multCol;ctx.shadowColor=multCol;ctx.shadowBlur=8;
-    ctx.beginPath();roundRect(ctx,barX,barY,barW*Math.min(left/7000,1),5,3);ctx.fill();
-    ctx.shadowBlur=0;
-  } else if(phase==='crashed'){
-    ctx.fillStyle='rgba(248,113,113,.7)';
-    ctx.fillText('💥  BUST  💥',W/2,H/2+50);
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    ctx.fillText(`🕐 ${(left/1000).toFixed(1)}초 후 발사 · 지금 베팅하세요`,W/2,H*.18+38);
+  } else if(crashPhase==='crashed'){
+    ctx.fillStyle='rgba(248,113,113,.8)';
+    ctx.fillText(`💥 ${(_cCrashMult||m).toFixed(2)}x 에서 폭발`,W/2,H*.18+38);
+  } else {
+    ctx.fillStyle='rgba(255,255,255,.35)';
+    ctx.fillText('↑ 올라가는 중 — 원하는 배당에서 현금화하세요',W/2,H*.18+38);
   }
+
+  /* ── 히스토리 배지 (우상단) ── */
+  // (HTML에서 렌더링하므로 생략)
 
   ctx.restore();
   _cRaf=requestAnimationFrame(_crashDraw);
-}
-
-function roundRect(ctx,x,y,w,h,r){
-  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
 
 function _spawnParticles(x,y){
@@ -2300,7 +2427,7 @@ function applyCrashState(msg){
     _cCrashMult=msg.mult||1;
     _cShake=18;
     const cv=$c('crashCanvas');
-    if(cv)_spawnParticles(cv.width/2, cv.height/2);
+    if(cv)_spawnExplosion(cv.width/2, cv.height*.5);
   }
 
   // 히스토리
