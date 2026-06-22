@@ -586,6 +586,10 @@ app.get('/api/inhouse/snapshot', (req, res) => {
 // ── 타이밍 복권 ──
 const timingSessions = new Map(); // sessionId → { targetMs, startedAt, name, date }
 
+// ── 타이밍 복권: 당첨자 인메모리 캐시 (레이스 컨디션 방지) ──
+// Node.js 싱글 스레드 특성 활용: await 전에 동기적으로 잠금
+let _timingWinner = null; // { date, winner } — 서버 재시작 시 파일에서 복원
+
 function getTodayKST() {
   return new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
 }
@@ -594,28 +598,48 @@ function getDailyTargetMs() {
   const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
   return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
 }
-// 당첨자 조회 — 인하우스 서버 우선, fallback 로컬
+
+// 인메모리 캐시에서 먼저 확인 (동기 → 레이스 없음)
+function getTimingWinnerSync() {
+  const today = getTodayKST();
+  if (_timingWinner && _timingWinner.date === today) return _timingWinner.winner;
+  // 인메모리에 없으면 파일에서 복원
+  const saved = readJSON(TIMING_WIN_FILE, {});
+  if (saved.date === today && saved.winner) {
+    _timingWinner = { date: today, winner: saved.winner };
+    return saved.winner;
+  }
+  return null;
+}
+
+// 비동기 조회 (인하우스 서버 포함) — 상태 표시용에만 사용
 async function getTimingWinner() {
+  // 인메모리 우선 (가장 신뢰도 높음)
+  const sync = getTimingWinnerSync();
+  if (sync) return sync;
+  // 인하우스 서버 확인 (서버 재시작 후 복원용)
   if (INHOUSE_SERVER_URL) {
     try {
       const d = await getJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`);
-      if (d.date === getTodayKST()) return d.winner || null;
-      return null;
+      if (d.date === getTodayKST() && d.winner) {
+        _timingWinner = { date: d.date, winner: d.winner };
+        return d.winner;
+      }
     } catch {}
   }
-  const saved = readJSON(TIMING_WIN_FILE, {});
-  return saved.date === getTodayKST() ? (saved.winner || null) : null;
+  return null;
 }
 
-// 당첨자 저장 — 인하우스 서버 + 로컬 동시
+// 당첨자 저장 — 인메모리(즉시) + 로컬 파일 + 인하우스 서버
 async function saveTimingWinner(date, winner) {
+  _timingWinner = { date, winner }; // 인메모리 즉시 반영
   const data = { date, winner };
-  writeJSON(TIMING_WIN_FILE, data); // 로컬 백업
+  writeJSON(TIMING_WIN_FILE, data); // 로컬 파일
   if (INHOUSE_SERVER_URL) {
     try {
       await postJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`, data,
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-    } catch {}
+    } catch(e) { console.error('[timing] inhouse 저장 실패:', e.message); }
   }
 }
 
@@ -628,7 +652,7 @@ app.get('/api/game/timing/state', async (req, res) => {
 app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  if (await getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
+  if (getTimingWinnerSync()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
   // 하루 50회 제한 (브루트포스 방지)
   if (!rl(`timing-day:${name}`, 50, 86400)) return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
   // 분당 5회 제한
@@ -654,22 +678,44 @@ app.post('/api/game/timing/press', async (req, res) => {
   const session = timingSessions.get(sessionId);
   if (!session || session.name !== name) return res.json({ ok: false, error: '세션 만료' });
   timingSessions.delete(sessionId);
-  if (session.date !== getTodayKST()) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
-  if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
+
+  const today = getTodayKST();
+  if (session.date !== today) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
+
+  // ══ 핵심: await 전에 동기적으로 확인 + 잠금 ══
+  // Node.js는 싱글 스레드이므로 이 시점은 원자적 (다른 요청 끼어들 수 없음)
+  if (getTimingWinnerSync()) {
+    return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
+  }
+
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
+
   if (diff <= 50) { // ±0.05초
+    // ══ 인메모리 즉시 잠금 (다른 동시 요청 차단) ══
+    const winner = { name, hitMs: elapsed, diff, at: Date.now() };
+    _timingWinner = { date: today, winner }; // await 전에 동기적으로 설정
+
+    // 이후 비동기 작업 (포인트 지급, 파일 저장)
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
         { nickname: name, amount: 100, reason: '🏆 타이밍 복권 당첨! (+100P)' },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
       if (r.ok) newPoints = r.points;
-    } catch {}
-    const winner = { name, hitMs: elapsed, diff, at: Date.now() };
-    await saveTimingWinner(getTodayKST(), winner);
+    } catch(e) { console.error('[timing] 포인트 지급 실패:', e.message); }
+
+    // 파일 + 인하우스 서버 동기화 (인메모리는 이미 잠겼으므로 안전)
+    const data = { date: today, winner };
+    writeJSON(TIMING_WIN_FILE, data);
+    if (INHOUSE_SERVER_URL) {
+      postJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`, data,
+        { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
+    }
+
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
     addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
+    console.log(`[timing] 당첨: ${name} / diff: ${diff}ms`);
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
   }
   return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
