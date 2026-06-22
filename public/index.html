@@ -1727,16 +1727,20 @@ async function tgStop() {
 ══════════════════════════════════════ */
 let msState = null;
 
+// ── 지뢰찾기 (서버사이드 — 지뢰 위치·배율 모두 서버에서 계산)
+let msSession = null; // { sessionId, total, mineCount, revealed:Set, alive, cashed }
+
 function initMs(wrap) {
+  msSession = null;
   wrap.innerHTML = `
-    <div style="text-align:center;padding:8px 0 4px;font-size:.8rem;color:var(--text-muted)">지뢰 개수 선택</div>
+    <div style="text-align:center;padding:8px 0 4px;font-size:.8rem;color:var(--text-muted)">지뢰 개수 선택 (1P 차감)</div>
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px">
-      ${[3,4,5,6,7].map(n=>`<button class="s-chip" onclick="msInit(${n})">${n}개</button>`).join('')}
+      ${[3,4,5,6,7].map(n=>`<button class="s-chip" id="msBtn${n}" onclick="msStart(${n})">${n}개</button>`).join('')}
     </div>
     <div class="ms-stats" id="msStats" style="display:none">
       <div class="ms-stat"><div class="ms-stat-l">지뢰</div><div id="msMineCount">-</div></div>
-      <div class="ms-stat"><div class="ms-stat-l">배당</div><div id="msMulti">1.00x</div></div>
-      <div class="ms-stat"><div class="ms-stat-l">수익</div><div id="msProfit">0P</div></div>
+      <div class="ms-stat"><div class="ms-stat-l">현재배당</div><div id="msMulti">-</div></div>
+      <div class="ms-stat"><div class="ms-stat-l">예상수익</div><div id="msProfit">-</div></div>
     </div>
     <div class="ms-grid" id="msGrid"></div>
     <div id="msMsg" style="text-align:center;font-size:.85rem;color:var(--text-muted);min-height:20px"></div>
@@ -1745,52 +1749,40 @@ function initMs(wrap) {
     </div>`;
 }
 
-async function msInit(mines) {
-  const name = myName;
-  if (!name) { toast('로그인이 필요합니다','err'); return; }
-  const BET = 1;
-  if (pts < BET) { toast('포인트가 부족합니다','err'); return; }
-  const COLS = 5, ROWS = 5, TOTAL = COLS * ROWS;
-  const mineSet = new Set();
-  while (mineSet.size < mines) mineSet.add(Math.floor(Math.random() * TOTAL));
-  const startBtn = document.querySelector(`button[onclick^="msInit"]`);
-  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '시작 중...'; }
-  const sr = await fetch('/api/game/ms/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({bet:BET}) })
+async function msStart(mines) {
+  if (!myName) { toast('로그인이 필요합니다','err'); return; }
+  const btn = document.getElementById(`msBtn${mines}`);
+  if (btn) { btn.disabled = true; btn.textContent = '시작 중...'; }
+  const r = await fetch('/api/game/ms/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mineCount: mines }) })
     .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
-  if (!sr.ok) { toast(sr.error||'시작 실패','err'); if(startBtn){startBtn.disabled=false;startBtn.textContent=`${mines}개`;} return; }
-  if (sr.points != null) savePts(sr.points); else savePts(pts - BET);
-  msState = { mines: mineSet, cols: COLS, rows: ROWS, total: TOTAL,
-    revealed: new Set(), bet: BET, mineCount: mines,
-    mult: 1.0, alive: true, cashed: false };
-  msRender();
+  if (!r.ok) { toast(r.error||'시작 실패','err'); if(btn){btn.disabled=false;btn.textContent=`${mines}개`;} return; }
+  if (r.points != null) savePts(r.points);
+  msSession = { sessionId: r.sessionId, total: r.total, mineCount: r.mineCount, revealed: new Set(), alive: true, cashed: false };
+  msRenderGrid();
   document.getElementById('msStats').style.display = '';
-  document.getElementById('msCashBtn').style.display = 'none';
-  msUpdateMath();
+  document.getElementById('msMineCount').textContent = mines + '개';
+  document.getElementById('msMulti').textContent = '1.00x';
+  document.getElementById('msProfit').textContent = '0P';
 }
 
-function msRender() {
+function msRenderGrid(mines) {
   const g = document.getElementById('msGrid');
-  if (!g || !msState) return;
-  const { cols, rows, total, revealed, alive, mines, cashed } = msState;
-  g.style.gridTemplateColumns = `repeat(${cols}, 52px)`;
+  if (!g || !msSession) return;
+  const { total, revealed, alive, cashed } = msSession;
+  const mineSet = mines ? new Set(mines) : new Set();
+  g.style.gridTemplateColumns = `repeat(5, 52px)`;
   g.innerHTML = '';
   for (let i = 0; i < total; i++) {
     const btn = document.createElement('button');
     btn.style.cssText = 'width:52px;height:52px;border-radius:8px;border:none;font-size:1.4rem;cursor:pointer;transition:all .12s;font-family:inherit;';
     if (revealed.has(i)) {
-      if (mines.has(i)) {
-        btn.textContent = '💣'; btn.style.background = '#7f1d1d';
-      } else {
-        btn.textContent = '💎'; btn.style.background = 'rgba(34,197,94,.25)'; btn.style.color='#4ade80';
-      }
-      btn.disabled = true;
+      btn.textContent = '💎'; btn.style.background = 'rgba(34,197,94,.25)'; btn.style.color='#4ade80'; btn.disabled = true;
     } else if (!alive || cashed) {
-      btn.textContent = mines.has(i) ? '💣' : '·';
-      btn.style.background = mines.has(i) ? 'rgba(127,29,29,.4)' : 'rgba(255,255,255,.05)';
+      btn.textContent = mineSet.has(i) ? '💣' : '·';
+      btn.style.background = mineSet.has(i) ? 'rgba(127,29,29,.4)' : 'rgba(255,255,255,.05)';
       btn.style.color = 'rgba(255,255,255,.3)'; btn.disabled = true;
     } else {
-      btn.textContent = '?'; btn.style.background = 'rgba(255,255,255,.08)';
-      btn.style.color = 'rgba(255,255,255,.6)';
+      btn.textContent = '?'; btn.style.background = 'rgba(255,255,255,.08)'; btn.style.color = 'rgba(255,255,255,.6)';
       btn.onmouseover = () => btn.style.background='rgba(255,255,255,.16)';
       btn.onmouseout  = () => btn.style.background='rgba(255,255,255,.08)';
       btn.onclick = () => msReveal(i);
@@ -1799,54 +1791,50 @@ function msRender() {
   }
 }
 
-function msReveal(idx) {
-  if (!msState || !msState.alive || msState.cashed) return;
-  msState.revealed.add(idx);
-  if (msState.mines.has(idx)) {
-    msState.alive = false;
+async function msReveal(idx) {
+  if (!msSession || !msSession.alive || msSession.cashed) return;
+  const r = await fetch('/api/game/ms/reveal', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sessionId: msSession.sessionId, cellIdx: idx }) })
+    .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
+  if (!r.ok) { toast(r.error||'오류','err'); return; }
+  if (r.hit) {
+    msSession.alive = false;
     document.getElementById('msMsg').innerHTML = '<span style="color:#f87171">💥 지뢰를 밟았습니다!</span>';
     document.getElementById('msCashBtn').style.display = 'none';
-    msRender(); msUpdateMath();
-    fetch('/api/game/ms/end', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({result:'lose',payout:0}) });
-    return;
+    msRenderGrid(r.mines);
+  } else {
+    msSession.revealed.add(idx);
+    msRenderGrid();
+    const k = msSession.revealed.size;
+    const rawMult = 1 + (k * msSession.mineCount) / (msSession.total * 0.8);
+    const mult = Math.min(4.0, Math.max(1.0, +rawMult.toFixed(2)));
+    document.getElementById('msMulti').textContent = mult.toFixed(2) + 'x';
+    document.getElementById('msProfit').textContent = `+${Math.floor(mult) - 1}P`;
+    if (r.autoWin) {
+      msSession.cashed = true;
+      document.getElementById('msMsg').innerHTML = `<span style="color:#4ade80">🏆 전체 클리어! ${r.payout}P 획득!</span>`;
+      document.getElementById('msCashBtn').style.display = 'none';
+      if (r.points != null) savePts(r.points);
+      msRenderGrid(r.mines);
+    } else {
+      document.getElementById('msMsg').textContent = `안전! ${msSession.revealed.size}칸 열었습니다`;
+      document.getElementById('msCashBtn').style.display = '';
+    }
   }
-  msUpdateMath();
-  msRender();
-  const safeLeft = msState.total - msState.mineCount - msState.revealed.size;
-  if (safeLeft === 0) {
-    msCashOut(); return;
-  }
-  document.getElementById('msMsg').textContent = `안전! ${msState.revealed.size}칸 열었습니다`;
-  document.getElementById('msCashBtn').style.display = '';
-}
-
-function msUpdateMath() {
-  if (!msState) return;
-  const { total, mineCount, revealed, bet, alive } = msState;
-  // 배율 = 1 + (열린칸 × 지뢰수) / (전체칸 × 0.8), 최대 4배
-  const k = revealed.size;
-  const rawMult = k > 0 ? 1 + (k * mineCount) / (total * 0.8) : 1.0;
-  const mult = Math.min(4.0, Math.max(1.0, +rawMult.toFixed(2))); // 최대 4배
-  msState.mult = mult;
-  const profit = Math.floor(bet * mult) - bet;
-  const el = id => document.getElementById(id);
-  if (el('msMineCount')) el('msMineCount').textContent = mineCount + '개';
-  if (el('msMulti')) el('msMulti').textContent = mult.toFixed(2) + 'x';
-  if (el('msProfit')) el('msProfit').style.color = profit >= 0 ? '#4ade80' : '#f87171';
-  if (el('msProfit')) el('msProfit').textContent = (profit >= 0 ? '+' : '') + profit + 'P';
 }
 
 async function msCashOut() {
-  if (!msState || !msState.alive || msState.cashed) return;
-  if (msState.revealed.size === 0) { toast('최소 1칸 이상 열어야 합니다','err'); return; }
-  msState.cashed = true;
-  const payout = Math.floor(msState.bet * msState.mult);
+  if (!msSession || !msSession.alive || msSession.cashed) return;
+  document.getElementById('msCashBtn').disabled = true;
+  const r = await fetch('/api/game/ms/cashout', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sessionId: msSession.sessionId }) })
+    .then(r=>r.json()).catch(()=>({ok:false}));
+  if (!r.ok) { toast(r.error||'오류','err'); document.getElementById('msCashBtn').disabled=false; return; }
+  msSession.cashed = true;
+  document.getElementById('msMsg').innerHTML = `<span style="color:#4ade80">✅ ${r.payout}P 획득! (+${r.payout - 1}P)</span>`;
   document.getElementById('msCashBtn').style.display = 'none';
-  msRender();
-  const er = await fetch('/api/game/ms/end', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({result:'win', payout}) })
-    .then(r=>r.json()).catch(()=>({}));
-  document.getElementById('msMsg').innerHTML = `<span style="color:#4ade80">✅ ${payout}P 획득! (+${payout - msState.bet}P)</span>`;
-  if (er.points != null) savePts(er.points); else savePts(pts + payout);
+  if (r.points != null) savePts(r.points);
+  msRenderGrid(r.mines);
 }
 
 /* ══════════════════════════════════════
