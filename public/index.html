@@ -53,6 +53,83 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 
 /* ══ CRASH GAME ══ */
 .crash-section{background:linear-gradient(135deg,rgba(10,10,30,.95),rgba(5,5,20,.98));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:28px 32px;margin-bottom:32px;position:relative;overflow:hidden}
+
+/* ── Crash Scene (SVG+CSS 방식) ── */
+.crash-scene{
+  position:relative;width:100%;height:340px;border-radius:14px;
+  overflow:hidden;cursor:default;
+}
+/* 배경 레이어 */
+.cs-bg{position:absolute;inset:0;transition:background 1.5s ease}
+/* 별 레이어 */
+.cs-stars{position:absolute;inset:0;pointer-events:none}
+.cs-star{position:absolute;border-radius:50%;background:#fff;animation:starTwinkle 2s ease-in-out infinite alternate}
+@keyframes starTwinkle{0%{opacity:.2;transform:scale(.8)}100%{opacity:1;transform:scale(1.2)}}
+/* 구름 */
+.cs-cloud{position:absolute;pointer-events:none;transition:opacity 1s ease}
+.cs-cloud-shape{
+  position:relative;background:rgba(255,255,255,.9);border-radius:50px;
+  filter:blur(2px);
+}
+.cs-cloud-shape::before,.cs-cloud-shape::after{
+  content:'';position:absolute;background:inherit;border-radius:50%;
+}
+@keyframes cloudDrift{from{transform:translateX(0)}to{transform:translateX(-110vw)}}
+/* 지면 */
+.cs-ground{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(180deg,#1a2e1a 0%,#0d1a0d 100%);
+  transition:height .5s ease,opacity .8s ease;
+}
+/* 발사대 */
+.cs-pad{position:absolute;bottom:0;left:50%;transform:translateX(-50%);pointer-events:none;transition:opacity .6s ease}
+/* 로켓 래퍼 */
+.cs-rocket-wrap{
+  position:absolute;left:50%;transform:translateX(-50%);
+  transition:bottom 0.15s linear;
+  display:flex;flex-direction:column;align-items:center;
+}
+/* 연기 흔적 */
+.cs-trail{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
+.cs-trail-dot{
+  position:absolute;border-radius:50%;background:rgba(200,210,220,.5);
+  animation:trailFade 1.5s ease-out forwards;
+}
+@keyframes trailFade{to{opacity:0;transform:scale(2.5)}}
+/* 화염 */
+.cs-flame{
+  width:18px;position:relative;margin-top:-4px;
+  animation:flameWave .08s ease-in-out infinite alternate;
+  transform-origin:top center;
+}
+@keyframes flameWave{from{transform:scaleX(.8) scaleY(.9)}to{transform:scaleX(1.15) scaleY(1.1)}}
+.cs-flame-side{
+  width:10px;position:absolute;top:0;
+  animation:flameSideWave .12s ease-in-out infinite alternate;
+}
+@keyframes flameSideWave{from{transform:scaleY(.7)}to{transform:scaleY(1.1)}}
+/* HUD 오버레이 */
+.cs-hud{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;flex-direction:column;align-items:center;
+  padding-top:24px;pointer-events:none;
+}
+.cs-mult{
+  font-size:72px;font-weight:900;letter-spacing:-3px;line-height:1;
+  transition:color .3s,text-shadow .3s;
+  font-variant-numeric:tabular-nums;
+}
+.cs-mult-white{color:#fff;text-shadow:0 0 40px rgba(255,255,255,.4)}
+.cs-mult-green{color:#4ade80;text-shadow:0 0 40px rgba(74,222,128,.6),0 0 80px rgba(74,222,128,.3)}
+.cs-mult-yellow{color:#fbbf24;text-shadow:0 0 40px rgba(251,191,36,.7),0 0 80px rgba(251,191,36,.3)}
+.cs-mult-purple{color:#c084fc;text-shadow:0 0 50px rgba(192,132,252,.8),0 0 100px rgba(192,132,252,.4)}
+.cs-mult-red{color:#f87171;text-shadow:0 0 40px rgba(248,113,113,.6)}
+.cs-sub{font-size:13px;font-weight:600;color:rgba(255,255,255,.5);margin-top:4px;letter-spacing:.5px}
+/* 파티클 캔버스 */
+.cs-particles{position:absolute;inset:0;pointer-events:none}
+/* 카운트다운 바 */
+.cs-countdown{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06)}
+.cs-countdown-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);transition:width .1s linear}
 .crash-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(168,85,247,.12),transparent 70%);pointer-events:none}
 .crash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .crash-title{font-size:.65rem;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,.4)}
@@ -98,6 +175,9 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 .crash-player-mult.waiting{color:var(--text-muted);font-weight:400}
 .crash-player-mult.bust{color:#f87171}
 .crash-no-players{color:var(--text-muted);font-size:.74rem;text-align:center;padding:8px 0}
+
+@keyframes crashShake{0%,100%{transform:none}20%{transform:translate(-8px,-5px)}40%{transform:translate(8px,5px)}60%{transform:translate(-5px,3px)}80%{transform:translate(5px,-3px)}}
+@keyframes cloudDrift{0%{transform:translateX(110vw)}100%{transform:translateX(-110vw)}}
 
 /* ══ INLINE GAME PANEL ══ */
 #gameListSection{}
@@ -2035,377 +2115,298 @@ let crashMyBet  = null;
 let crashPhase  = 'betting';
 let crashBetEndAt = 0;
 
-// 캔버스 애니메이션 상태
-let _cRaf       = null;   // requestAnimationFrame handle
-let _cPoints    = [];     // 그래프 포인트 [{t, m}]
-let _cStart     = 0;      // running 시작 시각 (클라이언트)
-let _cCrashMult = null;   // 최종 폭발 배당
-let _cParticles = [];     // 폭발 파티클
-let _cShake     = 0;      // 화면 흔들림 남은 프레임
+let _cRaf=null,_cStart=0,_cCrashMult=null,_cParticles=[],_cFrame=0;
+let _cTrailTimer=null,_cCountdownTimer=null;
 
-function $c(id) { return document.getElementById(id); }
+function $c(id){return document.getElementById(id);}
+
+/* SVG 로켓 마크업 */
+const ROCKET_SVG=`<svg viewBox="0 0 70 180" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:150px;filter:drop-shadow(0 0 12px rgba(180,140,255,.5))">
+<defs>
+  <linearGradient id="rBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8892a4"/><stop offset="25%" stop-color="#d4daea"/><stop offset="50%" stop-color="#ffffff"/><stop offset="75%" stop-color="#c8cede"/><stop offset="100%" stop-color="#7a8090"/></linearGradient>
+  <linearGradient id="rNose" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8892a4"/><stop offset="40%" stop-color="#e8ecf8"/><stop offset="100%" stop-color="#6a7080"/></linearGradient>
+  <linearGradient id="rWindow" cx="35%" cy="35%" r="65%" fx="35%" fy="35%" id="rWindow" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#bae6fd"/><stop offset="60%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0369a1"/></linearGradient>
+  <radialGradient id="rWinR" cx="35%" cy="35%" r="65%"><stop offset="0%" stop-color="#bae6fd"/><stop offset="60%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0369a1"/></radialGradient>
+  <linearGradient id="rStripe" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="#b91c1c"/></linearGradient>
+  <linearGradient id="rNozzle" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4a5060"/><stop offset="100%" stop-color="#2a2e38"/></linearGradient>
+  <filter id="rGlow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<!-- 노즈콘 -->
+<path d="M22 62 L35 4 L48 62 Z" fill="url(#rNose)" rx="2"/>
+<!-- 동체 -->
+<rect x="22" y="60" width="26" height="86" rx="4" fill="url(#rBody)"/>
+<!-- 빨간 줄 -->
+<rect x="22" y="100" width="26" height="12" rx="1" fill="url(#rStripe)"/>
+<!-- 창문 -->
+<circle cx="35" cy="82" r="9" fill="url(#rWinR)" filter="url(#rGlow)"/>
+<circle cx="35" cy="82" r="9" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" fill="none"/>
+<circle cx="31" cy="79" r="3" fill="rgba(255,255,255,0.65)"/>
+<!-- 왼쪽 핀 -->
+<path d="M22 122 L4 158 L22 148 Z" fill="url(#rStripe)"/>
+<!-- 오른쪽 핀 -->
+<path d="M48 122 L66 158 L48 148 Z" fill="url(#rStripe)"/>
+<!-- 노즐 -->
+<rect x="27" y="146" width="16" height="10" rx="3" fill="url(#rNozzle)"/>
+<rect x="30" y="153" width="10" height="5" rx="2" fill="#1a1e28"/>
+</svg>`;
+
+/* 화염 SVG */
+const FLAME_SVG=`<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:40px;height:60px;margin-top:-8px">
+<defs>
+  <radialGradient id="f1" cx="50%" cy="0%" r="100%"><stop offset="0%" stop-color="#ffffff" stop-opacity="1"/><stop offset="30%" stop-color="#ffdd00" stop-opacity=".9"/><stop offset="70%" stop-color="#ff6600" stop-opacity=".7"/><stop offset="100%" stop-color="#ff2200" stop-opacity="0"/></radialGradient>
+  <radialGradient id="f2" cx="50%" cy="0%" r="100%"><stop offset="0%" stop-color="#ffffaa" stop-opacity=".8"/><stop offset="50%" stop-color="#ff8800" stop-opacity=".5"/><stop offset="100%" stop-color="#ff4400" stop-opacity="0"/></radialGradient>
+</defs>
+<ellipse cx="20" cy="8" rx="8" ry="10" fill="url(#f1)" class="cs-fl-main"/>
+<path d="M12 12 Q8 30 10 50 Q15 40 20 55 Q25 40 30 50 Q32 30 28 12 Q24 25 20 28 Q16 25 12 12Z" fill="url(#f1)" class="cs-fl-main"/>
+<path d="M8 18 Q4 35 8 52 Q14 42 16 54 Q20 44 16 18Z" fill="url(#f2)" class="cs-fl-side"/>
+<path d="M32 18 Q36 35 32 52 Q26 42 24 54 Q20 44 24 18Z" fill="url(#f2)" class="cs-fl-side"/>
+</svg>`;
 
 function initCrash(wrap) {
-  // 이전 rAF 정리
   if(_cRaf){cancelAnimationFrame(_cRaf);_cRaf=null;}
-  _cPoints=[];_cStart=0;_cCrashMult=null;_cParticles=[];_cShake=0;
+  clearInterval(_cTrailTimer);clearInterval(_cCountdownTimer);
+  _cStart=0;_cCrashMult=null;_cParticles=[];
 
   wrap.innerHTML=`
-  <div class="crash-section" style="margin-bottom:0">
+  <div class="crash-section" style="margin-bottom:0;padding:20px 24px">
     <div class="crash-header">
       <div class="crash-title">💥 CRASH</div>
       <div class="crash-history" id="crashHistory"></div>
     </div>
-    <div class="crash-main" style="flex-direction:column;gap:14px">
-      <!-- 캔버스 그래프 -->
-      <canvas id="crashCanvas" style="width:100%;height:320px;border-radius:14px;background:#04020c;display:block"></canvas>
-      <!-- 하단 컨트롤 -->
-      <div style="display:flex;gap:16px;align-items:flex-start">
-        <div class="crash-bet-box" id="crashBetBox" style="flex:1">
-          <div class="crash-bet-label">베팅 금액 (10~50P)</div>
-          <div class="crash-chip-row">
-            <div class="crash-chip sel" data-v="10" onclick="crashSetBet(10)">10p</div>
-            <div class="crash-chip" data-v="20" onclick="crashSetBet(20)">20p</div>
-            <div class="crash-chip" data-v="30" onclick="crashSetBet(30)">30p</div>
-            <div class="crash-chip" data-v="50" onclick="crashSetBet(50)">50p</div>
-          </div>
-          <div class="crash-bet-display">베팅: <span id="crashBetAmt">${crashBet}</span> P</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;width:200px">
-          <button class="crash-action-btn join" id="crashActionBtn" onclick="crashAction()">다음 게임 참여</button>
-          <div class="crash-timer-bar"><div class="crash-timer-fill" id="crashTimerFill" style="width:100%"></div></div>
-        </div>
-        <div class="crash-players" id="crashPlayers" style="width:180px;max-height:90px"><div class="crash-no-players">참여자 없음</div></div>
+    <!-- 씬 -->
+    <div class="crash-scene" id="crashScene">
+      <div class="cs-bg" id="csBg"></div>
+      <div class="cs-stars" id="csStars"></div>
+      <div id="csClouds" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
+      <div class="cs-ground" id="csGround" style="height:18%"></div>
+      <!-- 발사대 SVG -->
+      <div class="cs-pad" id="csPad" style="bottom:18%;width:130px">
+        <svg viewBox="0 0 130 90" fill="none" style="width:130px;height:90px">
+          <rect x="15" y="80" width="100" height="8" rx="2" fill="#4a5568"/>
+          <rect x="55" y="20" width="20" height="62" rx="2" fill="#606878"/>
+          <rect x="53" y="18" width="24" height="6" rx="2" fill="#718096"/>
+          <line x1="15" y1="80" x2="45" y2="20" stroke="#4a5568" stroke-width="4" stroke-linecap="round"/>
+          <line x1="115" y1="80" x2="85" y2="20" stroke="#4a5568" stroke-width="4" stroke-linecap="round"/>
+          <rect x="25" y="78" width="8" height="20" fill="#3d4754"/>
+          <rect x="97" y="78" width="8" height="20" fill="#3d4754"/>
+        </svg>
       </div>
+      <!-- 로켓 -->
+      <div class="cs-rocket-wrap" id="csRocket" style="bottom:26%">
+        ${ROCKET_SVG}
+        <div id="csFlame" style="display:none">${FLAME_SVG}</div>
+      </div>
+      <!-- 파티클 캔버스 -->
+      <canvas class="cs-particles" id="csParticles"></canvas>
+      <!-- HUD -->
+      <div class="cs-hud" id="csHud">
+        <div class="cs-mult cs-mult-white" id="csMultText">1.00x</div>
+        <div class="cs-sub" id="csSubText">베팅 후 발사를 기다리세요</div>
+      </div>
+      <!-- 카운트다운 바 -->
+      <div class="cs-countdown"><div class="cs-countdown-fill" id="csCountdown" style="width:100%"></div></div>
+    </div>
+    <!-- 컨트롤 -->
+    <div style="display:flex;gap:16px;align-items:flex-start;margin-top:16px">
+      <div class="crash-bet-box" id="crashBetBox" style="flex:1">
+        <div class="crash-bet-label">베팅 금액 (10~50P)</div>
+        <div class="crash-chip-row">
+          <div class="crash-chip sel" data-v="10" onclick="crashSetBet(10)">10p</div>
+          <div class="crash-chip" data-v="20" onclick="crashSetBet(20)">20p</div>
+          <div class="crash-chip" data-v="30" onclick="crashSetBet(30)">30p</div>
+          <div class="crash-chip" data-v="50" onclick="crashSetBet(50)">50p</div>
+        </div>
+        <div class="crash-bet-display">베팅: <span id="crashBetAmt">${crashBet}</span> P</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;width:210px">
+        <button class="crash-action-btn join" id="crashActionBtn" onclick="crashAction()">다음 게임 참여</button>
+      </div>
+      <div class="crash-players" id="crashPlayers" style="width:180px;max-height:90px"><div class="crash-no-players">참여자 없음</div></div>
     </div>
   </div>`;
 
-  // 캔버스 실제 픽셀 크기 맞추기
-  const cv=$c('crashCanvas');
-  if(cv){cv.width=cv.offsetWidth||700;cv.height=320;_initScene(cv.width,cv.height);}
+  // 파티클 캔버스 크기
+  requestAnimationFrame(()=>{
+    const scene=$c('crashScene');
+    const pc=$c('csParticles');
+    if(scene&&pc){pc.width=scene.offsetWidth;pc.height=scene.offsetHeight;}
+    // 별 생성
+    _buildStars();
+    // 구름 생성
+    _buildClouds();
+  });
 
-  // rAF 루프 시작
-  _cRaf=requestAnimationFrame(_crashDraw);
-
+  // rAF 루프
+  _cRaf=requestAnimationFrame(_crashLoop);
   fetch('/api/game/crash/state').then(r=>r.json()).then(d=>applyCrashState(d)).catch(()=>{});
 }
 
-function _crashMult(ms){ return Math.pow(Math.E, 0.0001*ms); }
+function _crashMult(ms){return Math.pow(Math.E,0.0001*ms);}
 
-/* ── Scene 초기화 ── */
-let _cStars=[], _cClouds=[], _cFrame=0;
-function _initScene(W,H){
-  _cStars=Array.from({length:220},()=>({
-    x:Math.random()*W, y:Math.random()*H,
-    r:Math.random()*1.4+.3,
-    twinkle:Math.random()*Math.PI*2,
-    speed:Math.random()*.5+.5
-  }));
-  _cClouds=[
-    {x:W*.15, y:H*.52, w:160, h:55, speed:.4},
-    {x:W*.55, y:H*.44, w:220, h:65, speed:.25},
-    {x:W*.8,  y:H*.58, w:130, h:45, speed:.35},
-    {x:W*.35, y:H*.62, w:100, h:38, speed:.55},
-    {x:W*.7,  y:H*.38, w:180, h:50, speed:.2},
-    {x:W*.05, y:H*.35, w:140, h:42, speed:.3},
+/* ── 별 생성 ── */
+function _buildStars(){
+  const el=$c('csStars');if(!el)return;
+  el.innerHTML=Array.from({length:180},()=>{
+    const size=Math.random()*2.5+.5;
+    const delay=(Math.random()*4).toFixed(1);
+    const dur=(1.5+Math.random()*2).toFixed(1);
+    return`<div class="cs-star" style="left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*85).toFixed(1)}%;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;opacity:0;animation-delay:${delay}s;animation-duration:${dur}s"></div>`;
+  }).join('');
+}
+
+/* ── 구름 생성 ── */
+function _buildClouds(){
+  const el=$c('csClouds');if(!el)return;
+  const clouds=[
+    {w:200,h:60,top:20,dur:28,delay:0},
+    {w:280,h:70,top:35,dur:40,delay:8},
+    {w:160,h:50,top:50,dur:22,delay:15},
+    {w:240,h:65,top:25,dur:35,delay:4},
+    {w:180,h:55,top:60,dur:30,delay:20},
   ];
+  el.innerHTML=clouds.map(c=>`
+    <div class="cs-cloud" style="top:${c.top}%;opacity:0;animation:cloudDrift ${c.dur}s linear ${c.delay}s infinite">
+      <div class="cs-cloud-shape" style="width:${c.w}px;height:${c.h}px">
+        <div style="position:absolute;width:${c.w*.5}px;height:${c.h*1.1}px;background:rgba(255,255,255,.85);border-radius:50%;top:-${c.h*.4}px;left:${c.w*.15}px;filter:blur(1px)"></div>
+        <div style="position:absolute;width:${c.w*.35}px;height:${c.h*.9}px;background:rgba(255,255,255,.85);border-radius:50%;top:-${c.h*.3}px;left:${c.w*.5}px;filter:blur(1px)"></div>
+      </div>
+    </div>`).join('');
 }
 
-/* ── 하늘 배경 ── */
-function _drawSky(ctx,W,H,alt){
-  // alt: 0=발사대, 1=우주
-  const top=alt<.35
-    ? lerpCol([10,8,40],[5,15,80],alt/.35)
-    : alt<.7
-    ? lerpCol([5,15,80],[2,5,30],(alt-.35)/.35)
-    : lerpCol([2,5,30],[0,0,8],(alt-.7)/.3);
-  const bot=alt<.3
-    ? lerpCol([255,160,60],[120,200,255],alt/.3)
-    : alt<.6
-    ? lerpCol([120,200,255],[30,80,200],(alt-.3)/.3)
-    : lerpCol([30,80,200],[0,0,15],(alt-.6)/.4);
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,`rgb(${top})`);
-  g.addColorStop(1,`rgb(${bot})`);
-  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-
-  // 지평선 glow (낮은 고도)
-  if(alt<.4){
-    const glow=ctx.createRadialGradient(W/2,H,0,W/2,H,W*.8);
-    const a=Math.max(0,(0.4-alt)/.4);
-    glow.addColorStop(0,`rgba(255,140,40,${a*.35})`);
-    glow.addColorStop(1,'transparent');
-    ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+/* ── 배경 업데이트 ── */
+function _updateBg(alt){
+  const bg=$c('csBg');if(!bg)return;
+  let topCol,botCol;
+  if(alt<.2){
+    const t=alt/.2;
+    topCol=`rgb(${lerp(8,5,t)},${lerp(6,10,t)},${lerp(35,55,t)})`;
+    botCol=`rgb(${lerp(240,160,t)},${lerp(120,120,t)},${lerp(40,60,t)})`;
+  } else if(alt<.55){
+    const t=(alt-.2)/.35;
+    topCol=`rgb(${lerp(5,4,t)},${lerp(10,8,t)},${lerp(55,80,t)})`;
+    botCol=`rgb(${lerp(160,40,t)},${lerp(120,120,t)},${lerp(60,220,t)})`;
+  } else if(alt<.85){
+    const t=(alt-.55)/.3;
+    topCol=`rgb(${lerp(4,0,t)},${lerp(8,0,t)},${lerp(80,8,t)})`;
+    botCol=`rgb(${lerp(40,5,t)},${lerp(120,5,t)},${lerp(220,25,t)})`;
+  } else {
+    topCol='rgb(0,0,5)';botCol='rgb(2,0,12)';
   }
-}
-function lerpCol(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t))}
-
-/* ── 별 ── */
-function _drawStars(ctx,alt,frame){
-  const alpha=Math.max(0,(alt-.25)/.35);
-  if(alpha<.01)return;
-  _cStars.forEach(s=>{
-    const tw=.6+.4*Math.sin(s.twinkle+frame*.03*s.speed);
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(255,255,255,${(alpha*tw).toFixed(2)})`;ctx.fill();
-    if(s.r>1){// 큰 별 십자 빛
-      ctx.strokeStyle=`rgba(255,255,255,${(alpha*tw*.4).toFixed(2)})`;ctx.lineWidth=.5;
-      const len=s.r*3;
-      ctx.beginPath();ctx.moveTo(s.x-len,s.y);ctx.lineTo(s.x+len,s.y);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(s.x,s.y-len);ctx.lineTo(s.x,s.y+len);ctx.stroke();
-    }
-  });
-}
-
-/* ── 구름 ── */
-function _drawClouds(ctx,W,H,alt,frame){
-  const alpha=Math.max(0,alt<.15?alt/.15:alt<.5?1:(1-(alt-.5)/.25));
-  if(alpha<.01)return;
-  _cClouds.forEach(cl=>{
-    cl.x-=cl.speed;if(cl.x+cl.w<0)cl.x=W+cl.w;
-    _drawCloud(ctx,cl.x,cl.y,cl.w,cl.h,alpha);
-  });
-}
-function _drawCloud(ctx,x,y,w,h,alpha){
-  ctx.save();ctx.globalAlpha=alpha*.85;
-  const g=ctx.createRadialGradient(x+w/2,y+h/2,0,x+w/2,y+h/2,Math.max(w,h));
-  g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(1,'rgba(220,235,255,0)');
-  ctx.fillStyle=g;
-  ctx.beginPath();
-  ctx.ellipse(x+w*.5,y+h*.6,w*.5,h*.4,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x+w*.3,y+h*.45,w*.28,h*.35,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x+w*.72,y+h*.5,w*.22,h*.3,0,0,Math.PI*2);ctx.fill();
-  ctx.restore();
-}
-
-/* ── 지면 + 발사대 ── */
-function _drawGround(ctx,W,H,alt){
-  const a=Math.max(0,1-alt/.12);if(a<.01)return;
-  ctx.save();ctx.globalAlpha=a;
+  bg.style.background=`linear-gradient(180deg,${topCol} 0%,${botCol} 100%)`;
+  // 별 표시
+  const stEl=$c('csStars');
+  if(stEl)stEl.style.opacity=Math.min(1,Math.max(0,(alt-.2)/.4));
+  // 구름 표시
+  const clouds=document.querySelectorAll('#csClouds .cs-cloud');
+  const cloudA=alt<.12?alt/.12:alt<.55?1:Math.max(0,1-(alt-.55)/.2);
+  clouds.forEach(c=>c.style.opacity=cloudA*.9);
   // 지면
-  const gg=ctx.createLinearGradient(0,H*.82,0,H);
-  gg.addColorStop(0,'#1a2e1a');gg.addColorStop(1,'#0d1a0d');
-  ctx.fillStyle=gg;ctx.fillRect(0,H*.82,W,H*.18);
-  // 발사대 기둥
-  const px=W/2, py=H*.82;
-  ctx.fillStyle='#5a6070';
-  ctx.fillRect(px-40,py-60,80,60);// 플랫폼 기반
-  ctx.fillStyle='#4a5060';
-  ctx.fillRect(px-6,py-140,12,80);// 중앙 기둥
-  [-28,28].forEach(ox=>{
-    ctx.fillStyle='#606878';
-    ctx.fillRect(px+ox-4,py-120,8,60);
-  });
-  // 발사대 상단 플랫폼
-  const pg=ctx.createLinearGradient(px-50,0,px+50,0);
-  pg.addColorStop(0,'#404855');pg.addColorStop(.5,'#6a7888');pg.addColorStop(1,'#404855');
-  ctx.fillStyle=pg;ctx.fillRect(px-50,py-65,100,10);
-  // 지지 암
-  ctx.strokeStyle='#5a6878';ctx.lineWidth=4;
-  [[-45,-130],[45,-130]].forEach(([ox,oy])=>{
-    ctx.beginPath();ctx.moveTo(px+ox,py-60);ctx.lineTo(px+ox*.3,py+oy);ctx.stroke();
-  });
-  ctx.restore();
+  const gr=$c('csGround');
+  if(gr){gr.style.opacity=Math.max(0,1-alt/.14).toFixed(2);}
+  // 발사대
+  const pad=$c('csPad');
+  if(pad){pad.style.opacity=Math.max(0,1-alt/.1).toFixed(2);}
 }
 
-/* ── 로켓 (캔버스 직접 드로잉) ── */
-function _drawRocket(ctx,x,y,flame,crashed){
-  if(crashed)return;
-  ctx.save();ctx.translate(x,y);
+function lerp(a,b,t){return Math.round(a+(b-a)*Math.min(1,t));}
 
+/* ── 로켓 위치 업데이트 ── */
+function _updateRocket(m,phase){
+  const el=$c('csRocket');if(!el)return;
+  const scene=$c('crashScene');
+  const H=scene?scene.offsetHeight:340;
+  const groundH=H*.18;
+  // 발사대 위 = bottom: 18% + pad height (90px scaled)
+  const padTop=groundH+88; // px from bottom
+  const topPos=H*.08;
+  const progress=Math.min(1,1-1/Math.max(m,1));
+  const bottom=padTop+(H-padTop-topPos)*progress;
+  el.style.bottom=bottom+'px';
   // 화염
-  const fh=28+Math.sin(flame*4.5)*10;
-  const fg2=ctx.createLinearGradient(0,0,0,fh+10);
-  fg2.addColorStop(0,'rgba(255,255,220,.95)');
-  fg2.addColorStop(.35,'rgba(255,140,20,.8)');
-  fg2.addColorStop(1,'rgba(255,60,0,0)');
-  ctx.fillStyle=fg2;
-  ctx.beginPath();
-  ctx.moveTo(-9,2);
-  ctx.bezierCurveTo(-12,fh*.4,-4+Math.sin(flame*7)*3,fh*.7,0,fh+Math.sin(flame*5)*6);
-  ctx.bezierCurveTo(4+Math.sin(flame*7)*3,fh*.7,12,fh*.4,9,2);
-  ctx.closePath();ctx.fill();
-  // 보조 화염 2개
-  [[-14,0.55],[14,0.55]].forEach(([ox,sc])=>{
-    const bfh=fh*sc;
-    ctx.fillStyle=fg2;
-    ctx.beginPath();
-    ctx.moveTo(ox-5,2);
-    ctx.bezierCurveTo(ox-6,bfh*.4,ox+Math.sin(flame*6)*2,bfh*.8,ox,bfh);
-    ctx.bezierCurveTo(ox+6,bfh*.4,ox+5,bfh*.4,ox+5,2);
-    ctx.closePath();ctx.fill();
-  });
-
-  // 동체 그라디언트
-  const bg=ctx.createLinearGradient(-14,0,14,0);
-  bg.addColorStop(0,'#9aa0b0');bg.addColorStop(.25,'#d8dce8');
-  bg.addColorStop(.5,'#ffffff');bg.addColorStop(.75,'#d0d4e0');bg.addColorStop(1,'#808898');
-  ctx.fillStyle=bg;
-  // 동체 (둥근 직사각형)
-  ctx.beginPath();ctx.roundRect(-11,-52,22,54,4);ctx.fill();
-
-  // 빨간 줄무늬
-  ctx.fillStyle='#dc2626';ctx.fillRect(-11,-28,22,9);
-
-  // 창문
-  const wg=ctx.createRadialGradient(-3,-36,0,0,-34,7);
-  wg.addColorStop(0,'#bae6fd');wg.addColorStop(.6,'#38bdf8');wg.addColorStop(1,'#0369a1');
-  ctx.beginPath();ctx.arc(0,-34,6,0,Math.PI*2);ctx.fillStyle=wg;ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.stroke();
-  ctx.beginPath();ctx.arc(-2,-36,2.5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
-
-  // 노즈콘
-  const ng=ctx.createLinearGradient(-11,-52,11,-52);
-  ng.addColorStop(0,'#9aa0b0');ng.addColorStop(.4,'#e8ecf8');ng.addColorStop(1,'#707888');
-  ctx.fillStyle=ng;
-  ctx.beginPath();ctx.moveTo(-11,-52);ctx.lineTo(0,-90);ctx.lineTo(11,-52);ctx.closePath();ctx.fill();
-
-  // 날개 (핀)
-  ctx.fillStyle='#dc2626';
-  [[-11,-1],[11,1]].forEach(([bx,dir])=>{
-    ctx.beginPath();
-    ctx.moveTo(bx,2);ctx.lineTo(bx+dir*20,22);ctx.lineTo(bx+dir*14,2);ctx.closePath();
-    ctx.fill();
-  });
-  // 하단 노즐
-  ctx.fillStyle='#4a5060';ctx.fillRect(-8,2,16,6);
-
-  ctx.restore();
+  const flame=$c('csFlame');
+  if(flame)flame.style.display=(phase==='running')?'block':'none';
 }
 
-/* ── 폭발 파티클 ── */
-function _spawnExplosion(x,y){
-  const cols=['255,80,50','255,180,30','255,255,100','200,80,255','255,255,255'];
-  for(let i=0;i<80;i++){
-    const ang=Math.random()*Math.PI*2, spd=3+Math.random()*9;
-    _cParticles.push({
-      x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-4,
-      r:2+Math.random()*4,life:50+Math.random()*40,maxLife:90,
-      color:cols[Math.floor(Math.random()*cols.length)]
-    });
-  }
-}
-
-function _crashDraw(){
-  const cv=$c('crashCanvas');
-  if(!cv){_cRaf=null;return;}
+/* ── 파티클 루프 ── */
+function _drawParticles(){
+  const cv=$c('csParticles');if(!cv)return;
   const ctx=cv.getContext('2d');
-  const W=cv.width,H=cv.height;
-  const now=Date.now();
-  _cFrame++;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  _cParticles=_cParticles.filter(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.35;p.life--;
+    const a=Math.max(0,p.life/p.maxLife);
+    if(a<=0)return false;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${p.color},${a.toFixed(2)})`;ctx.fill();
+    return true;
+  });
+}
 
-  /* ── 현재 배당 계산 ── */
+/* ── 메인 루프 ── */
+function _crashLoop(){
+  if(!$c('crashScene')){_cRaf=null;return;}
+  _cFrame++;
+  const now=Date.now();
   let m=1.00;
   if(crashPhase==='running'&&_cStart>0){
     m=_crashMult(now-_cStart);
-    _cPoints.push({t:now-_cStart,m});
-    if(_cPoints.length>1500)_cPoints.shift();
     const btn=$c('crashActionBtn');
     if(btn&&btn.classList.contains('cashout'))btn.textContent=`현금화  ${m.toFixed(2)}x`;
   } else if(crashPhase==='crashed'){
     m=_cCrashMult||1;
   }
 
-  /* ── 고도 진행도 (0=발사대 / 1=우주) ── */
-  const alt=crashPhase==='betting'?0:Math.min(1,Math.log(Math.max(m,1))/Math.log(18));
+  const alt=crashPhase==='betting'?0:Math.min(1,Math.log(Math.max(m,1))/Math.log(20));
+  _updateBg(alt);
+  _updateRocket(m,crashPhase);
 
-  /* ── 흔들림 ── */
-  const sx=_cShake>0?(Math.random()-.5)*12:0,sy=_cShake>0?(Math.random()-.5)*12:0;
-  if(_cShake>0)_cShake--;
-  ctx.save();ctx.translate(sx,sy);
+  // 배당 숫자 업데이트
+  const mt=$c('csMultText');
+  if(mt){
+    mt.textContent=m.toFixed(2)+'x';
+    const cls=crashPhase==='crashed'?'cs-mult-red':m>=10?'cs-mult-purple':m>=4?'cs-mult-yellow':m>=2?'cs-mult-green':'cs-mult-white';
+    mt.className='cs-mult '+cls;
+  }
 
-  /* ── 배경 ── */
-  _drawSky(ctx,W,H,alt);
-  _drawStars(ctx,alt,_cFrame);
-  _drawClouds(ctx,W,H,alt,_cFrame);
-
-  /* ── 지면 + 발사대 ── */
-  _drawGround(ctx,W,H,alt);
-
-  /* ── 로켓 위치 계산 ── */
-  // 1x=발사대 위(H*0.74), 높아질수록 캔버스 상단
-  const rocketX=W/2;
-  const rocketBase=H*0.74; // 발사대 높이
-  const rocketTop=H*0.12;
-  const rocketProgress=1-1/Math.max(m,1);
-  const rocketY=rocketBase-(rocketBase-rocketTop)*Math.min(rocketProgress*1.15,1);
-
-  /* ── 로켓 그리기 ── */
-  const flamePhase=_cFrame*.08;
-  const scale=crashPhase==='betting'?1.15:1;
-  _drawRocket(ctx,rocketX,rocketY,flamePhase,scale,crashPhase==='crashed');
-
-  /* ── 연기 흔적 (running) ── */
-  if(crashPhase==='running'&&_cPoints.length>3){
-    const trailLen=Math.min(12,Math.floor(_cPoints.length/4));
-    for(let i=0;i<trailLen;i++){
-      const pIdx=_cPoints.length-1-i*4;
-      if(pIdx<0)break;
-      const pt=_cPoints[pIdx];
-      const py=rocketBase-(rocketBase-rocketTop)*Math.min((1-1/Math.max(pt.m,1))*1.15,1);
-      const a=(trailLen-i)/trailLen*.25;
-      ctx.beginPath();ctx.arc(rocketX+(Math.sin(i*1.7)*6),py+30,5+i*1.5,0,Math.PI*2);
-      ctx.fillStyle=`rgba(200,200,220,${a.toFixed(2)})`;ctx.fill();
+  // 서브 텍스트
+  const st=$c('csSubText');
+  if(st){
+    if(crashPhase==='betting'){
+      const left=Math.max(0,crashBetEndAt-now);
+      st.textContent=`🕐 ${(left/1000).toFixed(1)}초 후 발사`;
+    } else if(crashPhase==='running'){
+      st.textContent='원하는 배당에서 현금화 버튼을 누르세요';
+    } else {
+      st.textContent=`💥 ${(_cCrashMult||m).toFixed(2)}x 에서 폭발!`;
     }
   }
 
-  /* ── 파티클 ── */
-  _cParticles=_cParticles.filter(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.vy+=0.3;p.life--;
-    const a=p.life/p.maxLife;
-    if(p.life<=0)return false;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
-    ctx.fillStyle=`rgba(${p.color},${a.toFixed(2)})`;ctx.fill();
-    return true;
-  });
-
-  /* ── HUD: 배당 숫자 ── */
-  const multCol=crashPhase==='crashed'?'#f87171':m>=10?'#c084fc':m>=4?'#fbbf24':m>=2?'#4ade80':'#ffffff';
-  const fs=m>=100?48:m>=10?58:66;
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  // 배경 pill
-  ctx.fillStyle='rgba(0,0,0,.45)';
-  ctx.beginPath();ctx.roundRect(W/2-110,H*.18-36,220,72,16);ctx.fill();
-  // 숫자
-  ctx.font=`900 ${fs}px Inter,system-ui,sans-serif`;
-  ctx.shadowColor=multCol;ctx.shadowBlur=35;ctx.fillStyle=multCol;
-  ctx.fillText(m.toFixed(2)+'x',W/2,H*.18);
-  ctx.shadowBlur=0;
-
-  /* ── 상태 텍스트 ── */
-  ctx.font='600 13px Inter,system-ui,sans-serif';
-  if(crashPhase==='betting'){
-    const left=Math.max(0,crashBetEndAt-now);
-    ctx.fillStyle='rgba(255,255,255,.55)';
-    ctx.fillText(`🕐 ${(left/1000).toFixed(1)}초 후 발사 · 지금 베팅하세요`,W/2,H*.18+38);
-  } else if(crashPhase==='crashed'){
-    ctx.fillStyle='rgba(248,113,113,.8)';
-    ctx.fillText(`💥 ${(_cCrashMult||m).toFixed(2)}x 에서 폭발`,W/2,H*.18+38);
-  } else {
-    ctx.fillStyle='rgba(255,255,255,.35)';
-    ctx.fillText('↑ 올라가는 중 — 원하는 배당에서 현금화하세요',W/2,H*.18+38);
+  // 카운트다운 바
+  const cd=$c('csCountdown');
+  if(cd&&crashPhase==='betting'){
+    cd.style.width=Math.round(Math.max(0,crashBetEndAt-now)/70)+'%';
   }
 
-  /* ── 히스토리 배지 (우상단) ── */
-  // (HTML에서 렌더링하므로 생략)
-
-  ctx.restore();
-  _cRaf=requestAnimationFrame(_crashDraw);
+  _drawParticles();
+  _cRaf=requestAnimationFrame(_crashLoop);
 }
 
-function _spawnParticles(x,y){
-  const colors=['248,113,113','251,191,36','168,85,247','74,222,128','255,255,255'];
-  for(let i=0;i<60;i++){
-    const ang=Math.random()*Math.PI*2, spd=2+Math.random()*6;
-    _cParticles.push({
-      x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-3,
-      r:2+Math.random()*3,life:40+Math.random()*30,maxLife:70,
-      alpha:1,color:colors[Math.floor(Math.random()*colors.length)]
-    });
+function _spawnExplosion(x,y){
+  const cols=['255,80,50','255,180,30','255,240,80','200,80,255','255,255,255','100,220,255'];
+  for(let i=0;i<90;i++){
+    const ang=Math.random()*Math.PI*2,spd=3+Math.random()*10;
+    _cParticles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-5,
+      r:2+Math.random()*5,life:55+Math.random()*45,maxLife:100,
+      color:cols[Math.floor(Math.random()*cols.length)]});
   }
 }
+
+/* ── 기존 canvas 함수들 제거됨 (SVG+CSS 방식으로 전환) ── */
+function _initScene(){} // stub (더 이상 사용 안 함)
+function _drawSky(){} function _drawStars(){} function _drawClouds(){}
+function _drawGround(){} function _drawRocket(){} function _crashDraw(){}
+function _spawnParticles(x,y){_spawnExplosion(x,y);}
+function lerpCol(){}
 
 function crashSetBet(n){
   crashBet=n;
@@ -2418,16 +2419,17 @@ function applyCrashState(msg){
   crashPhase=msg.phase;
   crashBetEndAt=msg.betEndAt||0;
 
-  // running 시작 감지 → 클라이언트 타이머 시작
   if(msg.phase==='running'&&prevPhase!=='running'){
-    _cStart=Date.now(); _cPoints=[]; _cCrashMult=null;
+    _cStart=Date.now();_cCrashMult=null;
   }
-  // 폭발 감지 → 파티클 + 흔들림
   if(msg.phase==='crashed'&&prevPhase!=='crashed'){
     _cCrashMult=msg.mult||1;
-    _cShake=18;
-    const cv=$c('crashCanvas');
-    if(cv)_spawnExplosion(cv.width/2, cv.height*.5);
+    // 씬 흔들림
+    const scene=$c('crashScene');
+    if(scene){scene.style.animation='none';requestAnimationFrame(()=>{scene.style.animation='crashShake .5s ease';});}
+    // 파티클
+    const pc=$c('csParticles');
+    if(pc)_spawnExplosion(pc.width/2,pc.height*.45);
   }
 
   // 히스토리
