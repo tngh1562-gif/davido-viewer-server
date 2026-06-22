@@ -2090,7 +2090,7 @@ function initCrash(wrap) {
   fetch('/api/game/crash/state').then(r=>r.json()).then(d=>applyCrashState(d)).catch(()=>{});
 }
 
-function _crashMult(elapsedMs){ return Math.pow(Math.E,0.0001*elapsedMs); }
+function _crashMult(ms){ return Math.pow(Math.E, 0.0001*ms); }
 
 function _crashDraw(){
   const cv=$c('crashCanvas');
@@ -2099,100 +2099,173 @@ function _crashDraw(){
   const W=cv.width, H=cv.height;
   const now=Date.now();
 
-  // 현재 배당 계산 (클라이언트 보간)
+  /* ── 현재 배당 ── */
   let m=1.00;
   if(crashPhase==='running'&&_cStart>0){
-    m=_crashMult(now-_cStart);
-    _cPoints.push({t:now,m});
-    if(_cPoints.length>800)_cPoints.shift();
-    // 현금화 버튼 배당 실시간 업데이트
+    const el=now-_cStart;
+    m=_crashMult(el);
+    _cPoints.push({t:el,m});
+    if(_cPoints.length>1200)_cPoints.shift();
     const btn=$c('crashActionBtn');
     if(btn&&btn.classList.contains('cashout'))btn.textContent=`현금화  ${m.toFixed(2)}x`;
   } else if(crashPhase==='crashed'){
-    m=_cCrashMult||1;
+    m=_cCrashMult||(_cPoints.length?_cPoints[_cPoints.length-1].m:1);
   }
 
-  // 흔들림 오프셋
-  const sx=_cShake>0?(Math.random()-.5)*8:0;
-  const sy=_cShake>0?(Math.random()-.5)*8:0;
+  /* ── 흔들림 ── */
+  const sx=_cShake>0?(Math.random()-.5)*10:0, sy=_cShake>0?(Math.random()-.5)*10:0;
   if(_cShake>0)_cShake--;
-  ctx.save();ctx.translate(sx,sy);
+  ctx.save(); ctx.translate(sx,sy);
 
-  // 배경
-  ctx.fillStyle='#05020f';ctx.fillRect(0,0,W,H);
+  /* ── 배경 ── */
+  ctx.fillStyle='#06030f'; ctx.fillRect(0,0,W,H);
+  // 하단 Ambient glow
+  const aGlow=ctx.createRadialGradient(W*.15,H,0,W*.15,H,W*.7);
+  aGlow.addColorStop(0,'rgba(120,60,220,.18)');aGlow.addColorStop(1,'transparent');
+  ctx.fillStyle=aGlow;ctx.fillRect(0,0,W,H);
 
-  // 그리드
-  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
-  for(let i=1;i<4;i++){
-    ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(W*i/4,0);ctx.lineTo(W*i/4,H);ctx.stroke();
-  }
+  /* ── 레이아웃 마진 ── */
+  const ML=58,MB=36,MR=18,MT=18;
+  const GW=W-ML-MR, GH=H-MT-MB;
 
-  // 커브 그리기
-  if(_cPoints.length>1){
-    const maxM=Math.max(m*1.3,2.5);
-    const mapX=i=>(i/(_cPoints.length-1))*(W-60)+20;
-    const mapY=v=>H-10-(H-30)*Math.log(Math.max(v,1))/Math.log(maxM);
+  /* ── Y 스케일 (로그) ── */
+  const maxM=crashPhase==='betting'?3:Math.max(m*1.25,2.2);
+  const mapY=v=>MT+GH*(1-Math.log(Math.max(v,1))/Math.log(maxM));
+  // X: elapsed time → screen x
+  const totalT=_cPoints.length>0?_cPoints[_cPoints.length-1].t:1;
+  const mapX=t=>ML+GW*(t/Math.max(totalT,1));
 
-    // 색상
-    const col=m>=10?'#c084fc':m>=5?'#fbbf24':m>=2?'#4ade80':'#a855f7';
+  /* ── 그리드 + Y축 레이블 ── */
+  const yTicks=[1,1.5,2,3,5,10,20,50,100].filter(v=>v<=maxM*1.05);
+  ctx.font='11px Inter,system-ui,sans-serif';
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  yTicks.forEach(v=>{
+    const y=mapY(v);
+    if(y<MT-2||y>H-MB+2)return;
+    // 점선 그리드
+    ctx.setLineDash([3,5]);
+    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(ML,y);ctx.lineTo(W-MR,y);ctx.stroke();
+    ctx.setLineDash([]);
+    // 레이블
+    ctx.fillStyle='rgba(255,255,255,.28)';
+    ctx.fillText(v+'x',ML-7,y);
+  });
+  // 축 테두리
+  ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(ML,MT);ctx.lineTo(ML,H-MB);ctx.lineTo(W-MR,H-MB);ctx.stroke();
 
-    // 아래 채우기
+  /* ── 곡선 그리기 ── */
+  if((_cPoints.length>1&&(crashPhase==='running'||crashPhase==='crashed'))){
+    const col=crashPhase==='crashed'?'#f87171':m>=10?'#c084fc':m>=4?'#fbbf24':m>=2?'#4ade80':'#a855f7';
+    const colDim=col+'22';
+
+    // 곡선 경로
     ctx.beginPath();
-    ctx.moveTo(mapX(0),mapY(_cPoints[0].m));
-    _cPoints.forEach((_,i)=>{if(i>0)ctx.lineTo(mapX(i),mapY(_cPoints[i].m));});
-    ctx.lineTo(mapX(_cPoints.length-1),H);ctx.lineTo(mapX(0),H);ctx.closePath();
-    const fg=ctx.createLinearGradient(0,0,0,H);
-    fg.addColorStop(0,col+'40');fg.addColorStop(1,col+'05');
+    ctx.moveTo(ML,H-MB);
+    _cPoints.forEach(p=>ctx.lineTo(mapX(p.t),mapY(p.m)));
+    const lastX=mapX(totalT), lastY=mapY(m);
+    // 채우기
+    ctx.lineTo(lastX,H-MB);ctx.closePath();
+    const fg=ctx.createLinearGradient(0,MT,0,H-MB);
+    fg.addColorStop(0,col+'35');fg.addColorStop(0.7,col+'10');fg.addColorStop(1,col+'00');
     ctx.fillStyle=fg;ctx.fill();
 
-    // 곡선
-    ctx.beginPath();
-    ctx.moveTo(mapX(0),mapY(_cPoints[0].m));
-    _cPoints.forEach((_,i)=>{if(i>0)ctx.lineTo(mapX(i),mapY(_cPoints[i].m));});
-    ctx.strokeStyle=col;ctx.lineWidth=3;
-    ctx.shadowColor=col;ctx.shadowBlur=12;
-    ctx.stroke();ctx.shadowBlur=0;
+    // 선 (3겹 glow)
+    [18,8,3].forEach((blur,i)=>{
+      ctx.beginPath();
+      ctx.moveTo(ML,H-MB);
+      _cPoints.forEach(p=>ctx.lineTo(mapX(p.t),mapY(p.m)));
+      ctx.strokeStyle=i===2?col:col+(i===0?'30':'60');
+      ctx.lineWidth=i===2?2.5:i===1?5:10;
+      ctx.shadowColor=col;ctx.shadowBlur=blur;
+      ctx.stroke();
+    });
+    ctx.shadowBlur=0;
 
-    // 로켓 (폭발 중이 아닐 때)
+    /* ── 로켓 ── */
     if(crashPhase==='running'){
-      const tx=mapX(_cPoints.length-1), ty=mapY(m);
+      // 꼬리 잔광
+      for(let i=0;i<5;i++){
+        const p=_cPoints[Math.max(0,_cPoints.length-1-i*8)];
+        if(!p)continue;
+        const alpha=(5-i)/5*0.4;
+        ctx.beginPath();ctx.arc(mapX(p.t),mapY(p.m),4-i*.5,0,Math.PI*2);
+        ctx.fillStyle=`${col}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
+        ctx.fill();
+      }
       // 발광 점
-      ctx.beginPath();ctx.arc(tx,ty,6,0,Math.PI*2);
-      ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=20;ctx.fill();ctx.shadowBlur=0;
+      ctx.beginPath();ctx.arc(lastX,lastY,7,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=30;ctx.fill();
+      ctx.shadowBlur=0;
       // 로켓 이모지
-      ctx.font='22px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('🚀',tx,ty-20);
+      ctx.save();
+      const angle=_cPoints.length>2
+        ?Math.atan2(mapY(_cPoints[_cPoints.length-1].m)-mapY(_cPoints[Math.max(0,_cPoints.length-10)].m),
+                    mapX(totalT)-mapX(_cPoints[Math.max(0,_cPoints.length-10)].t))
+        :-Math.PI/4;
+      ctx.translate(lastX,lastY-20);
+      ctx.rotate(angle-Math.PI/2);
+      ctx.font='26px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🚀',0,0);
+      ctx.restore();
     }
   }
 
-  // 파티클 (폭발)
+  /* ── 파티클 ── */
   _cParticles=_cParticles.filter(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.vy+=0.3;p.life--;p.alpha=p.life/p.maxLife;
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.25;p.life--;
+    const a=p.life/p.maxLife;
     if(p.life<=0)return false;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.alpha,0,Math.PI*2);
-    ctx.fillStyle=`rgba(${p.color},${p.alpha})`;ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${p.color},${a.toFixed(2)})`;ctx.fill();
     return true;
   });
 
-  // 중앙 배당 텍스트
-  const textCol=crashPhase==='crashed'?'#f87171':m>=10?'#c084fc':m>=5?'#fbbf24':'#fff';
-  const fontSize=m>=100?56:m>=10?62:68;
-  ctx.font=`900 ${fontSize}px Inter,system-ui,sans-serif`;
+  /* ── 중앙 배당 숫자 ── */
+  const phase=crashPhase;
+  const multCol=phase==='crashed'?'#f87171':m>=10?'#c084fc':m>=4?'#fbbf24':m>=2?'#4ade80':'#ffffff';
+  const fs=m>=100?52:m>=10?62:72;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle=textCol;
-  ctx.shadowColor=textCol;ctx.shadowBlur=40;
+
+  // 바깥 glow
+  ctx.font=`900 ${fs}px Inter,system-ui,sans-serif`;
+  ctx.fillStyle=multCol+'20';ctx.shadowColor=multCol;ctx.shadowBlur=60;
+  ctx.fillText(m.toFixed(2)+'x',W/2,H/2);
+
+  // 실제 텍스트
+  ctx.shadowBlur=20;ctx.fillStyle=multCol;
   ctx.fillText(m.toFixed(2)+'x',W/2,H/2);
   ctx.shadowBlur=0;
 
-  // 서브 텍스트
-  ctx.font='600 14px Inter,sans-serif';
-  ctx.fillStyle='rgba(255,255,255,.35)';
-  if(crashPhase==='betting')ctx.fillText('베팅 후 게임 시작을 기다리세요',W/2,H/2+46);
-  else if(crashPhase==='crashed')ctx.fillText(`💥 ${(_cCrashMult||m).toFixed(2)}x 에서 폭발!`,W/2,H/2+46);
+  // 서브 메시지
+  ctx.font='500 13px Inter,system-ui,sans-serif';
+  if(phase==='betting'){
+    const left=Math.max(0,crashBetEndAt-now);
+    const sec=(left/1000).toFixed(1);
+    ctx.fillStyle='rgba(255,255,255,.3)';
+    ctx.fillText(`${sec}초 후 시작 · 지금 베팅하세요`,W/2,H/2+50);
+    // 베팅 구간 카운트다운 바 (캔버스 하단)
+    const barW=200, barX=(W-barW)/2, barY=H-MB+10;
+    ctx.fillStyle='rgba(255,255,255,.06)';
+    ctx.beginPath();roundRect(ctx,barX,barY,barW,5,3);ctx.fill();
+    ctx.fillStyle=multCol;ctx.shadowColor=multCol;ctx.shadowBlur=8;
+    ctx.beginPath();roundRect(ctx,barX,barY,barW*Math.min(left/7000,1),5,3);ctx.fill();
+    ctx.shadowBlur=0;
+  } else if(phase==='crashed'){
+    ctx.fillStyle='rgba(248,113,113,.7)';
+    ctx.fillText('💥  BUST  💥',W/2,H/2+50);
+  }
 
   ctx.restore();
   _cRaf=requestAnimationFrame(_crashDraw);
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
 
 function _spawnParticles(x,y){
