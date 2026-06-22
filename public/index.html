@@ -56,7 +56,7 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 
 /* ── Crash Scene (SVG+CSS 방식) ── */
 .crash-scene{
-  position:relative;width:100%;height:340px;border-radius:14px;
+  position:relative;width:100%;height:420px;border-radius:14px;
   overflow:hidden;cursor:default;
 }
 /* 배경 레이어 */
@@ -108,16 +108,19 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
   animation:flameSideWave .12s ease-in-out infinite alternate;
 }
 @keyframes flameSideWave{from{transform:scaleY(.7)}to{transform:scaleY(1.1)}}
-/* HUD 오버레이 */
+/* HUD 오버레이 — 상단 중앙 고정, 로켓 영역 침범 안 함 */
 .cs-hud{
-  position:absolute;top:0;left:0;right:0;
+  position:absolute;top:18px;left:0;right:0;
   display:flex;flex-direction:column;align-items:center;
-  padding-top:24px;pointer-events:none;
+  pointer-events:none;z-index:10;
 }
 .cs-mult{
-  font-size:72px;font-weight:900;letter-spacing:-3px;line-height:1;
+  font-size:68px;font-weight:900;letter-spacing:-3px;line-height:1;
   transition:color .3s,text-shadow .3s;
   font-variant-numeric:tabular-nums;
+  /* 텍스트 뒤 반투명 배경으로 로켓과 겹쳐도 가독성 유지 */
+  padding:4px 20px;border-radius:12px;
+  background:rgba(0,0,0,.18);backdrop-filter:blur(4px);
 }
 .cs-mult-white{color:#fff;text-shadow:0 0 40px rgba(255,255,255,.4)}
 .cs-mult-green{color:#4ade80;text-shadow:0 0 40px rgba(74,222,128,.6),0 0 80px rgba(74,222,128,.3)}
@@ -2179,8 +2182,8 @@ function initCrash(wrap) {
       <div class="cs-stars" id="csStars"></div>
       <div id="csClouds" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
       <div class="cs-ground" id="csGround" style="height:18%"></div>
-      <!-- 발사대 SVG -->
-      <div class="cs-pad" id="csPad" style="bottom:18%;width:130px">
+      <!-- 발사대 SVG (지면 바로 위) -->
+      <div class="cs-pad" id="csPad" style="bottom:17%;width:130px">
         <svg viewBox="0 0 130 90" fill="none" style="width:130px;height:90px">
           <rect x="15" y="80" width="100" height="8" rx="2" fill="#4a5568"/>
           <rect x="55" y="20" width="20" height="62" rx="2" fill="#606878"/>
@@ -2191,8 +2194,8 @@ function initCrash(wrap) {
           <rect x="97" y="78" width="8" height="20" fill="#3d4754"/>
         </svg>
       </div>
-      <!-- 로켓 (초기값은 CSS로, JS가 이후 제어) -->
-      <div class="cs-rocket-wrap" id="csRocket" style="bottom:38%">
+      <!-- 로켓 (JS가 bottom 값 계산해서 제어) -->
+      <div class="cs-rocket-wrap" id="csRocket" style="bottom:22%">
         ${ROCKET_SVG}
         <div id="csFlame" style="display:none">${FLAME_SVG}</div>
       </div>
@@ -2311,44 +2314,51 @@ function _updateBg(alt){
 function lerp(a,b,t){return Math.round(a+(b-a)*Math.min(1,t));}
 
 /* ── 카메라 팔로우: 로켓 고정, 세계가 내려감 ── */
+const ROCKET_H = 150; // SVG 로켓 높이(px)
+const FLAME_H  = 55;  // SVG 화염 높이(px)
+
 function _updateRocket(m,phase){
   const scene=$c('crashScene');if(!scene)return;
   const H=scene.offsetHeight;
+  const groundH=Math.round(H*.17);      // 지면 높이
+  const padPlatformH=70;                 // 발사대 플랫폼까지 높이
+  // 로켓 하단 = 지면 + 발사대 플랫폼 (베팅 중 or 발사 직후)
+  const rocketOnPad = groundH + padPlatformH;  // 발사대 위 위치
+  // 비행 중엔 같은 위치에 고정 (세계가 내려감)
+  const rocketFixedBottom = rocketOnPad;
 
-  // 로켓은 항상 화면 중앙 아래쪽에 고정
-  const rocketFixedBottom=H*.38;
   const el=$c('csRocket');
   if(el){
-    el.style.bottom=rocketFixedBottom+'px';
-    el.style.transition='none';
-    // 화염
+    el.style.bottom = rocketFixedBottom + 'px';
+    el.style.transition = 'none';
+    // 화염 (running일 때만)
     const flame=$c('csFlame');
-    if(flame)flame.style.display=(phase==='running')?'block':'none';
+    if(flame) flame.style.display = (phase==='running') ? 'block' : 'none';
   }
 
-  // 세계 스크롤 오프셋 (배당이 오를수록 배경이 아래로)
-  const progress=1-1/Math.max(m,1); // 0~1
-  const worldY=H*progress*1.6;
+  // 세계 스크롤 오프셋
+  const progress = 1 - 1/Math.max(m,1);
+  const worldY   = H * progress * 1.8;
 
   // 지면
   const gr=$c('csGround');
   if(gr){
     gr.style.transform=`translateY(${worldY}px)`;
-    gr.style.opacity=Math.max(0,1-progress/.12).toFixed(2);
+    gr.style.opacity=Math.max(0,1-progress/.1).toFixed(2);
   }
-  // 발사대
+  // 발사대 (로켓보다 빠르게 사라짐)
   const pad=$c('csPad');
   if(pad){
-    pad.style.transform=`translateY(${worldY}px)`;
-    pad.style.opacity=Math.max(0,1-progress/.08).toFixed(2);
+    pad.style.transform=`translateY(${worldY*1.05}px)`;
+    pad.style.opacity=Math.max(0,1-progress/.07).toFixed(2);
   }
-  // 구름 (절반 속도 시차)
+  // 구름 시차
   document.querySelectorAll('#csClouds .cs-cloud').forEach(c=>{
-    c.style.marginTop=`${worldY*.45}px`;
+    c.style.marginTop=`${worldY*.4}px`;
   });
-  // 별 (느린 시차)
+  // 별 시차
   const stars=$c('csStars');
-  if(stars)stars.style.transform=`translateY(${worldY*.12}px)`;
+  if(stars) stars.style.transform=`translateY(${worldY*.1}px)`;
 }
 
 /* ── 파티클 루프 ── */
@@ -2454,7 +2464,7 @@ function applyCrashState(msg){
     if(scene){scene.style.animation='none';requestAnimationFrame(()=>{scene.style.animation='crashShake .5s ease';});}
     // 파티클
     const pc=$c('csParticles');
-    if(pc)_spawnExplosion(pc.width/2,pc.height*.45);
+    if(pc)_spawnExplosion(pc.width/2,pc.height*.5);
   }
 
   // 히스토리
