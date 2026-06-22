@@ -718,37 +718,6 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 <!-- ═══ MINI GAMES ═══ -->
 <div id="page-minigames" class="page">
 
-  <!-- ══ CRASH GAME (항상 표시) ══ -->
-  <div class="crash-section" id="crashSection">
-    <div class="crash-header">
-      <div class="crash-title">💥 CRASH</div>
-      <div class="crash-history" id="crashHistory"></div>
-    </div>
-    <div class="crash-main">
-      <div class="crash-display">
-        <div class="crash-mult idle" id="crashMult">1.00x</div>
-        <div class="crash-status" id="crashStatus">베팅 대기 중...</div>
-        <div class="crash-timer-bar"><div class="crash-timer-fill" id="crashTimerFill" style="width:100%"></div></div>
-      </div>
-      <div class="crash-right">
-        <div class="crash-bet-box" id="crashBetBox">
-          <div class="crash-bet-label">베팅 금액</div>
-          <div class="crash-chip-row">
-            <div class="crash-chip sel" data-v="10" onclick="crashSetBet(10)">10p</div>
-            <div class="crash-chip" data-v="20" onclick="crashSetBet(20)">20p</div>
-            <div class="crash-chip" data-v="30" onclick="crashSetBet(30)">30p</div>
-            <div class="crash-chip" data-v="50" onclick="crashSetBet(50)">50p</div>
-          </div>
-          <div class="crash-bet-display">베팅: <span id="crashBetAmt">10</span> P</div>
-        </div>
-        <button class="crash-action-btn join" id="crashActionBtn" onclick="crashAction()">다음 게임 참여</button>
-        <div class="crash-players" id="crashPlayers">
-          <div class="crash-no-players">참여자 없음</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- 카드 목록 -->
   <div id="gameListSection">
     <div class="betting-hero">
@@ -801,6 +770,13 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-title">타이밍 복권</div>
         <div class="card-desc" style="color:rgba(255,255,255,.8)">⏱ 오늘의 시간을 정확히 맞춰라<br>선착순 1명 <b>100P</b> · 도전 1P</div>
         <div class="card-footer-link" style="color:#c4b5fd">도전하기 +</div>
+      </div>
+      <div class="card game-card" style="background:linear-gradient(135deg,#0f0a1e,#2d1060);color:#fff;border:1px solid rgba(168,85,247,.25)" onclick="openGame('crash')">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
+        <div class="card-label">LIVE · 실시간</div>
+        <div class="card-title">배당 폭발</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">💥 배당이 올라갈 때 현금화<br>폭발 전에 빠져나와라 · 10~50P</div>
+        <div class="card-footer-link" style="color:#c084fc">참여하기 +</div>
       </div>
     </div>
   </div>
@@ -1662,13 +1638,14 @@ async function doBuy(){
 let currentGame=null;
 function openGame(g){
   currentGame=g;
-  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권'};
+  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권',crash:'💥 배당 폭발'};
   document.getElementById('gmTitle').textContent=titles[g]||g;
   document.getElementById('gmPts').textContent=pts.toLocaleString();
   const content=document.getElementById('gmContent');
   content.innerHTML='';
   if(g==='ms')initMs(content);
   else if(g==='timing')initTiming(content);
+  else if(g==='crash')initCrash(content);
   document.getElementById('gameListSection').style.display='none';
   document.getElementById('gamePlaySection').style.display='block';
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2053,177 +2030,153 @@ setInterval(loadAnnouncements, 30000);
    CRASH GAME
 ══════════════════════════════════════ */
 let crashBet = 10;
-let crashMyBet = null;    // 이번 라운드 내 베팅 { amount, roundId }
+let crashMyBet = null;   // { amount, roundId, cashedOut }
 let crashPhase = 'betting';
 let crashBetEndAt = 0;
 let crashTimerRaf = null;
+
+// Crash UI가 현재 열려 있는지 확인하는 헬퍼
+function $c(id) { return document.getElementById(id); }
+
+function initCrash(wrap) {
+  wrap.innerHTML = `
+  <div class="crash-section" style="margin-bottom:0">
+    <div class="crash-header">
+      <div class="crash-title">💥 CRASH</div>
+      <div class="crash-history" id="crashHistory"></div>
+    </div>
+    <div class="crash-main">
+      <div class="crash-display">
+        <div class="crash-mult idle" id="crashMult">1.00x</div>
+        <div class="crash-status" id="crashStatus">베팅 대기 중...</div>
+        <div class="crash-timer-bar"><div class="crash-timer-fill" id="crashTimerFill" style="width:100%"></div></div>
+      </div>
+      <div class="crash-right">
+        <div class="crash-bet-box" id="crashBetBox">
+          <div class="crash-bet-label">베팅 금액 (10~50P)</div>
+          <div class="crash-chip-row">
+            <div class="crash-chip sel" data-v="10" onclick="crashSetBet(10)">10p</div>
+            <div class="crash-chip" data-v="20" onclick="crashSetBet(20)">20p</div>
+            <div class="crash-chip" data-v="30" onclick="crashSetBet(30)">30p</div>
+            <div class="crash-chip" data-v="50" onclick="crashSetBet(50)">50p</div>
+          </div>
+          <div class="crash-bet-display">베팅: <span id="crashBetAmt">${crashBet}</span> P</div>
+        </div>
+        <button class="crash-action-btn join" id="crashActionBtn" onclick="crashAction()">다음 게임 참여</button>
+        <div class="crash-players" id="crashPlayers"><div class="crash-no-players">참여자 없음</div></div>
+      </div>
+    </div>
+  </div>`;
+  // 현재 상태 즉시 반영
+  fetch('/api/game/crash/state').then(r=>r.json()).then(d=>applyCrashState(d)).catch(()=>{});
+}
 
 function crashSetBet(n) {
   crashBet = n;
   document.querySelectorAll('.crash-chip').forEach(c =>
     c.classList.toggle('sel', parseInt(c.dataset.v) === n));
-  document.getElementById('crashBetAmt').textContent = n;
+  const el = $c('crashBetAmt'); if(el) el.textContent = n;
 }
 
 function applyCrashState(msg) {
-  crashPhase = msg.phase;
+  // 패널이 닫혀있으면 상태만 저장하고 UI 업데이트 스킵
+  crashPhase   = msg.phase;
   crashBetEndAt = msg.betEndAt || 0;
+  if (!$c('crashMult')) return;
 
-  // 배당 숫자 + 색상
-  const multEl = document.getElementById('crashMult');
-  const m = msg.mult || 1.00;
+  const m = +(msg.mult || 1).toFixed(2);
+
+  // 배당 + 색상
+  const multEl = $c('crashMult');
   multEl.textContent = m.toFixed(2) + 'x';
-  multEl.className = 'crash-mult';
-  if (msg.phase === 'running' || msg.phase === 'crashed') {
-    if (msg.phase === 'crashed') multEl.classList.add('crashed');
-    else if (m >= 10) multEl.classList.add('moon-mult');
-    else if (m >= 3)  multEl.classList.add('high-mult');
-    else              multEl.classList.add('running');
-  } else {
-    multEl.classList.add('idle');
-  }
+  multEl.className = 'crash-mult ' + (
+    msg.phase === 'crashed' ? 'crashed' :
+    msg.phase === 'running' ? (m >= 10 ? 'moon-mult' : m >= 3 ? 'high-mult' : 'running') :
+    'idle'
+  );
 
   // 상태 텍스트
-  const statusEl = document.getElementById('crashStatus');
-  if (msg.phase === 'betting')  statusEl.textContent = '베팅 마감 전 참여하세요';
-  else if (msg.phase === 'running') statusEl.textContent = '🚀 게임 진행 중';
-  else statusEl.textContent = `💥 ${m.toFixed(2)}x 에서 폭발!`;
+  const stEl = $c('crashStatus');
+  if(stEl) stEl.textContent =
+    msg.phase === 'betting'  ? `베팅 마감 전 참여하세요 (${crashPhase==='betting'?'':''}` :
+    msg.phase === 'running'  ? '🚀 게임 진행 중 — 원하는 배당에서 현금화!' :
+    `💥 ${m.toFixed(2)}x 에서 폭발!`;
 
-  // 히스토리
-  if (msg.history) renderCrashHistory(msg.history);
-
-  // 참여자 목록
-  renderCrashPlayers(msg.players || [], msg.phase);
-
-  // 액션 버튼
-  updateCrashBtn(msg);
-
-  // 베팅 구간 타이머 바
-  if (msg.phase === 'betting') {
-    startCrashTimerBar();
-  } else {
-    stopCrashTimerBar();
-    document.getElementById('crashTimerFill').style.width = '0%';
+  if (msg.history) {
+    const hEl = $c('crashHistory');
+    if(hEl) hEl.innerHTML = msg.history.slice(0,12).map(h=>{
+      const cls = h.mult>=10?'moon':h.mult>=3?'high':h.mult>=1.5?'mid':'low';
+      return `<div class="crash-hist-item ${cls}">${h.mult.toFixed(2)}x</div>`;
+    }).join('');
   }
-}
 
-function renderCrashHistory(history) {
-  const el = document.getElementById('crashHistory');
-  el.innerHTML = history.slice(0, 12).map(h => {
-    const m = h.mult;
-    const cls = m >= 10 ? 'moon' : m >= 3 ? 'high' : m >= 1.5 ? 'mid' : 'low';
-    return `<div class="crash-hist-item ${cls}">${m.toFixed(2)}x</div>`;
-  }).join('');
+  renderCrashPlayers(msg.players||[], msg.phase);
+  updateCrashBtn(msg, m);
+
+  if (msg.phase === 'betting') startCrashTimerBar();
+  else { stopCrashTimerBar(); const f=$c('crashTimerFill'); if(f) f.style.width='0%'; }
 }
 
 function renderCrashPlayers(players, phase) {
-  const el = document.getElementById('crashPlayers');
-  if (!players.length) { el.innerHTML = '<div class="crash-no-players">참여자 없음</div>'; return; }
-  el.innerHTML = players.map(p => {
-    let multHtml;
-    if (p.cashedOut) {
-      multHtml = `<span class="crash-player-mult">${p.cashMult.toFixed(2)}x ✓</span>`;
-    } else if (phase === 'crashed') {
-      multHtml = `<span class="crash-player-mult bust">💥</span>`;
-    } else {
-      multHtml = `<span class="crash-player-mult waiting">대기 중</span>`;
-    }
-    return `<div class="crash-player-row"><span class="crash-player-name">${escapeHtml(p.name)}</span>${multHtml}</div>`;
+  const el = $c('crashPlayers'); if(!el) return;
+  if (!players.length) { el.innerHTML='<div class="crash-no-players">참여자 없음</div>'; return; }
+  el.innerHTML = players.map(p=>{
+    const mHtml = p.cashedOut
+      ? `<span class="crash-player-mult">${p.cashMult.toFixed(2)}x ✓</span>`
+      : phase==='crashed'
+        ? `<span class="crash-player-mult bust">💥</span>`
+        : `<span class="crash-player-mult waiting">대기중</span>`;
+    return `<div class="crash-player-row"><span class="crash-player-name">${escapeHtml(p.name)}</span>${mHtml}</div>`;
   }).join('');
 }
 
-function updateCrashBtn(msg) {
-  const btn = document.getElementById('crashActionBtn');
-  const betBox = document.getElementById('crashBetBox');
-  const myRoundBet = crashMyBet && crashMyBet.roundId === msg.roundId;
+function updateCrashBtn(msg, m) {
+  const btn=$c('crashActionBtn'), betBox=$c('crashBetBox'); if(!btn) return;
+  const myRound = crashMyBet && crashMyBet.roundId === msg.roundId;
 
-  if (msg.phase === 'betting') {
-    betBox.style.display = '';
-    if (myRoundBet) {
-      btn.textContent = `✓ ${crashMyBet.amount}P 참여 완료`;
-      btn.className = 'crash-action-btn waiting';
-      btn.disabled = true;
+  if (msg.phase==='betting') {
+    if(betBox) betBox.style.display='';
+    if (myRound) {
+      btn.textContent=`✓ ${crashMyBet.amount}P 참여 완료`; btn.className='crash-action-btn waiting'; btn.disabled=true;
     } else {
-      btn.textContent = '다음 게임 참여';
-      btn.className = 'crash-action-btn join';
-      btn.disabled = false;
+      btn.textContent='다음 게임 참여'; btn.className='crash-action-btn join'; btn.disabled=false;
     }
-  } else if (msg.phase === 'running' && myRoundBet && !crashMyBet.cashedOut) {
-    betBox.style.display = 'none';
-    btn.textContent = `현금화  ${(msg.mult||1).toFixed(2)}x`;
-    btn.className = 'crash-action-btn cashout';
-    btn.disabled = false;
-  } else if (msg.phase === 'running') {
-    betBox.style.display = 'none';
-    btn.textContent = '다음 판 대기 중...';
-    btn.className = 'crash-action-btn waiting';
-    btn.disabled = true;
+  } else if (msg.phase==='running' && myRound && !crashMyBet.cashedOut) {
+    if(betBox) betBox.style.display='none';
+    btn.textContent=`현금화  ${m.toFixed(2)}x`; btn.className='crash-action-btn cashout'; btn.disabled=false;
+  } else if (msg.phase==='running') {
+    if(betBox) betBox.style.display='none';
+    btn.textContent='다음 판 대기 중...'; btn.className='crash-action-btn waiting'; btn.disabled=true;
   } else {
-    // crashed
-    betBox.style.display = '';
-    if (myRoundBet && !crashMyBet.cashedOut) {
-      toast('💥 폭발! 포인트를 잃었습니다', 'err');
-      crashMyBet = null;
-    }
-    btn.textContent = '다음 게임 참여';
-    btn.className = 'crash-action-btn join';
-    btn.disabled = false;
+    if(betBox) betBox.style.display='';
+    if (myRound && !crashMyBet?.cashedOut) { toast('💥 폭발! 포인트를 잃었습니다','err'); crashMyBet=null; }
+    btn.textContent='다음 게임 참여'; btn.className='crash-action-btn join'; btn.disabled=false;
   }
 }
 
 function startCrashTimerBar() {
   stopCrashTimerBar();
-  function tick() {
-    const now = Date.now();
-    const total = 7000; // CRASH_BETTING_SEC
-    const left = Math.max(0, crashBetEndAt - now);
-    const pct = Math.round((left / total) * 100);
-    document.getElementById('crashTimerFill').style.width = pct + '%';
-    if (left > 0 && crashPhase === 'betting') crashTimerRaf = requestAnimationFrame(tick);
-  }
-  crashTimerRaf = requestAnimationFrame(tick);
+  (function tick(){
+    const left=Math.max(0,crashBetEndAt-Date.now());
+    const f=$c('crashTimerFill');
+    if(f) f.style.width=Math.round(left/70)+'%';
+    if(left>0 && crashPhase==='betting') crashTimerRaf=requestAnimationFrame(tick);
+  })();
 }
-function stopCrashTimerBar() {
-  if (crashTimerRaf) { cancelAnimationFrame(crashTimerRaf); crashTimerRaf = null; }
-}
+function stopCrashTimerBar(){if(crashTimerRaf){cancelAnimationFrame(crashTimerRaf);crashTimerRaf=null;}}
 
 async function crashAction() {
-  if (crashPhase === 'betting') {
-    // 참여
-    if (crashMyBet) return;
-    if ((pts || 0) < crashBet) { toast('포인트 부족', 'err'); return; }
-    const btn = document.getElementById('crashActionBtn');
-    btn.disabled = true;
-    const r = await fetch('/api/game/crash/bet', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: crashBet })
-    }).then(r => r.json()).catch(() => ({ ok: false, error: '연결 오류' }));
-    if (r.ok) {
-      crashMyBet = { amount: crashBet, roundId: r.roundId, cashedOut: false };
-      savePts(r.viewer.points);
-      toast(`${crashBet}P 베팅 완료! 🎯`, 'ok');
-    } else {
-      toast(r.error || '오류', 'err');
-      btn.disabled = false;
-    }
-  } else if (crashPhase === 'running' && crashMyBet && !crashMyBet.cashedOut) {
-    // 현금화
-    const r = await fetch('/api/game/crash/cashout', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    }).then(r => r.json()).catch(() => ({ ok: false }));
-    if (r.ok) {
-      crashMyBet.cashedOut = true;
-      savePts(r.viewer.points);
-      toast(`💰 ${r.mult.toFixed(2)}x 현금화! +${r.gain}P`, 'ok');
-    }
+  if (crashPhase==='betting' && !crashMyBet) {
+    if((pts||0)<crashBet){toast('포인트 부족','err');return;}
+    const btn=$c('crashActionBtn'); if(btn) btn.disabled=true;
+    const r=await fetch('/api/game/crash/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:crashBet})}).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
+    if(r.ok){crashMyBet={amount:crashBet,roundId:r.roundId,cashedOut:false};savePts(r.viewer.points);toast(`${crashBet}P 베팅 완료! 🎯`,'ok');}
+    else{toast(r.error||'오류','err');if(btn) btn.disabled=false;}
+  } else if (crashPhase==='running' && crashMyBet && !crashMyBet.cashedOut) {
+    const r=await fetch('/api/game/crash/cashout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}' }).then(r=>r.json()).catch(()=>({ok:false}));
+    if(r.ok){crashMyBet.cashedOut=true;savePts(r.viewer.points);toast(`💰 ${r.mult.toFixed(2)}x 현금화! +${r.gain}P`,'ok');}
   }
 }
-
-// 초기 상태 로드
-fetch('/api/game/crash/state').then(r => r.json()).then(d => {
-  applyCrashState({ ...d, type: 'crash_state' });
-}).catch(() => {});
 
 </script>
 </body>
