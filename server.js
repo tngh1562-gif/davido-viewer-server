@@ -377,7 +377,7 @@ app.post('/api/admin/bet', async (req, res) => {
             await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
               { nickname: n, amount: gain },
               { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-          } catch {}
+          } catch(e) { console.error('[BET] 당첨 지급 실패:', n, gain, e.message); }
         }
       });
     await Promise.all(grantPromises);
@@ -395,16 +395,21 @@ app.post('/api/admin/bet', async (req, res) => {
   res.json({ ok: true, betting });
 });
 
-// ── Admin: give points ──
-app.post('/api/admin/points', (req, res) => {
+// ── Admin: give points (인하우스 DB 연동) ──
+app.post('/api/admin/points', async (req, res) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== (ADMIN_SECRET)) return res.status(403).json({ ok: false });
+  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false });
   const { name, delta } = req.body;
-  const { viewers, viewer } = getViewer(name);
-  viewer.points = Math.max(0, (viewer.points || 0) + delta);
-  saveViewer(viewers);
-  broadcast({ type: 'points_update', name, points: viewer.points });
-  res.json({ ok: true, viewer });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const endpoint = delta > 0 ? 'viewer-grant' : 'viewer-deduct';
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/${endpoint}`,
+      { nickname: name, amount: Math.abs(delta) },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!r.ok) return res.json({ ok: false, error: r.error });
+    broadcast({ type: 'points_update', name, points: r.points });
+    res.json({ ok: true, points: r.points });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 // ── Shop ──
@@ -555,7 +560,8 @@ app.post('/api/game/timing/press', async (req, res) => {
         { nickname: name, amount: 100 },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
       if (r.ok) newPoints = r.points;
-    } catch {}
+      else console.error('[TIMING] 100P 지급 실패:', name, r.error);
+    } catch(e) { console.error('[TIMING] 100P 지급 오류:', name, e.message); }
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     await saveTimingWinner(getTodayKST(), winner);
     timingWinnerSaving = false;
@@ -747,7 +753,8 @@ function calcMsPayout(session) {
 }
 
 async function msGrantPayout(name, payout) {
-  if (payout < 1 || !INHOUSE_SERVER_URL) return null; // 1P 포함 환불 가능
+  if (payout < 1) return null;
+  if (!INHOUSE_SERVER_URL) { console.error('[GRANT] INHOUSE_SERVER_URL 미설정 — 포인트 미지급:', name, payout); return null; }
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
       { nickname: name, amount: payout },
