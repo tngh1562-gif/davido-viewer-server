@@ -939,14 +939,14 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 
   <!-- 피로도 회복 아이템 -->
   <div class="h-section" style="font-size:.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">⚡ 피로도 회복</div>
-  <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:16px">피로도는 게임마다 소모됩니다 (타이밍 −5, 지뢰찾기 −10, 배당폭발 −15) · 매일 자정 자동 +30 회복</div>
+  <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:16px">피로도는 게임마다 소모됩니다 (타이밍 −5, 지뢰찾기 −2, 배당폭발 −10) · 매일 자정 자동 +30 회복</div>
   <div class="store-grid">
     <div class="card">
       <span class="rarity-badge rarity-common">일반</span>
       <div style="font-size:2.4rem;margin-bottom:8px">🧪</div>
       <div class="card-title">피로도 회복제 (소)</div>
       <div class="card-desc">피로도를 30 회복합니다.<br><span style="color:#4ade80">현재 피로도: <span id="shopFatigue">--</span>/100</span></div>
-      <div class="product-price" style="color:#4ade80">30 P</div>
+      <div class="product-price" style="color:#4ade80">60 P</div>
       <button class="btn-buy" onclick="openBuy('fatigue_sm')">사용하기</button>
     </div>
     <div class="card">
@@ -954,7 +954,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div style="font-size:2.4rem;margin-bottom:8px">💊</div>
       <div class="card-title">피로도 회복제 (대)</div>
       <div class="card-desc">피로도를 70 회복합니다.</div>
-      <div class="product-price" style="color:#4ade80">65 P</div>
+      <div class="product-price" style="color:#4ade80">130 P</div>
       <button class="btn-buy" onclick="openBuy('fatigue_lg')">사용하기</button>
     </div>
     <div class="card" style="border-color:rgba(74,222,128,.2)">
@@ -962,7 +962,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div style="font-size:2.4rem;margin-bottom:8px">✨</div>
       <div class="card-title">피로도 완전 회복</div>
       <div class="card-desc">피로도를 100으로 완전 회복합니다.</div>
-      <div class="product-price" style="color:#4ade80">90 P</div>
+      <div class="product-price" style="color:#4ade80">180 P</div>
       <button class="btn-buy" onclick="openBuy('fatigue_full')">사용하기</button>
     </div>
   </div>
@@ -1744,9 +1744,9 @@ const ITEMS={
   no_ban:      {icon:'🛡️',name:'노밴권',          desc:'다음 내전 밴 페이즈 면제',          price:240, fatigue:0},
   all_day:     {icon:'🌙', name:'종일권',          desc:'당일 모든 내전 제한 없이 참가',      price:460, fatigue:0},
   extend:      {icon:'⚡', name:'연장권',          desc:'내전 1판 추가 연장',                price:600, fatigue:0},
-  fatigue_sm:  {icon:'🧪', name:'피로도 회복제 (소)', desc:'피로도를 30 회복합니다',         price:30,  fatigue:30},
-  fatigue_lg:  {icon:'💊', name:'피로도 회복제 (대)', desc:'피로도를 70 회복합니다',         price:65,  fatigue:70},
-  fatigue_full:{icon:'✨', name:'피로도 완전 회복',   desc:'피로도를 100으로 완전 회복합니다',price:90,  fatigue:100},
+  fatigue_sm:  {icon:'🧪', name:'피로도 회복제 (소)', desc:'피로도를 30 회복합니다',         price:60,  fatigue:30},
+  fatigue_lg:  {icon:'💊', name:'피로도 회복제 (대)', desc:'피로도를 70 회복합니다',         price:130, fatigue:70},
+  fatigue_full:{icon:'✨', name:'피로도 완전 회복',   desc:'피로도를 100으로 완전 회복합니다',price:180, fatigue:100},
 };
 function openBuy(id){
   const it=ITEMS[id]; if(!it)return;

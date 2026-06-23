@@ -129,7 +129,7 @@ function saveViewer(viewers) { writeJSON(VIEWERS_FILE, viewers); }
 
 // ── 피로도 헬퍼 ──
 const FATIGUE_MAX = 100;
-const FATIGUE_COST = { timing: 5, ms: 10, crash: 15 };
+const FATIGUE_COST = { timing: 5, ms: 2, crash: 10 };
 
 function checkFatigue(name, cost) {
   const { viewers, viewer } = getViewer(name);
@@ -1059,9 +1059,9 @@ app.post('/api/fatigue/recover', async (req, res) => {
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   const { itemId } = req.body;
   const recoveryItems = {
-    'fatigue_sm':  { name: '피로도 회복제 (소)', amount: 30,  price: 30  },
-    'fatigue_lg':  { name: '피로도 회복제 (대)', amount: 70,  price: 65  },
-    'fatigue_full':{ name: '피로도 완전 회복',   amount: 100, price: 90  },
+    'fatigue_sm':  { name: '피로도 회복제 (소)', amount: 30,  price: 60  },
+    'fatigue_lg':  { name: '피로도 회복제 (대)', amount: 70,  price: 130 },
+    'fatigue_full':{ name: '피로도 완전 회복',   amount: 100, price: 180 },
   };
   const item = recoveryItems[itemId];
   if (!item) return res.json({ ok: false, error: '아이템 없음' });
