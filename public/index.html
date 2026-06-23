@@ -726,7 +726,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">피로도 회복제 (소)</div>
       <div class="card-desc">피로도를 30 회복합니다.<br><span style="color:#4ade80">현재 피로도: <span id="shopFatigue">--</span>/100</span></div>
       <div class="product-price" style="color:#4ade80">60 P</div>
-      <button class="btn-buy" onclick="openBuy('fatigue_sm')">사용하기</button>
+      <button class="btn-buy" id="fatBtnSm" onclick="buyFatigue('fatigue_sm',this)">사용하기</button>
     </div>
     <div class="card">
       <span class="rarity-badge rarity-uncommon">고급</span>
@@ -734,7 +734,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">피로도 회복제 (대)</div>
       <div class="card-desc">피로도를 70 회복합니다.</div>
       <div class="product-price" style="color:#4ade80">130 P</div>
-      <button class="btn-buy" onclick="openBuy('fatigue_lg')">사용하기</button>
+      <button class="btn-buy" id="fatBtnLg" onclick="buyFatigue('fatigue_lg',this)">사용하기</button>
     </div>
     <div class="card" style="border-color:rgba(74,222,128,.2)">
       <span class="rarity-badge rarity-rare">희귀</span>
@@ -742,7 +742,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">피로도 완전 회복</div>
       <div class="card-desc">피로도를 100으로 완전 회복합니다.</div>
       <div class="product-price" style="color:#4ade80">180 P</div>
-      <button class="btn-buy" onclick="openBuy('fatigue_full')">사용하기</button>
+      <button class="btn-buy" id="fatBtnFull" onclick="buyFatigue('fatigue_full',this)">사용하기</button>
     </div>
   </div>
 </div>
@@ -800,7 +800,9 @@ async function startChzzkLogin() {
     const res = await fetch(`/api/auth/poll/${_currentCode}`).then(r=>r.json()).catch(()=>({ok:false,status:'error'}));
     if (res.status === 'confirmed' && res.ok) {
       clearInterval(_pollInterval); clearInterval(_pollTimer);
-      showApp(res.viewer);
+      // 인하우스 포인트 최신값 반영을 위해 /api/me 재조회
+      const me = await fetch('/api/me').then(r=>r.json()).catch(()=>({ok:false}));
+      showApp(res.viewer, me.ok ? me.inhousePoints : null);
     } else if (res.status === 'expired') {
       cancelChzzkLogin();
     }
@@ -1542,6 +1544,25 @@ function openBuy(id){
   document.getElementById('buyBg').classList.add('open');
 }
 function closeBuy(){document.getElementById('buyBg').classList.remove('open');buyTarget=null}
+
+async function buyFatigue(itemId, btn){
+  const it = ITEMS[itemId]; if(!it) return;
+  if(pts < it.price){ toast(`포인트 부족 (필요 ${it.price}P, 보유 ${pts}P)`, 'err'); return; }
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '처리 중...';
+  const r = await fetch('/api/fatigue/recover',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({itemId})
+  }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
+  btn.disabled = false; btn.textContent = orig;
+  if(r.ok){
+    if(r.points != null) savePts(r.points);
+    if(r.fatigue != null) saveFatigue(r.fatigue);
+    toast(`${it.name} 사용 완료! 피로도 +${it.fatigue} ⚡`, 'ok');
+  } else {
+    toast(r.error || '구매 실패', 'err');
+  }
+}
 async function doBuy(){
   if(!buyTarget)return;
   const it=ITEMS[buyTarget];
