@@ -151,7 +151,14 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  // CSP 임시 비활성화 (로그인 버튼 반응 없음 진단 중)
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; " +
+    "media-src 'self' https:; " +
+    "frame-src https://www.youtube.com https://clips.twitch.tv https://player.twitch.tv; " +
+    "connect-src 'self' wss:;"
+  );
   next();
 });
 // 전체 IP 레이트 리밋 (분당 300회)
@@ -196,7 +203,7 @@ app.get('/api/auth/poll/:token', (req, res) => {
 // 봇이 채팅 감지 후 호출
 app.post('/api/auth/confirm', (req, res) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== 'davido-admin') return res.status(403).json({ ok: false, error: '권한 없음' });
+  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
   const { token, name } = req.body;
   if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
   const key = token.toUpperCase();
@@ -433,137 +440,7 @@ app.post('/api/shop/buy', async (req, res) => {
 });
 
 // ══════════ MINI GAMES ══════════
-
-// ── Card utilities (Blackjack) ──
-const SUITS = ['♠','♥','♦','♣'];
-const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-function createDeck(n=4){const d=[];for(let i=0;i<n;i++)for(const s of SUITS)for(const r of RANKS)d.push({r,s});return shuffle([...d])}
-function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
-function cVal(c){if(['J','Q','K'].includes(c.r))return 10;if(c.r==='A')return 11;return parseInt(c.r)}
 function hVal(hand){let v=0,a=0;for(const c of hand){v+=cVal(c);if(c.r==='A')a++}while(v>21&&a>0){v-=10;a--}return v}
-const bjSessions={};
-
-// ── Slot utilities ──
-const SL_SYM=['🍒','🍋','🔔','⭐','💎','7️⃣'];
-const SL_W  =[35,28,20,12,4,1];
-const SL_PAY={'7️⃣7️⃣7️⃣':10,'💎💎💎':6,'⭐⭐⭐':4,'🔔🔔🔔':3,'🍋🍋🍋':2.5,'🍒🍒🍒':2};
-function pickSym(){let r=Math.random()*100;for(let i=0;i<SL_SYM.length;i++){r-=SL_W[i];if(r<=0)return SL_SYM[i]}return SL_SYM[0]}
-function slotPayout(reels,bet){
-  const k=reels.join('');
-  if(SL_PAY[k]) return Math.floor(bet*SL_PAY[k]);
-  const[a,b,c]=reels;if(a===b||b===c||a===c) return Math.floor(bet*1.3);
-  return 0;
-}
-
-// ── Roulette utilities ──
-const RL_RED=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-const RL_ORDER=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-
-// ── Slots ──
-app.post('/api/game/slots',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  const bet=parseInt(req.body.bet);
-  if(!bet||bet<1||bet>BET_MAX)return res.json({ok:false,error:`1~${BET_MAX}p 배팅`});
-  const{viewers,viewer}=getViewer(name);
-  if(viewer.points<bet)return res.json({ok:false,error:'포인트 부족'});
-  const reels=[pickSym(),pickSym(),pickSym()];
-  const payout=slotPayout(reels,bet);
-  viewer.points=Math.max(0,viewer.points-bet+payout);
-  saveViewer(viewers);
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,reels,payout,net:payout-bet,viewer,jackpot:reels.join('')==='7️⃣7️⃣7️⃣'});
-});
-
-// ── Blackjack ──
-app.post('/api/game/bj/start',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  if(bjSessions[name])return res.json({ok:false,error:'진행 중인 게임 있음'});
-  const bet=parseInt(req.body.bet);
-  if(!bet||bet<1||bet>BET_MAX)return res.json({ok:false,error:`1~${BET_MAX}p 배팅`});
-  const{viewers,viewer}=getViewer(name);
-  if(viewer.points<bet)return res.json({ok:false,error:'포인트 부족'});
-  viewer.points-=bet;saveViewer(viewers);
-  const deck=createDeck(4);
-  const ph=[deck.pop(),deck.pop()],dh=[deck.pop(),deck.pop()];
-  const pv=hVal(ph),dv=hVal(dh);
-  if(pv===21){
-    const bj=dv===21;const pay=bj?bet:Math.floor(bet*2.5);
-    viewer.points+=pay;saveViewer(viewers);
-    broadcast({type:'points_update',name,points:viewer.points});
-    return res.json({ok:true,state:'over',ph,dh,pv,dv,result:bj?'push':'blackjack',pay,viewer});
-  }
-  bjSessions[name]={deck,ph,dh,bet,doubled:false};
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,state:'playing',ph,dh_show:[dh[0]],pv,viewer,canDouble:viewer.points>=bet});
-});
-
-app.post('/api/game/bj/action',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  const sess=bjSessions[name];if(!sess)return res.json({ok:false,error:'게임 없음'});
-  const{action}=req.body;
-  const{viewers,viewer}=getViewer(name);
-  if(action==='double'){
-    if(viewer.points<sess.bet)return res.json({ok:false,error:'포인트 부족'});
-    viewer.points-=sess.bet;sess.bet*=2;sess.doubled=true;
-  }
-  if(action==='hit'||action==='double'){
-    sess.ph.push(sess.deck.pop());
-    const pv=hVal(sess.ph);
-    if(pv>21||sess.doubled){
-      if(pv>21){
-        delete bjSessions[name];saveViewer(viewers);
-        broadcast({type:'points_update',name,points:viewer.points});
-        return res.json({ok:true,state:'over',ph:sess.ph,dh:sess.dh,pv,dv:hVal(sess.dh),result:'bust',pay:0,viewer});
-      }
-      return doStand(name,sess,viewers,viewer,res);
-    }
-    saveViewer(viewers);broadcast({type:'points_update',name,points:viewer.points});
-    return res.json({ok:true,state:'playing',ph:sess.ph,dh_show:[sess.dh[0]],pv,viewer,canDouble:false});
-  }
-  if(action==='stand') return doStand(name,sess,viewers,viewer,res);
-  res.json({ok:false,error:'unknown'});
-});
-
-function doStand(name,sess,viewers,viewer,res){
-  while(hVal(sess.dh)<17)sess.dh.push(sess.deck.pop());
-  const pv=hVal(sess.ph),dv=hVal(sess.dh);
-  let result,pay;
-  if(dv>21||pv>dv){result='win';pay=Math.floor(sess.bet*1.9);}
-  else if(pv===dv){result='push';pay=sess.bet;}
-  else{result='lose';pay=0;}
-  viewer.points+=pay;saveViewer(viewers);delete bjSessions[name];
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,state:'over',ph:sess.ph,dh:sess.dh,pv,dv,result,pay,viewer});
-}
-
-// ── Roulette ──
-app.post('/api/game/roulette',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  const{bets}=req.body;
-  if(!bets||!bets.length)return res.json({ok:false,error:'배팅 필요'});
-  const totalBet=bets.reduce((s,b)=>s+parseInt(b.amount||0),0);
-  if(totalBet<1||totalBet>BET_MAX)return res.json({ok:false,error:`총 배팅 1~${BET_MAX}p`});
-  const{viewers,viewer}=getViewer(name);
-  if(viewer.points<totalBet)return res.json({ok:false,error:'포인트 부족'});
-  viewer.points-=totalBet;
-  const result=Math.floor(Math.random()*37);
-  const color=result===0?'green':RL_RED.has(result)?'red':'black';
-  const wheelIdx=RL_ORDER.indexOf(result);
-  let payout=0;
-  bets.forEach(b=>{
-    const a=parseInt(b.amount||0);
-    if(b.type==='number'&&parseInt(b.value)===result)payout+=Math.floor(a*35*0.9);
-    if(b.type==='color'&&b.value===color&&color!=='green')payout+=Math.floor(a*1.8);
-    if(b.type==='parity'&&result!==0){
-      if(b.value==='odd'&&result%2===1)payout+=Math.floor(a*1.8);
-      if(b.value==='even'&&result%2===0)payout+=Math.floor(a*1.8);
-    }
-    if(b.type==='dozen'&&result>0&&parseInt(b.value)===Math.ceil(result/12))payout+=Math.floor(a*2.7);
-  });
-  viewer.points+=payout;saveViewer(viewers);
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,result,color,wheelIdx,payout,net:payout-totalBet,viewer});
-});
 
 // ── Inhouse Snapshot (for index_5 dashboard) ──
 const ANN_FILE = path.join(DATA_DIR, 'announcements.json');
@@ -592,60 +469,39 @@ app.get('/api/inhouse/snapshot', (req, res) => {
 // ── 타이밍 복권 ──
 const timingSessions = new Map(); // sessionId → { targetMs, startedAt, name, date }
 
-// ── 타이밍 복권: 당첨자 인메모리 캐시 (레이스 컨디션 방지) ──
-// Node.js 싱글 스레드 특성 활용: await 전에 동기적으로 잠금
-let _timingWinner = null; // { date, winner } — 서버 재시작 시 파일에서 복원
-
 function getTodayKST() {
   return new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
 }
 function getDailyTargetMs() {
   const today = getTodayKST();
   const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
-  return (parseInt(hash.slice(0, 8), 16) % 40000) + 5000; // 5.00 ~ 44.99초 (난이도 상향)
+  return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
 }
-
-// 인메모리 캐시에서 먼저 확인 (동기 → 레이스 없음)
-function getTimingWinnerSync() {
-  const today = getTodayKST();
-  if (_timingWinner && _timingWinner.date === today) return _timingWinner.winner;
-  // 인메모리에 없으면 파일에서 복원
-  const saved = readJSON(TIMING_WIN_FILE, {});
-  if (saved.date === today && saved.winner) {
-    _timingWinner = { date: today, winner: saved.winner };
-    return saved.winner;
-  }
-  return null;
-}
-
-// 비동기 조회 (인하우스 서버 포함) — 상태 표시용에만 사용
+// 당첨자 조회 — 인하우스 서버 우선, fallback 로컬
 async function getTimingWinner() {
-  // 인메모리 우선 (가장 신뢰도 높음)
-  const sync = getTimingWinnerSync();
-  if (sync) return sync;
-  // 인하우스 서버 확인 (서버 재시작 후 복원용)
   if (INHOUSE_SERVER_URL) {
     try {
       const d = await getJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`);
-      if (d.date === getTodayKST() && d.winner) {
-        _timingWinner = { date: d.date, winner: d.winner };
-        return d.winner;
-      }
+      if (d.date === getTodayKST()) return d.winner || null;
+      return null;
     } catch {}
   }
-  return null;
+  const saved = readJSON(TIMING_WIN_FILE, {});
+  return saved.date === getTodayKST() ? (saved.winner || null) : null;
 }
 
-// 당첨자 저장 — 인메모리(즉시) + 로컬 파일 + 인하우스 서버
+// 당첨자 저장 — 인하우스 서버 + 로컬 동시
+// 이중 당첨 방지용 인메모리 락
+let timingWinnerSaving = false;
+
 async function saveTimingWinner(date, winner) {
-  _timingWinner = { date, winner }; // 인메모리 즉시 반영
   const data = { date, winner };
-  writeJSON(TIMING_WIN_FILE, data); // 로컬 파일
+  writeJSON(TIMING_WIN_FILE, data); // 로컬 백업
   if (INHOUSE_SERVER_URL) {
     try {
       await postJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`, data,
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-    } catch(e) { console.error('[timing] inhouse 저장 실패:', e.message); }
+    } catch {}
   }
 }
 
@@ -658,7 +514,7 @@ app.get('/api/game/timing/state', async (req, res) => {
 app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  if (getTimingWinnerSync()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
+  if (await getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
   // 하루 50회 제한 (브루트포스 방지)
   if (!rl(`timing-day:${name}`, 50, 86400)) return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
   // 분당 5회 제한
@@ -666,7 +522,7 @@ app.post('/api/game/timing/start', async (req, res) => {
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1, reason: '⏱ 타이밍 복권 도전 (-1P)' },
+      { nickname: name, amount: 1 },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
     const sessionId = crypto.randomBytes(16).toString('hex');
@@ -684,44 +540,27 @@ app.post('/api/game/timing/press', async (req, res) => {
   const session = timingSessions.get(sessionId);
   if (!session || session.name !== name) return res.json({ ok: false, error: '세션 만료' });
   timingSessions.delete(sessionId);
-
-  const today = getTodayKST();
-  if (session.date !== today) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
-
-  // ══ 핵심: await 전에 동기적으로 확인 + 잠금 ══
-  // Node.js는 싱글 스레드이므로 이 시점은 원자적 (다른 요청 끼어들 수 없음)
-  if (getTimingWinnerSync()) {
-    return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
-  }
-
+  if (session.date !== getTodayKST()) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
+  // 이중 당첨 방지: 락 확인 + getTimingWinner 동시 체크
+  if (timingWinnerSaving) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
+  if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
-
-  if (diff <= 5) { // ±0.005초 (5ms — 브라우저 이벤트 지연 수준, 사실상 불가능)
-    // ══ 인메모리 즉시 잠금 (다른 동시 요청 차단) ══
-    const winner = { name, hitMs: elapsed, diff, at: Date.now() };
-    _timingWinner = { date: today, winner }; // await 전에 동기적으로 설정
-
-    // 이후 비동기 작업 (포인트 지급, 파일 저장)
+  if (diff <= 100) { // ±0.1초 (네트워크 지연 감안)
+    if (timingWinnerSaving) return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs, error: '이미 당첨자 있음' });
+    timingWinnerSaving = true;
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-        { nickname: name, amount: 100, reason: '🏆 타이밍 복권 당첨! (+100P)' },
+        { nickname: name, amount: 100 },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
       if (r.ok) newPoints = r.points;
-    } catch(e) { console.error('[timing] 포인트 지급 실패:', e.message); }
-
-    // 파일 + 인하우스 서버 동기화 (인메모리는 이미 잠겼으므로 안전)
-    const data = { date: today, winner };
-    writeJSON(TIMING_WIN_FILE, data);
-    if (INHOUSE_SERVER_URL) {
-      postJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`, data,
-        { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
-    }
-
+    } catch {}
+    const winner = { name, hitMs: elapsed, diff, at: Date.now() };
+    await saveTimingWinner(getTodayKST(), winner);
+    timingWinnerSaving = false;
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
     addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
-    console.log(`[timing] 당첨: ${name} / diff: ${diff}ms`);
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
   }
   return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
@@ -908,10 +747,10 @@ function calcMsPayout(session) {
 }
 
 async function msGrantPayout(name, payout) {
-  if (payout <= 1 || !INHOUSE_SERVER_URL) return null;
+  if (payout < 1 || !INHOUSE_SERVER_URL) return null; // 1P 포함 환불 가능
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-      { nickname: name, amount: payout, reason: `💣 지뢰찾기 성공 (+${payout}P)` },
+      { nickname: name, amount: payout },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (r.ok) { addFeed('game', name, { reason: `💣 지뢰찾기 성공 (+${payout}P)` }); return r.points; }
   } catch {}
@@ -927,7 +766,7 @@ app.post('/api/game/ms/start', async (req, res) => {
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
     const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1, reason: '💣 지뢰찾기 시작 (-1P)' },
+      { nickname: name, amount: 1 },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
     // 지뢰 위치 서버에서 생성 — 클라이언트에 절대 안 보냄
@@ -1045,197 +884,15 @@ app.delete('/api/comments/:postId/:commentId/:replyId', (req, res) => {
   res.json({ ok: true });
 });
 
-// ══════════════════════════════════════════════════════════
-// CRASH GAME — 서버 루프 (항상 실행)
-// ══════════════════════════════════════════════════════════
-const CRASH_BET_MIN     = 10;   // 최소 베팅
-const CRASH_BET_MAX     = 30;   // 최대 베팅 (50→30 하향)
-const CRASH_BETTING_SEC = 7;    // 베팅 구간 (초)
-const CRASH_TICK_MS     = 100;  // 배당 업데이트 간격
-
-let crash = {
-  phase:     'betting',  // 'betting' | 'running' | 'crashed'
-  roundId:   0,
-  crashAt:   1.00,       // 이번 라운드 폭발 배당 (비공개)
-  startTime: 0,          // running 시작 시각
-  betEndAt:  0,          // 베팅 마감 시각
-  mult:      1.00,       // 현재 배당
-  bets:      {},         // { name: { amount, cashedOut, cashMult } }
-  history:   [],         // 최근 20판 결과
-  tickTimer: null,
-  phaseTimer: null,
-};
-
-function genCrashPoint() {
-  const r = crypto.randomBytes(4).readUInt32BE() / 0xFFFFFFFF;
-  // 20% 즉시 폭발 (하우스 엣지 강화)
-  if (r < 0.20) return 1.00;
-  // 분포 계수 0.90, 최대 15x 캡 → 기대수익 72%, 하우스 엣지 28%
-  return Math.round(Math.min(0.90 / (1 - r), 15) * 100) / 100;
-}
-
-function crashMult(elapsedMs) {
-  // e^(0.0001 * ms) → 10s=2.72x, 20s=7.39x, 30s=20.09x
-  return Math.round(Math.pow(Math.E, 0.0001 * elapsedMs) * 100) / 100;
-}
-
-function crashBroadcast(extra = {}) {
-  const pub = {
-    type:    'crash_state',
-    phase:   crash.phase,
-    roundId: crash.roundId,
-    mult:    crash.mult,
-    betEndAt: crash.betEndAt,
-    history: crash.history,
-    // 베팅 현황 (금액은 숨기고 이름+캐시아웃 여부만)
-    players: Object.entries(crash.bets).map(([name, b]) => ({
-      name,
-      cashedOut: b.cashedOut,
-      cashMult:  b.cashedOut ? b.cashMult : null,
-    })),
-    ...extra,
-  };
-  broadcast(pub);
-}
-
-function startBetting() {
-  crash.phase    = 'betting';
-  crash.roundId += 1;
-  crash.crashAt  = genCrashPoint();
-  crash.bets     = {};
-  crash.mult     = 1.00;
-  crash.betEndAt = Date.now() + CRASH_BETTING_SEC * 1000;
-  crashBroadcast();
-  crash.phaseTimer = setTimeout(startRunning, CRASH_BETTING_SEC * 1000);
-}
-
-function startRunning() {
-  crash.phase     = 'running';
-  crash.startTime = Date.now();
-  crashBroadcast();
-
-  crash.tickTimer = setInterval(() => {
-    const elapsed = Date.now() - crash.startTime;
-    crash.mult = crashMult(elapsed);
-
-    if (crash.mult >= crash.crashAt) {
-      crash.mult = crash.crashAt;
-      clearInterval(crash.tickTimer);
-      endRound();
-    } else {
-      crashBroadcast();
-    }
-  }, CRASH_TICK_MS);
-}
-
-function endRound() {
-  crash.phase = 'crashed';
-
-  // 폭발 시 캐시아웃 못 한 사람들 피드 추가
-  Object.entries(crash.bets).forEach(([name, b]) => {
-    if (!b.cashedOut) {
-      addFeed('crash', name, { mult: crash.crashAt, gain: 0, bet: b.amount,
-        reason: `💥 배당폭발 폭발 ${crash.crashAt}x (-${b.amount}P)` });
-    }
-  });
-
-  crash.history.unshift({ mult: crash.crashAt, roundId: crash.roundId });
-  if (crash.history.length > 20) crash.history.pop();
-
-  crashBroadcast({ crashed: true });
-  crash.phaseTimer = setTimeout(startBetting, 4000);
-}
-
-// Crash 베팅 API
-app.post('/api/game/crash/bet', async (req, res) => {
-  const name = getSessionName(req);
-  if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  if (crash.phase !== 'betting') return res.json({ ok: false, error: '베팅 시간이 아닙니다' });
-  if (crash.bets[name]) return res.json({ ok: false, error: '이미 베팅했습니다' });
-
-  const amount = parseInt(req.body.amount || 0);
-  if (amount < CRASH_BET_MIN || amount > CRASH_BET_MAX)
-    return res.json({ ok: false, error: `베팅: ${CRASH_BET_MIN}~${CRASH_BET_MAX}p` });
-
-  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
-  try {
-    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount, reason: `💥 배당폭발 베팅 (-${amount}P)` },
-      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-    if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
-    const { viewers, viewer } = getViewer(name);
-    viewer.points = dr.points; saveViewer(viewers);
-    crash.bets[name] = { amount, cashedOut: false, cashMult: null };
-    crashBroadcast();
-    res.json({ ok: true, viewer, roundId: crash.roundId });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
-
-// 현금화 API
-app.post('/api/game/crash/cashout', async (req, res) => {
-  const name = getSessionName(req);
-  if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  if (crash.phase !== 'running') return res.json({ ok: false, error: '게임 진행 중이 아닙니다' });
-
-  const bet = crash.bets[name];
-  if (!bet) return res.json({ ok: false, error: '이번 판 베팅 없음' });
-  if (bet.cashedOut) return res.json({ ok: false, error: '이미 현금화함' });
-
-  const mult = crash.mult;
-  const gain = Math.floor(bet.amount * mult);
-  const net  = gain - bet.amount; // 순이익
-  bet.cashedOut = true;
-  bet.cashMult  = mult;
-
-  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
-  try {
-    const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-      { nickname: name, amount: gain, reason: `💥 배당폭발 현금화 ${mult.toFixed(2)}x (+${gain}P)` },
-      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-    const { viewers, viewer } = getViewer(name);
-    if (gr.ok) viewer.points = gr.points; saveViewer(viewers);
-    addFeed('crash', name, { mult, gain, bet: bet.amount, reason: `💥 배당폭발 ${mult.toFixed(2)}x 현금화 (+${gain}P)` });
-    crashBroadcast();
-    res.json({ ok: true, mult, gain, viewer });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
-
-// 현재 Crash 상태 (처음 접속 시)
-app.get('/api/game/crash/state', (req, res) => {
-  res.json({
-    phase:   crash.phase,
-    roundId: crash.roundId,
-    mult:    crash.mult,
-    betEndAt: crash.betEndAt,
-    history: crash.history,
-    players: Object.entries(crash.bets).map(([name, b]) => ({
-      name, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
-    })),
-  });
-});
-
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
   const shop = readJSON(SHOP_FILE, { items: [] });
   ws.send(JSON.stringify({ type: 'init', betting, shop }));
-  // 접속 시 현재 Crash 상태 전송
-  ws.send(JSON.stringify({
-    type:    'crash_state',
-    phase:   crash.phase,
-    roundId: crash.roundId,
-    mult:    crash.mult,
-    betEndAt: crash.betEndAt,
-    history: crash.history,
-    players: Object.entries(crash.bets).map(([name, b]) => ({
-      name, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
-    })),
-  }));
 });
 
 server.listen(PORT, () => {
   console.log(`davido-viewer server on :${PORT}`);
-  startBetting(); // Crash 게임 루프 시작
   // 서버 시작 시 봇에 공지 동기화 요청
   if (BOT_API_URL) {
     setTimeout(() => {
