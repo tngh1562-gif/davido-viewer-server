@@ -56,8 +56,6 @@ function addFeed(kind, viewer, data) {
   } catch {}
 }
 
-// ── 서명 기반 stateless 세션 (배포해도 로그인 유지) ──
-const SESSION_SECRET        = process.env.SESSION_SECRET        || 'davido-viewer-secret-2025';
 const ADMIN_SECRET          = process.env.ADMIN_SECRET          || 'davido-admin';
 const VIEWER_SERVER_SECRET  = process.env.VIEWER_SERVER_SECRET  || 'davido-admin';
 
@@ -89,25 +87,37 @@ if (!fs.existsSync(SHOP_FILE)) writeJSON(SHOP_FILE, {
   ]
 });
 
-// ── Session helpers (stateless signed token) ──
-// 토큰 형식: base64(name + ":" + hmac_hex)
+// ── 파일 기반 세션 (Railway Volume에 저장 → 배포해도 로그인 유지) ──
+const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+if (!fs.existsSync(SESSIONS_FILE)) writeJSON(SESSIONS_FILE, {});
+
+// 인메모리 세션 캐시 (파일 I/O 최소화)
+let _sessions = readJSON(SESSIONS_FILE, {});
+
 function makeSessionToken(name) {
-  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(name).digest('hex');
-  return Buffer.from(name + ':' + sig).toString('base64');
+  const token = crypto.randomBytes(32).toString('hex');
+  _sessions[token] = { name, createdAt: Date.now() };
+  // 오래된 세션 정리 (1년 이상)
+  const cutoff = Date.now() - 365 * 24 * 3600 * 1000;
+  let dirty = false;
+  for (const k of Object.keys(_sessions)) {
+    if (_sessions[k].createdAt < cutoff) { delete _sessions[k]; dirty = true; }
+  }
+  writeJSON(SESSIONS_FILE, _sessions);
+  return token;
 }
+
 function getSessionName(req) {
   const cookie = req.headers.cookie || '';
-  const m = cookie.match(/vsession=([A-Za-z0-9+/=]+)/);
+  const m = cookie.match(/vsession=([a-f0-9]{64})/);
   if (!m) return null;
-  try {
-    const decoded = Buffer.from(m[1], 'base64').toString('utf8');
-    const sep = decoded.lastIndexOf(':');
-    if (sep < 0) return null;
-    const name = decoded.slice(0, sep);
-    const sig  = decoded.slice(sep + 1);
-    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(name).digest('hex');
-    return sig === expected ? name : null;
-  } catch { return null; }
+  const session = _sessions[m[1]];
+  return session ? session.name : null;
+}
+
+function deleteSession(token) {
+  delete _sessions[token];
+  writeJSON(SESSIONS_FILE, _sessions);
 }
 
 // ── Viewer helpers ──
@@ -276,6 +286,9 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
+  const cookie = req.headers.cookie || '';
+  const m = cookie.match(/vsession=([a-f0-9]{64})/);
+  if (m) deleteSession(m[1]);
   res.setHeader('Set-Cookie', 'vsession=; Path=/; HttpOnly; Max-Age=0');
   res.json({ ok: true });
 });
