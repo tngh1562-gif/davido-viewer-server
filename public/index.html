@@ -50,6 +50,10 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 .user-profile{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:500}
 .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--ref-blue),var(--ref-purple-start))}
 .pts-badge{background:rgba(255,200,68,.12);border:1px solid rgba(255,200,68,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+.fatigue-badge{background:rgba(100,200,100,.1);border:1px solid rgba(100,200,100,.3);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:#4ade80;letter-spacing:.5px;display:flex;align-items:center;gap:4px}
+.fatigue-badge.low{background:rgba(255,100,100,.1);border-color:rgba(255,100,100,.3);color:#f87171}
+.fatigue-bar{width:40px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:2px}
+.fatigue-bar-fill{height:100%;background:#4ade80;border-radius:2px;transition:width .3s}
 
 /* ══ CRASH GAME ══ */
 .crash-section{background:linear-gradient(135deg,rgba(10,10,30,.95),rgba(5,5,20,.98));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:28px 32px;margin-bottom:32px;position:relative;overflow:hidden}
@@ -740,6 +744,10 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
     </div>
     <div class="user-profile">
+      <div class="fatigue-badge" id="fatigueBadge" title="피로도 — 게임할 때마다 소모, 매일 자정 30 회복">
+        ⚡ <span id="navFatigue">100</span>/100
+        <div class="fatigue-bar"><div class="fatigue-bar-fill" id="fatigueBarFill" style="width:100%"></div></div>
+      </div>
       <div class="pts-badge">◈ <span id="navPts">0</span></div>
       <div class="avatar"></div>
       <span id="navName">시청자</span>
@@ -890,45 +898,73 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 <!-- ═══ STORE ═══ -->
 <div id="page-store" class="page">
   <div class="h-section" style="margin-bottom:8px">내전 상점</div>
-  <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:28px">내전 참여 및 미니게임으로 포인트를 모아 아이템을 구매하세요</div>
-  <div class="store-grid">
+  <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:20px">내전 참여 및 미니게임으로 포인트를 모아 아이템을 구매하세요</div>
 
+  <!-- 내전 아이템 -->
+  <div class="h-section" style="font-size:.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">⚔ 내전 아이템</div>
+  <div class="store-grid" style="margin-bottom:32px">
     <div class="card">
       <span class="rarity-badge rarity-common">일반</span>
       <div style="font-size:2.4rem;margin-bottom:8px">⭐</div>
       <div class="card-title">선참권</div>
       <div class="card-desc">다음 내전 팀 배치 선택 우선권이 주어집니다.</div>
-      <div class="product-price">60 P</div>
+      <div class="product-price">120 P</div>
       <button class="btn-buy" onclick="openBuy('priority')">구매하기</button>
     </div>
-
     <div class="card">
       <span class="rarity-badge rarity-uncommon">고급</span>
       <div style="font-size:2.4rem;margin-bottom:8px">🛡️</div>
       <div class="card-title">노밴권</div>
       <div class="card-desc">다음 내전의 밴 페이즈가 면제됩니다.</div>
-      <div class="product-price">120 P</div>
+      <div class="product-price">240 P</div>
       <button class="btn-buy" onclick="openBuy('no_ban')">구매하기</button>
     </div>
-
     <div class="card" style="border-color:rgba(168,85,247,.3)">
       <span class="rarity-badge rarity-rare">희귀</span>
       <div style="font-size:2.4rem;margin-bottom:8px">🌙</div>
       <div class="card-title">종일권</div>
       <div class="card-desc">당일 진행되는 모든 내전에 제한 없이 참가할 수 있습니다.</div>
-      <div class="product-price">230 P</div>
+      <div class="product-price">460 P</div>
       <button class="btn-buy" onclick="openBuy('all_day')">구매하기</button>
     </div>
-
     <div class="card card-gradient-purple" style="border:none">
       <span class="rarity-badge" style="background:rgba(255,200,68,.2);color:#fbbf24">영웅</span>
       <div style="font-size:2.4rem;margin-bottom:8px">⚡</div>
       <div class="card-title">연장권</div>
       <div class="card-desc" style="color:rgba(255,255,255,.8)">내전을 1판 추가 연장할 수 있습니다.</div>
-      <div class="product-price" style="color:#fbbf24">300 P</div>
+      <div class="product-price" style="color:#fbbf24">600 P</div>
       <button class="btn-buy" style="background:rgba(255,200,68,.9);color:#000" onclick="openBuy('extend')">구매하기</button>
     </div>
+  </div>
 
+  <!-- 피로도 회복 아이템 -->
+  <div class="h-section" style="font-size:.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">⚡ 피로도 회복</div>
+  <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:16px">피로도는 게임마다 소모됩니다 (타이밍 −5, 지뢰찾기 −10, 배당폭발 −15) · 매일 자정 자동 +30 회복</div>
+  <div class="store-grid">
+    <div class="card">
+      <span class="rarity-badge rarity-common">일반</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">🧪</div>
+      <div class="card-title">피로도 회복제 (소)</div>
+      <div class="card-desc">피로도를 30 회복합니다.<br><span style="color:#4ade80">현재 피로도: <span id="shopFatigue">--</span>/100</span></div>
+      <div class="product-price" style="color:#4ade80">30 P</div>
+      <button class="btn-buy" onclick="openBuy('fatigue_sm')">사용하기</button>
+    </div>
+    <div class="card">
+      <span class="rarity-badge rarity-uncommon">고급</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">💊</div>
+      <div class="card-title">피로도 회복제 (대)</div>
+      <div class="card-desc">피로도를 70 회복합니다.</div>
+      <div class="product-price" style="color:#4ade80">65 P</div>
+      <button class="btn-buy" onclick="openBuy('fatigue_lg')">사용하기</button>
+    </div>
+    <div class="card" style="border-color:rgba(74,222,128,.2)">
+      <span class="rarity-badge rarity-rare">희귀</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">✨</div>
+      <div class="card-title">피로도 완전 회복</div>
+      <div class="card-desc">피로도를 100으로 완전 회복합니다.</div>
+      <div class="product-price" style="color:#4ade80">90 P</div>
+      <button class="btn-buy" onclick="openBuy('fatigue_full')">사용하기</button>
+    </div>
   </div>
 </div>
 
@@ -1012,6 +1048,27 @@ function copyCode() {
 let pts = 0;
 let myName = '';
 let buyTarget = null;
+let myFatigue = 100;
+
+function saveFatigue(n){
+  myFatigue = n;
+  const badge = document.getElementById('fatigueBadge');
+  const numEl  = document.getElementById('navFatigue');
+  const fill   = document.getElementById('fatigueBarFill');
+  if(!badge||!numEl||!fill) return;
+  numEl.textContent = n;
+  fill.style.width = Math.max(0,Math.min(100,n)) + '%';
+  fill.style.background = n<=20?'#f87171':n<=50?'#fbbf24':'#4ade80';
+  badge.className = 'fatigue-badge' + (n<=20?' low':'');
+  const sf=document.getElementById('shopFatigue');if(sf)sf.textContent=n;
+}
+
+async function loadFatigue(){
+  try{
+    const r = await fetch('/api/fatigue').then(r=>r.json());
+    if(r.ok) saveFatigue(r.fatigue);
+  }catch{}
+}
 
 function savePts(n){
   pts = n;
@@ -1031,6 +1088,7 @@ function showApp(viewer, inhousePoints){
   loadSnapshot();
   loadRanking();
   loadAnnouncements();
+  loadFatigue();
 }
 
 async function refreshMe(){
@@ -1661,6 +1719,11 @@ async function deletePost(id, board) {
 
 /* ══════════ NAV ══════════ */
 function switchTab(pageId, el){
+  // 상점 탭 열 때 피로도 최신값 표시
+  if(pageId==='page-store'){
+    const sf=document.getElementById('shopFatigue');
+    if(sf)sf.textContent=myFatigue;
+  }
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1677,10 +1740,13 @@ function toast(msg,type='info'){
 
 /* ══════════ SHOP ══════════ */
 const ITEMS={
-  priority:{icon:'⭐',name:'선참권',desc:'다음 내전 팀 배치 선택 우선권',price:60},
-  no_ban:  {icon:'🛡️',name:'노밴권',desc:'다음 내전 밴 페이즈 면제',price:120},
-  all_day: {icon:'🌙',name:'종일권',desc:'당일 모든 내전 제한 없이 참가',price:230},
-  extend:  {icon:'⚡',name:'연장권',desc:'내전 1판 추가 연장',price:300},
+  priority:    {icon:'⭐', name:'선참권',          desc:'다음 내전 팀 배치 선택 우선권',    price:120, fatigue:0},
+  no_ban:      {icon:'🛡️',name:'노밴권',          desc:'다음 내전 밴 페이즈 면제',          price:240, fatigue:0},
+  all_day:     {icon:'🌙', name:'종일권',          desc:'당일 모든 내전 제한 없이 참가',      price:460, fatigue:0},
+  extend:      {icon:'⚡', name:'연장권',          desc:'내전 1판 추가 연장',                price:600, fatigue:0},
+  fatigue_sm:  {icon:'🧪', name:'피로도 회복제 (소)', desc:'피로도를 30 회복합니다',         price:30,  fatigue:30},
+  fatigue_lg:  {icon:'💊', name:'피로도 회복제 (대)', desc:'피로도를 70 회복합니다',         price:65,  fatigue:70},
+  fatigue_full:{icon:'✨', name:'피로도 완전 회복',   desc:'피로도를 100으로 완전 회복합니다',price:90,  fatigue:100},
 };
 function openBuy(id){
   const it=ITEMS[id]; if(!it)return;
@@ -1703,14 +1769,20 @@ async function doBuy(){
   if(pts<it.price){toast('포인트 부족','err');return;}
   const btn=document.getElementById('bmOk');
   btn.disabled=true; btn.textContent='처리 중...';
-  const r=await fetch('/api/shop/buy',{
+  // 피로도 아이템은 별도 API 사용
+  const isFatigueItem = it.fatigue > 0;
+  const url  = isFatigueItem ? '/api/fatigue/recover' : '/api/shop/buy';
+  const body = isFatigueItem ? {itemId:buyTarget} : {itemId:buyTarget};
+  const r=await fetch(url,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({itemId:buyTarget})
+    body:JSON.stringify(body)
   }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
   btn.disabled=false; btn.textContent='구매 확정';
   if(r.ok){
     if(r.points!=null) savePts(r.points); else savePts(pts-it.price);
-    toast(`${it.name} 구매 완료! 보관함에 추가됐습니다 🎉`,'ok');
+    if(r.fatigue!=null) saveFatigue(r.fatigue);
+    const msg = isFatigueItem ? `${it.name} 사용 완료! 피로도 +${it.fatigue} 🧪` : `${it.name} 구매 완료! 보관함에 추가됐습니다 🎉`;
+    toast(msg,'ok');
     closeBuy();
   } else {
     toast(r.error||'구매 실패','err');
@@ -1807,6 +1879,7 @@ async function tgStart(targetMs) {
     return;
   }
   if (r.points != null) savePts(r.points);
+  if (r.fatigue != null) saveFatigue(r.fatigue);
   tgSession = { sessionId: r.sessionId, startedAt: r.startedAt, targetMs };
 
   // 타이머 보임 — 단, 정확한 목표 시간은 범위로만 알려줌
@@ -1915,6 +1988,7 @@ async function msStart(mines) {
     .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
   if (!r.ok) { toast(r.error||'시작 실패','err'); msSetBtns(false); return; }
   if (r.points != null) savePts(r.points);
+  if (r.fatigue != null) saveFatigue(r.fatigue);
   msSession = { sessionId: r.sessionId, total: r.total, mineCount: r.mineCount, revealed: new Set(), alive: true, cashed: false };
   msSetBtns(true, '진행중');
   msRenderGrid();
@@ -2531,7 +2605,7 @@ async function crashAction(){
     if((pts||0)<crashBet){toast('포인트 부족','err');return;}
     const btn=$c('crashActionBtn');if(btn)btn.disabled=true;
     const r=await fetch('/api/game/crash/bet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:crashBet})}).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
-    if(r.ok){crashMyBet={amount:crashBet,roundId:r.roundId,cashedOut:false};savePts(r.viewer.points);toast(`${crashBet}P 베팅 완료! 🎯`,'ok');}
+    if(r.ok){crashMyBet={amount:crashBet,roundId:r.roundId,cashedOut:false};savePts(r.viewer.points);if(r.fatigue!=null)saveFatigue(r.fatigue);toast(`${crashBet}P 베팅 완료! 🎯`,'ok');}
     else{toast(r.error||'오류','err');if(btn)btn.disabled=false;}
   } else if(crashPhase==='running'&&crashMyBet&&!crashMyBet.cashedOut){
     const r=await fetch('/api/game/crash/cashout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(r=>r.json()).catch(()=>({ok:false}));

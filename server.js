@@ -114,9 +114,45 @@ function getSessionName(req) {
 function getViewer(name) {
   const viewers = readJSON(VIEWERS_FILE, {});
   if (!viewers[name]) viewers[name] = { name, points: 0, bets: 0, wins: 0, purchases: [] };
-  return { viewers, viewer: viewers[name] };
+  const v = viewers[name];
+  // 피로도 초기화 (필드 없으면 기본값)
+  if (v.fatigue === undefined) v.fatigue = 100;
+  // 매일 자정 KST 자동 30 회복
+  const today = getTodayKST ? getTodayKST() : new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  if (v.fatigueResetDate !== today) {
+    v.fatigue = Math.min(100, (v.fatigue || 0) + 30);
+    v.fatigueResetDate = today;
+  }
+  return { viewers, viewer: v };
 }
 function saveViewer(viewers) { writeJSON(VIEWERS_FILE, viewers); }
+
+// ── 피로도 헬퍼 ──
+const FATIGUE_MAX = 100;
+const FATIGUE_COST = { timing: 5, ms: 10, crash: 15 };
+
+function checkFatigue(name, cost) {
+  const { viewers, viewer } = getViewer(name);
+  const cur = viewer.fatigue ?? FATIGUE_MAX;
+  if (cur < cost) return { ok: false, fatigue: cur, error: `피로도가 부족합니다 (필요 ${cost}, 보유 ${cur}) — 상점에서 회복 아이템을 구매하세요` };
+  viewer.fatigue = cur - cost;
+  saveViewer(viewers);
+  return { ok: true, fatigue: viewer.fatigue };
+}
+
+function recoverFatigue(name, amount) {
+  const { viewers, viewer } = getViewer(name);
+  viewer.fatigue = Math.min(FATIGUE_MAX, (viewer.fatigue ?? 0) + amount);
+  saveViewer(viewers);
+  return viewer.fatigue;
+}
+
+app.get('/api/fatigue', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { viewer } = getViewer(name);
+  res.json({ ok: true, fatigue: viewer.fatigue ?? FATIGUE_MAX, max: FATIGUE_MAX, cost: FATIGUE_COST });
+});
 
 // ── Broadcast ──
 function broadcast(data) {
@@ -520,6 +556,9 @@ app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (await getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
+  // 피로도 체크
+  const fg = checkFatigue(name, FATIGUE_COST.timing);
+  if (!fg.ok) return res.json({ ok: false, error: fg.error, fatigue: fg.fatigue });
   // 하루 50회 제한 (브루트포스 방지)
   if (!rl(`timing-day:${name}`, 50, 86400)) return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
   // 분당 5회 제한
@@ -534,8 +573,11 @@ app.post('/api/game/timing/start', async (req, res) => {
     const startedAt = Date.now();
     timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
     setTimeout(() => timingSessions.delete(sessionId), 30000);
-    res.json({ ok: true, sessionId, startedAt, points: r.points });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
+    res.json({ ok: true, sessionId, startedAt, points: r.points, fatigue: fg.fatigue });
+  } catch(e) {
+    recoverFatigue(name, FATIGUE_COST.timing); // 오류 시 피로도 환불
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 app.post('/api/game/timing/press', async (req, res) => {
@@ -767,6 +809,9 @@ async function msGrantPayout(name, payout) {
 app.post('/api/game/ms/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  // 피로도 체크
+  const fg = checkFatigue(name, FATIGUE_COST.ms);
+  if (!fg.ok) return res.json({ ok: false, error: fg.error, fatigue: fg.fatigue });
   if (!rl(`ms-min:${name}`, 20, 60)) return res.status(429).json({ ok: false, error: '너무 빠릅니다' });
   const mineCount = Math.max(3, Math.min(7, parseInt(req.body.mineCount) || 5));
   const TOTAL = 25;
@@ -782,8 +827,11 @@ app.post('/api/game/ms/start', async (req, res) => {
     const sessionId = crypto.randomBytes(16).toString('hex');
     msSessions.set(sessionId, { name, mineSet, revealed: new Set(), bet: 1, mineCount, total: TOTAL, alive: true, cashed: false });
     setTimeout(() => msSessions.delete(sessionId), 30 * 60 * 1000);
-    res.json({ ok: true, sessionId, total: TOTAL, mineCount, points: dr.points });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
+    res.json({ ok: true, sessionId, total: TOTAL, mineCount, points: dr.points, fatigue: fg.fatigue });
+  } catch(e) {
+    recoverFatigue(name, FATIGUE_COST.ms); // 오류 시 피로도 환불
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 app.post('/api/game/ms/reveal', async (req, res) => {
@@ -891,6 +939,145 @@ app.delete('/api/comments/:postId/:commentId/:replyId', (req, res) => {
   res.json({ ok: true });
 });
 
+// ══════════════════════════════════════════════════════════
+// 배당 폭발 (CRASH) 게임 — 서버 루프
+// ══════════════════════════════════════════════════════════
+const CRASH_BET_MIN     = 10;
+const CRASH_BET_MAX     = 30;
+const CRASH_BETTING_SEC = 7;
+
+let crash = {
+  phase: 'betting', roundId: 0, crashAt: 1.00, startTime: 0,
+  betEndAt: 0, mult: 1.00, bets: {}, history: [],
+  tickTimer: null, phaseTimer: null,
+};
+
+function genCrashPoint() {
+  const r = crypto.randomBytes(4).readUInt32BE() / 0xFFFFFFFF;
+  if (r < 0.20) return 1.00;
+  return Math.round(Math.min(0.90 / (1 - r), 15) * 100) / 100;
+}
+function crashMult(ms) { return Math.round(Math.pow(Math.E, 0.0001 * ms) * 100) / 100; }
+
+function crashBroadcast(extra = {}) {
+  broadcast({
+    type: 'crash_state', phase: crash.phase, roundId: crash.roundId,
+    mult: crash.mult, betEndAt: crash.betEndAt, history: crash.history,
+    players: Object.entries(crash.bets).map(([n, b]) => ({
+      name: n, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
+    })), ...extra,
+  });
+}
+
+function startBetting() {
+  crash.phase = 'betting'; crash.roundId += 1;
+  crash.crashAt = genCrashPoint(); crash.bets = {}; crash.mult = 1.00;
+  crash.betEndAt = Date.now() + CRASH_BETTING_SEC * 1000;
+  crashBroadcast();
+  crash.phaseTimer = setTimeout(startRunning, CRASH_BETTING_SEC * 1000);
+}
+
+function startRunning() {
+  crash.phase = 'running'; crash.startTime = Date.now();
+  crashBroadcast();
+  crash.tickTimer = setInterval(() => {
+    const elapsed = Date.now() - crash.startTime;
+    crash.mult = crashMult(elapsed);
+    if (crash.mult >= crash.crashAt) {
+      crash.mult = crash.crashAt; clearInterval(crash.tickTimer); endRound();
+    } else { crashBroadcast(); }
+  }, 100);
+}
+
+function endRound() {
+  crash.phase = 'crashed';
+  Object.entries(crash.bets).forEach(([n, b]) => {
+    if (!b.cashedOut) addFeed('crash', n, { mult: crash.crashAt, gain: 0, bet: b.amount, reason: `💥 배당폭발 폭발 ${crash.crashAt}x (-${b.amount}P)` });
+  });
+  crash.history.unshift({ mult: crash.crashAt, roundId: crash.roundId });
+  if (crash.history.length > 20) crash.history.pop();
+  crashBroadcast({ crashed: true });
+  crash.phaseTimer = setTimeout(startBetting, 4000);
+}
+
+app.post('/api/game/crash/bet', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (crash.phase !== 'betting') return res.json({ ok: false, error: '베팅 시간이 아닙니다' });
+  if (crash.bets[name]) return res.json({ ok: false, error: '이미 베팅했습니다' });
+  const amount = parseInt(req.body.amount || 0);
+  if (amount < CRASH_BET_MIN || amount > CRASH_BET_MAX) return res.json({ ok: false, error: `베팅: ${CRASH_BET_MIN}~${CRASH_BET_MAX}p` });
+  // 피로도 체크
+  const fg = checkFatigue(name, FATIGUE_COST.crash);
+  if (!fg.ok) return res.json({ ok: false, error: fg.error, fatigue: fg.fatigue });
+  if (!INHOUSE_SERVER_URL) { recoverFatigue(name, FATIGUE_COST.crash); return res.json({ ok: false, error: '서버 연결 안됨' }); }
+  try {
+    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount, reason: `💥 배당폭발 베팅 (-${amount}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!dr.ok) { recoverFatigue(name, FATIGUE_COST.crash); return res.json({ ok: false, error: dr.error || '포인트 부족' }); }
+    const { viewers, viewer } = getViewer(name); viewer.points = dr.points; saveViewer(viewers);
+    crash.bets[name] = { amount, cashedOut: false, cashMult: null };
+    crashBroadcast();
+    res.json({ ok: true, viewer, roundId: crash.roundId, fatigue: fg.fatigue });
+  } catch(e) { recoverFatigue(name, FATIGUE_COST.crash); res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/game/crash/cashout', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (crash.phase !== 'running') return res.json({ ok: false, error: '게임 진행 중이 아닙니다' });
+  const bet = crash.bets[name];
+  if (!bet) return res.json({ ok: false, error: '이번 판 베팅 없음' });
+  if (bet.cashedOut) return res.json({ ok: false, error: '이미 현금화함' });
+  const mult = crash.mult; const gain = Math.floor(bet.amount * mult);
+  bet.cashedOut = true; bet.cashMult = mult;
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
+  try {
+    const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      { nickname: name, amount: gain, reason: `💥 배당폭발 ${mult.toFixed(2)}x 현금화 (+${gain}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    const { viewers, viewer } = getViewer(name); if (gr.ok) viewer.points = gr.points; saveViewer(viewers);
+    addFeed('crash', name, { mult, gain, bet: bet.amount, reason: `💥 배당폭발 ${mult.toFixed(2)}x 현금화 (+${gain}P)` });
+    crashBroadcast(); res.json({ ok: true, mult, gain, viewer });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/game/crash/state', (req, res) => {
+  res.json({
+    phase: crash.phase, roundId: crash.roundId, mult: crash.mult,
+    betEndAt: crash.betEndAt, history: crash.history,
+    players: Object.entries(crash.bets).map(([n, b]) => ({
+      name: n, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
+    })),
+  });
+});
+
+// ── 피로도 회복 아이템 구매 처리 ──
+app.post('/api/fatigue/recover', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { itemId } = req.body;
+  const recoveryItems = {
+    'fatigue_sm':  { name: '피로도 회복제 (소)', amount: 30,  price: 30  },
+    'fatigue_lg':  { name: '피로도 회복제 (대)', amount: 70,  price: 65  },
+    'fatigue_full':{ name: '피로도 완전 회복',   amount: 100, price: 90  },
+  };
+  const item = recoveryItems[itemId];
+  if (!item) return res.json({ ok: false, error: '아이템 없음' });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount: item.price, reason: `🧪 ${item.name} 구매 (-${item.price}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
+    const newFatigue = recoverFatigue(name, item.amount);
+    const { viewers, viewer } = getViewer(name); viewer.points = r.points; saveViewer(viewers);
+    addFeed('shop', name, { reason: `🧪 ${item.name} 사용 (피로도 +${item.amount})` });
+    res.json({ ok: true, fatigue: newFatigue, points: r.points });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
@@ -900,6 +1087,7 @@ wss.on('connection', (ws) => {
 
 server.listen(PORT, () => {
   console.log(`davido-viewer server on :${PORT}`);
+  startBetting(); // 배당폭발 게임 루프 시작
   // 서버 시작 시 봇에 공지 동기화 요청
   if (BOT_API_URL) {
     setTimeout(() => {
