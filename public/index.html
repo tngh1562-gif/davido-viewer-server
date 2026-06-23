@@ -688,7 +688,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">선참권</div>
       <div class="card-desc">다음 내전 팀 배치 선택 우선권이 주어집니다.</div>
       <div class="product-price">120 P</div>
-      <button class="btn-buy" onclick="openBuy('priority')">구매하기</button>
+      <button class="btn-buy" onclick="buyItem('priority',this)">구매하기</button>
     </div>
     <div class="card">
       <span class="rarity-badge rarity-uncommon">고급</span>
@@ -696,7 +696,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">노밴권</div>
       <div class="card-desc">다음 내전의 밴 페이즈가 면제됩니다.</div>
       <div class="product-price">240 P</div>
-      <button class="btn-buy" onclick="openBuy('no_ban')">구매하기</button>
+      <button class="btn-buy" onclick="buyItem('no_ban',this)">구매하기</button>
     </div>
     <div class="card" style="border-color:rgba(168,85,247,.3)">
       <span class="rarity-badge rarity-rare">희귀</span>
@@ -704,7 +704,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">종일권</div>
       <div class="card-desc">당일 진행되는 모든 내전에 제한 없이 참가할 수 있습니다.</div>
       <div class="product-price">460 P</div>
-      <button class="btn-buy" onclick="openBuy('all_day')">구매하기</button>
+      <button class="btn-buy" onclick="buyItem('all_day',this)">구매하기</button>
     </div>
     <div class="card card-gradient-purple" style="border:none">
       <span class="rarity-badge" style="background:rgba(255,200,68,.2);color:#fbbf24">영웅</span>
@@ -712,7 +712,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-title">연장권</div>
       <div class="card-desc" style="color:rgba(255,255,255,.8)">내전을 1판 추가 연장할 수 있습니다.</div>
       <div class="product-price" style="color:#fbbf24">600 P</div>
-      <button class="btn-buy" style="background:rgba(255,200,68,.9);color:#000" onclick="openBuy('extend')">구매하기</button>
+      <button class="btn-buy" style="background:rgba(255,200,68,.9);color:#000" onclick="buyItem('extend',this)">구매하기</button>
     </div>
   </div>
 
@@ -748,22 +748,6 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 </div>
 
 </main>
-
-<!-- ═══ GAME MODAL ═══ -->
-<!-- ═══ BUY MODAL ═══ -->
-<div class="buy-modal-bg" id="buyBg">
-  <div class="buy-modal">
-    <div class="bm-icon" id="bmIcon"></div>
-    <div class="bm-name" id="bmName"></div>
-    <div class="bm-desc" id="bmDesc"></div>
-    <div class="bm-price-row"><span>◈</span><span class="bm-price" id="bmPrice"></span><span>P</span></div>
-    <div class="bm-after" id="bmAfter"></div>
-    <div class="bm-actions">
-      <button class="bm-cancel" onclick="closeBuy()">취소</button>
-      <button class="bm-ok" id="bmOk" onclick="doBuy()">구매 확정</button>
-    </div>
-  </div>
-</div>
 
 <div id="toast-cont"></div>
 
@@ -828,7 +812,6 @@ function copyCode() {
 /* ══════════ LOGIN / SESSION ══════════ */
 let pts = 0;
 let myName = '';
-let buyTarget = null;
 let myFatigue = 100;
 
 function saveFatigue(n){
@@ -1529,21 +1512,24 @@ const ITEMS={
   fatigue_lg:  {icon:'💊', name:'피로도 회복제 (대)', desc:'피로도를 70 회복합니다',         price:130, fatigue:70},
   fatigue_full:{icon:'✨', name:'피로도 완전 회복',   desc:'피로도를 100으로 완전 회복합니다',price:180, fatigue:100},
 };
-function openBuy(id){
-  const it=ITEMS[id]; if(!it)return;
-  buyTarget=id;
-  document.getElementById('bmIcon').textContent=it.icon;
-  document.getElementById('bmName').textContent=it.name;
-  document.getElementById('bmDesc').textContent=it.desc;
-  document.getElementById('bmPrice').textContent=it.price.toLocaleString();
-  const after=pts-it.price;
-  const af=document.getElementById('bmAfter');
-  af.textContent='구매 후 잔액: '+(after<0?'포인트 부족':after.toLocaleString()+' P');
-  af.className='bm-after '+(after<0?'bad':'ok');
-  document.getElementById('bmOk').disabled=after<0;
-  document.getElementById('buyBg').classList.add('open');
+// 일반 상점 아이템 즉시 구매
+async function buyItem(itemId, btn){
+  const it=ITEMS[itemId]; if(!it) return;
+  if(pts < it.price){ toast(`포인트 부족 (필요 ${it.price}P, 보유 ${pts}P)`,'err'); return; }
+  const orig=btn.textContent;
+  btn.disabled=true; btn.textContent='처리 중...';
+  const r=await fetch('/api/shop/buy',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({itemId})
+  }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
+  btn.disabled=false; btn.textContent=orig;
+  if(r.ok){
+    if(r.points!=null) savePts(r.points); else savePts(pts-it.price);
+    toast(`${it.name} 구매 완료! 보관함에 추가됐습니다 🎉`,'ok');
+  } else {
+    toast(r.error||'구매 실패','err');
+  }
 }
-function closeBuy(){document.getElementById('buyBg').classList.remove('open');buyTarget=null}
 
 async function buyFatigue(itemId, btn){
   const it = ITEMS[itemId]; if(!it) return;
@@ -1561,31 +1547,6 @@ async function buyFatigue(itemId, btn){
     toast(`${it.name} 사용 완료! 피로도 +${it.fatigue} ⚡`, 'ok');
   } else {
     toast(r.error || '구매 실패', 'err');
-  }
-}
-async function doBuy(){
-  if(!buyTarget)return;
-  const it=ITEMS[buyTarget];
-  if(pts<it.price){toast('포인트 부족','err');return;}
-  const btn=document.getElementById('bmOk');
-  btn.disabled=true; btn.textContent='처리 중...';
-  // 피로도 아이템은 별도 API 사용
-  const isFatigueItem = it.fatigue > 0;
-  const url  = isFatigueItem ? '/api/fatigue/recover' : '/api/shop/buy';
-  const body = isFatigueItem ? {itemId:buyTarget} : {itemId:buyTarget};
-  const r=await fetch(url,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  }).then(r=>r.json()).catch(()=>({ok:false,error:'연결 오류'}));
-  btn.disabled=false; btn.textContent='구매 확정';
-  if(r.ok){
-    if(r.points!=null) savePts(r.points); else savePts(pts-it.price);
-    if(r.fatigue!=null) saveFatigue(r.fatigue);
-    const msg = isFatigueItem ? `${it.name} 사용 완료! 피로도 +${it.fatigue} 🧪` : `${it.name} 구매 완료! 보관함에 추가됐습니다 🎉`;
-    toast(msg,'ok');
-    closeBuy();
-  } else {
-    toast(r.error||'구매 실패','err');
   }
 }
 
