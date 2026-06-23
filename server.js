@@ -281,7 +281,7 @@ app.get('/api/bet/status', (req, res) => {
   res.json(readJSON(BETTING_FILE, {}));
 });
 
-app.post('/api/bet/place', (req, res) => {
+app.post('/api/bet/place', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   const { team, amount } = req.body;
@@ -294,18 +294,20 @@ app.post('/api/bet/place', (req, res) => {
   if (betting.status !== 'open') return res.json({ ok: false, error: '배팅 시간이 아닙니다' });
   if (betting.bets[name]) return res.json({ ok: false, error: '이미 배팅했습니다' });
 
-  const { viewers, viewer } = getViewer(name);
-  if (viewer.points < amt) return res.json({ ok: false, error: '포인트 부족' });
+  // 인하우스 DB에서 실제 포인트 차감
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 오류' });
+  try {
+    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount: amt },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
+  } catch(e) { return res.json({ ok: false, error: e.message }); }
 
-  viewer.points -= amt;
-  viewer.bets++;
   betting.bets[name] = { team, amount: amt };
-  saveViewer(viewers);
   writeJSON(BETTING_FILE, betting);
-
   broadcast({ type: 'bet_update', bets: betting.bets, status: betting.status });
   addFeed('bet', name, { team, amount: amt, reason: `${team === 'blue' ? '🔵 블루' : '🔴 레드'}팀에 ${amt}P 배팅` });
-  res.json({ ok: true, viewer });
+  res.json({ ok: true });
 });
 
 // ── 배팅 자동 마감 타이머 ──
@@ -327,7 +329,7 @@ function startBetTimer() {
 }
 
 // ── Admin: betting control ──
-app.post('/api/admin/bet', (req, res) => {
+app.post('/api/admin/bet', async (req, res) => {
   const { action, blueTeam, redTeam, result } = req.body;
   const secret = req.headers['x-admin-secret'];
   if (secret !== (ADMIN_SECRET)) return res.status(403).json({ ok: false });
@@ -351,23 +353,27 @@ app.post('/api/admin/bet', (req, res) => {
     betting.status = 'ended';
     betting.result = result; // 'blue' | 'red'
     // 배당 계산: 풀 기반 배당, 상한 BET_MAX_MULT, 하우스 수수료 BET_RAKE 차감
-    const viewers = readJSON(VIEWERS_FILE, {});
     const blueTot = Object.values(betting.bets).filter(b=>b.team==='blue').reduce((s,b)=>s+b.amount,0);
     const redTot  = Object.values(betting.bets).filter(b=>b.team==='red').reduce((s,b)=>s+b.amount,0);
     const totalPool = blueTot + redTot;
     const winnerPool = result === 'blue' ? blueTot : redTot;
-    Object.entries(betting.bets).forEach(([n, b]) => {
-      if (b.team === result) {
-        const rawMult = totalPool / (winnerPool || 1);          // 풀 기반 배당
-        const mult    = Math.min(rawMult, BET_MAX_MULT);        // 상한 적용
-        const gain    = Math.floor(b.amount * mult * (1 - BET_RAKE)); // 수수료 차감
-        if (!viewers[n]) viewers[n] = { name: n, points: 0, bets: 0, wins: 0, purchases: [] };
-        viewers[n].points += gain;
-        viewers[n].wins++;
+    // 인하우스 DB에 당첨 포인트 지급 (병렬)
+    const grantPromises = Object.entries(betting.bets)
+      .filter(([, b]) => b.team === result)
+      .map(async ([n, b]) => {
+        const rawMult = totalPool / (winnerPool || 1);
+        const mult = Math.min(rawMult, BET_MAX_MULT);
+        const gain = Math.floor(b.amount * mult * (1 - BET_RAKE));
         betting.bets[n].payout = gain;
-      }
-    });
-    writeJSON(VIEWERS_FILE, viewers);
+        if (INHOUSE_SERVER_URL && gain > 0) {
+          try {
+            await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+              { nickname: n, amount: gain },
+              { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+          } catch {}
+        }
+      });
+    await Promise.all(grantPromises);
   } else if (action === 'ended') {
     betting.status = 'ended';
     betting.result = null;
