@@ -151,7 +151,14 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  // CSP 임시 비활성화 (로그인 버튼 반응 없음 진단 중)
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; " +
+    "media-src 'self' https:; " +
+    "frame-src https://www.youtube.com https://clips.twitch.tv https://player.twitch.tv; " +
+    "connect-src 'self' wss:;"
+  );
   next();
 });
 // 전체 IP 레이트 리밋 (분당 300회)
@@ -196,7 +203,7 @@ app.get('/api/auth/poll/:token', (req, res) => {
 // 봇이 채팅 감지 후 호출
 app.post('/api/auth/confirm', (req, res) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== 'davido-admin') return res.status(403).json({ ok: false, error: '권한 없음' });
+  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
   const { token, name } = req.body;
   if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
   const key = token.toUpperCase();
@@ -433,137 +440,7 @@ app.post('/api/shop/buy', async (req, res) => {
 });
 
 // ══════════ MINI GAMES ══════════
-
-// ── Card utilities (Blackjack) ──
-const SUITS = ['♠','♥','♦','♣'];
-const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-function createDeck(n=4){const d=[];for(let i=0;i<n;i++)for(const s of SUITS)for(const r of RANKS)d.push({r,s});return shuffle([...d])}
-function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
-function cVal(c){if(['J','Q','K'].includes(c.r))return 10;if(c.r==='A')return 11;return parseInt(c.r)}
 function hVal(hand){let v=0,a=0;for(const c of hand){v+=cVal(c);if(c.r==='A')a++}while(v>21&&a>0){v-=10;a--}return v}
-const bjSessions={};
-
-// ── Slot utilities ──
-const SL_SYM=['🍒','🍋','🔔','⭐','💎','7️⃣'];
-const SL_W  =[35,28,20,12,4,1];
-const SL_PAY={'7️⃣7️⃣7️⃣':10,'💎💎💎':6,'⭐⭐⭐':4,'🔔🔔🔔':3,'🍋🍋🍋':2.5,'🍒🍒🍒':2};
-function pickSym(){let r=Math.random()*100;for(let i=0;i<SL_SYM.length;i++){r-=SL_W[i];if(r<=0)return SL_SYM[i]}return SL_SYM[0]}
-function slotPayout(reels,bet){
-  const k=reels.join('');
-  if(SL_PAY[k]) return Math.floor(bet*SL_PAY[k]);
-  const[a,b,c]=reels;if(a===b||b===c||a===c) return Math.floor(bet*1.3);
-  return 0;
-}
-
-// ── Roulette utilities ──
-const RL_RED=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-const RL_ORDER=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-
-// ── Slots ──
-app.post('/api/game/slots',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  const bet=parseInt(req.body.bet);
-  if(!bet||bet<1||bet>BET_MAX)return res.json({ok:false,error:`1~${BET_MAX}p 배팅`});
-  const{viewers,viewer}=getViewer(name);
-  if(viewer.points<bet)return res.json({ok:false,error:'포인트 부족'});
-  const reels=[pickSym(),pickSym(),pickSym()];
-  const payout=slotPayout(reels,bet);
-  viewer.points=Math.max(0,viewer.points-bet+payout);
-  saveViewer(viewers);
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,reels,payout,net:payout-bet,viewer,jackpot:reels.join('')==='7️⃣7️⃣7️⃣'});
-});
-
-// ── Blackjack ──
-app.post('/api/game/bj/start',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  if(bjSessions[name])return res.json({ok:false,error:'진행 중인 게임 있음'});
-  const bet=parseInt(req.body.bet);
-  if(!bet||bet<1||bet>BET_MAX)return res.json({ok:false,error:`1~${BET_MAX}p 배팅`});
-  const{viewers,viewer}=getViewer(name);
-  if(viewer.points<bet)return res.json({ok:false,error:'포인트 부족'});
-  viewer.points-=bet;saveViewer(viewers);
-  const deck=createDeck(4);
-  const ph=[deck.pop(),deck.pop()],dh=[deck.pop(),deck.pop()];
-  const pv=hVal(ph),dv=hVal(dh);
-  if(pv===21){
-    const bj=dv===21;const pay=bj?bet:Math.floor(bet*2.5);
-    viewer.points+=pay;saveViewer(viewers);
-    broadcast({type:'points_update',name,points:viewer.points});
-    return res.json({ok:true,state:'over',ph,dh,pv,dv,result:bj?'push':'blackjack',pay,viewer});
-  }
-  bjSessions[name]={deck,ph,dh,bet,doubled:false};
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,state:'playing',ph,dh_show:[dh[0]],pv,viewer,canDouble:viewer.points>=bet});
-});
-
-app.post('/api/game/bj/action',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  const sess=bjSessions[name];if(!sess)return res.json({ok:false,error:'게임 없음'});
-  const{action}=req.body;
-  const{viewers,viewer}=getViewer(name);
-  if(action==='double'){
-    if(viewer.points<sess.bet)return res.json({ok:false,error:'포인트 부족'});
-    viewer.points-=sess.bet;sess.bet*=2;sess.doubled=true;
-  }
-  if(action==='hit'||action==='double'){
-    sess.ph.push(sess.deck.pop());
-    const pv=hVal(sess.ph);
-    if(pv>21||sess.doubled){
-      if(pv>21){
-        delete bjSessions[name];saveViewer(viewers);
-        broadcast({type:'points_update',name,points:viewer.points});
-        return res.json({ok:true,state:'over',ph:sess.ph,dh:sess.dh,pv,dv:hVal(sess.dh),result:'bust',pay:0,viewer});
-      }
-      return doStand(name,sess,viewers,viewer,res);
-    }
-    saveViewer(viewers);broadcast({type:'points_update',name,points:viewer.points});
-    return res.json({ok:true,state:'playing',ph:sess.ph,dh_show:[sess.dh[0]],pv,viewer,canDouble:false});
-  }
-  if(action==='stand') return doStand(name,sess,viewers,viewer,res);
-  res.json({ok:false,error:'unknown'});
-});
-
-function doStand(name,sess,viewers,viewer,res){
-  while(hVal(sess.dh)<17)sess.dh.push(sess.deck.pop());
-  const pv=hVal(sess.ph),dv=hVal(sess.dh);
-  let result,pay;
-  if(dv>21||pv>dv){result='win';pay=Math.floor(sess.bet*1.9);}
-  else if(pv===dv){result='push';pay=sess.bet;}
-  else{result='lose';pay=0;}
-  viewer.points+=pay;saveViewer(viewers);delete bjSessions[name];
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,state:'over',ph:sess.ph,dh:sess.dh,pv,dv,result,pay,viewer});
-}
-
-// ── Roulette ──
-app.post('/api/game/roulette',(req,res)=>{
-  const name=getSessionName(req);if(!name)return res.json({ok:false,error:'로그인 필요'});
-  const{bets}=req.body;
-  if(!bets||!bets.length)return res.json({ok:false,error:'배팅 필요'});
-  const totalBet=bets.reduce((s,b)=>s+parseInt(b.amount||0),0);
-  if(totalBet<1||totalBet>BET_MAX)return res.json({ok:false,error:`총 배팅 1~${BET_MAX}p`});
-  const{viewers,viewer}=getViewer(name);
-  if(viewer.points<totalBet)return res.json({ok:false,error:'포인트 부족'});
-  viewer.points-=totalBet;
-  const result=Math.floor(Math.random()*37);
-  const color=result===0?'green':RL_RED.has(result)?'red':'black';
-  const wheelIdx=RL_ORDER.indexOf(result);
-  let payout=0;
-  bets.forEach(b=>{
-    const a=parseInt(b.amount||0);
-    if(b.type==='number'&&parseInt(b.value)===result)payout+=Math.floor(a*35*0.9);
-    if(b.type==='color'&&b.value===color&&color!=='green')payout+=Math.floor(a*1.8);
-    if(b.type==='parity'&&result!==0){
-      if(b.value==='odd'&&result%2===1)payout+=Math.floor(a*1.8);
-      if(b.value==='even'&&result%2===0)payout+=Math.floor(a*1.8);
-    }
-    if(b.type==='dozen'&&result>0&&parseInt(b.value)===Math.ceil(result/12))payout+=Math.floor(a*2.7);
-  });
-  viewer.points+=payout;saveViewer(viewers);
-  broadcast({type:'points_update',name,points:viewer.points});
-  res.json({ok:true,result,color,wheelIdx,payout,net:payout-totalBet,viewer});
-});
 
 // ── Inhouse Snapshot (for index_5 dashboard) ──
 const ANN_FILE = path.join(DATA_DIR, 'announcements.json');
@@ -614,6 +491,9 @@ async function getTimingWinner() {
 }
 
 // 당첨자 저장 — 인하우스 서버 + 로컬 동시
+// 이중 당첨 방지용 인메모리 락
+let timingWinnerSaving = false;
+
 async function saveTimingWinner(date, winner) {
   const data = { date, winner };
   writeJSON(TIMING_WIN_FILE, data); // 로컬 백업
@@ -661,10 +541,14 @@ app.post('/api/game/timing/press', async (req, res) => {
   if (!session || session.name !== name) return res.json({ ok: false, error: '세션 만료' });
   timingSessions.delete(sessionId);
   if (session.date !== getTodayKST()) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
+  // 이중 당첨 방지: 락 확인 + getTimingWinner 동시 체크
+  if (timingWinnerSaving) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
   if (diff <= 100) { // ±0.1초 (네트워크 지연 감안)
+    if (timingWinnerSaving) return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs, error: '이미 당첨자 있음' });
+    timingWinnerSaving = true;
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
@@ -674,6 +558,7 @@ app.post('/api/game/timing/press', async (req, res) => {
     } catch {}
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     await saveTimingWinner(getTodayKST(), winner);
+    timingWinnerSaving = false;
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
     addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
@@ -862,7 +747,7 @@ function calcMsPayout(session) {
 }
 
 async function msGrantPayout(name, payout) {
-  if (payout <= 1 || !INHOUSE_SERVER_URL) return null;
+  if (payout < 1 || !INHOUSE_SERVER_URL) return null; // 1P 포함 환불 가능
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
       { nickname: name, amount: payout },
