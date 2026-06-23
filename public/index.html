@@ -538,117 +538,51 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 
 <!-- ═══ HOME ═══ -->
 <div id="page-home" class="page active">
-
-  <!-- 레이아웃 선택 버튼 (임시) -->
-  <div id="layoutPicker" style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
-    <span style="font-size:.7rem;color:var(--text-muted);letter-spacing:1px">레이아웃 선택:</span>
-    <button onclick="setLayout('a')" id="lbA" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:.75rem;cursor:pointer;font-family:inherit">A안</button>
-    <button onclick="setLayout('b')" id="lbB" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:.75rem;cursor:pointer;font-family:inherit">B안</button>
-    <button onclick="setLayout('c')" id="lbC" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:.75rem;cursor:pointer;font-family:inherit">C안</button>
-  </div>
-
-  <!-- ══ A안: 4열 스탯 + 3열 콘텐츠 ══ -->
-  <div id="layoutA" class="dash-layout" style="display:none">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
-      <div class="card card-solid-blue" style="padding:18px 20px">
-        <div class="card-label">등록된 시청자</div>
-        <div class="stat-val" id="statViewersA">—</div>
-      </div>
-      <div class="card card-solid-green" style="padding:18px 20px">
-        <div class="card-label" style="color:#000">보유 포인트</div>
-        <div class="stat-val" id="homePointsA" style="color:#000">0 P</div>
-      </div>
-      <div class="card" style="padding:18px 20px">
-        <div class="card-label">내전 상태</div>
-        <div id="inhouseStatusA" style="font-size:1rem;font-weight:700;margin-top:6px">대기중</div>
-      </div>
-      <div class="card" style="padding:18px 20px">
-        <div class="card-label">내 피로도</div>
-        <div style="font-size:1.8rem;font-weight:700;margin-top:6px">⚡ <span id="fatigueA">--</span><span style="font-size:.9rem;opacity:.6">/100</span></div>
-      </div>
+  <div class="stats-row">
+    <div class="card card-solid-blue">
+      <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div><div class="dash short"></div></div>
+      <div class="card-label">Platform Stats</div>
+      <div class="card-title">등록된 시청자</div>
+      <div class="stat-val" id="statViewers">— <span style="font-size:16px;font-weight:500;opacity:.8">명</span></div>
+      <div class="card-footer-brand">Davido Inhouse</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-      <div class="card">
+    <div class="card card-solid-green">
+      <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
+      <div class="card-label">My Points</div>
+      <div class="card-title">보유 포인트</div>
+      <div class="stat-val" id="homePoints">0 <span style="font-size:16px;font-weight:500;opacity:.8">P</span></div>
+      <div class="card-footer-brand">Davido Inhouse</div>
+    </div>
+  </div>
+  <div class="main-grid">
+    <div class="main-content">
+      <div class="ann-section">
         <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
-        <div id="annScrollA"><div class="card card-gradient-purple" style="padding:16px"><div class="card-label">NOTICE</div><div class="card-title">공지 대기중</div></div></div>
+        <div class="ann-scroll" id="annScroll">
+          <div class="card card-gradient-purple ann-card">
+            <div class="card-label" style="opacity:.9">EVENT MATCH</div>
+            <div class="card-title">공지사항 대기중</div>
+            <div class="card-desc">아직 등록된 공지가 없습니다</div>
+            <div class="card-footer-link" style="margin-top:auto">관리자가 공지를 등록하면 표시됩니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="side-stack">
+      <div class="card">
+        <div class="h-section">실시간 피드</div>
+        <div id="feedList">
+          <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">데이터 로딩 중...</span></div></div>
+        </div>
       </div>
       <div class="card">
-        <div class="h-section">⚡ 실시간 피드</div>
-        <div id="feedListA"><div class="list-item"><span style="font-size:13px;color:var(--text-muted)">로딩 중...</span></div></div>
-      </div>
-      <div class="card">
-        <div class="h-section">🏆 포인트 랭킹</div>
-        <div id="rankListA"><div class="list-item"><span style="font-size:13px;color:var(--text-muted)">로딩 중...</span></div></div>
+        <div class="h-section">포인트 랭킹</div>
+        <div id="rankList">
+          <div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">로딩 중</span></div></div>
+        </div>
       </div>
     </div>
   </div>
-
-  <!-- ══ B안: 2열 큰 스탯 + 3열 콘텐츠 ══ -->
-  <div id="layoutB" class="dash-layout" style="display:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div class="card card-solid-blue">
-        <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
-        <div class="card-label">Platform Stats</div>
-        <div class="card-title">등록된 시청자</div>
-        <div class="stat-val" id="statViewersB">—</div>
-        <div class="card-footer-brand">Davido Inhouse</div>
-      </div>
-      <div class="card card-solid-green">
-        <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div></div>
-        <div class="card-label">My Points · Fatigue</div>
-        <div class="card-title">보유 포인트</div>
-        <div class="stat-val" id="homePointsB" style="color:#000">0 P</div>
-        <div style="font-size:.8rem;color:#000;opacity:.7;margin-top:4px">⚡ 피로도 <span id="fatigueB">--</span>/100</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:16px">
-      <div class="card">
-        <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
-        <div id="annScrollB"><div class="card card-gradient-purple" style="padding:16px"><div class="card-label">NOTICE</div><div class="card-title">공지 대기중</div></div></div>
-      </div>
-      <div class="card">
-        <div class="h-section">⚡ 실시간 피드</div>
-        <div id="feedListB"><div class="list-item"><span style="font-size:13px;color:var(--text-muted)">로딩 중...</span></div></div>
-      </div>
-      <div class="card">
-        <div class="h-section">🏆 포인트 랭킹</div>
-        <div id="rankListB"><div class="list-item"><span style="font-size:13px;color:var(--text-muted)">로딩 중...</span></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ C안: 3열 동등 분할 ══ -->
-  <div id="layoutC" class="dash-layout" style="display:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-      <!-- 왼쪽: 스탯 + 공지 -->
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card card-solid-blue" style="padding:16px 20px">
-          <div class="card-label">등록된 시청자</div>
-          <div class="stat-val" id="statViewersC">—</div>
-        </div>
-        <div class="card card-solid-green" style="padding:16px 20px">
-          <div class="card-label" style="color:#000">보유 포인트</div>
-          <div class="stat-val" id="homePointsC" style="color:#000">0 P</div>
-          <div style="font-size:.78rem;color:#000;opacity:.65;margin-top:4px">⚡ 피로도 <span id="fatigueC">--</span>/100</div>
-        </div>
-        <div class="card" style="flex:1">
-          <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
-          <div id="annScrollC"><div class="card card-gradient-purple" style="padding:16px"><div class="card-label">NOTICE</div><div class="card-title">공지 대기중</div></div></div>
-        </div>
-      </div>
-      <!-- 가운데: 피드 -->
-      <div class="card">
-        <div class="h-section">⚡ 실시간 피드</div>
-        <div id="feedListC"><div class="list-item"><span style="font-size:13px;color:var(--text-muted)">로딩 중...</span></div></div>
-      </div>
-      <!-- 오른쪽: 랭킹 -->
-      <div class="card">
-        <div class="h-section">🏆 포인트 랭킹</div>
-        <div id="rankListC"><div class="list-item"><span style="font-size:13px;color:var(--text-muted)">로딩 중...</span></div></div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <!-- ═══ MINI GAMES ═══ -->
@@ -919,8 +853,6 @@ function showApp(viewer, inhousePoints){
   loadRanking();
   loadAnnouncements();
   loadFatigue();
-  // 레이아웃 초기화
-  setTimeout(()=>setLayout(_curLayout), 100);
 }
 
 async function refreshMe(){
@@ -1918,51 +1850,14 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* ── 레이아웃 전환 ── */
-let _curLayout = localStorage.getItem('dashLayout') || 'a';
-
-function setLayout(l) {
-  _curLayout = l;
-  localStorage.setItem('dashLayout', l);
-  ['a','b','c'].forEach(x => {
-    document.getElementById('layout'+x.toUpperCase()).style.display = x===l ? '' : 'none';
-    const btn = document.getElementById('lb'+x.toUpperCase());
-    if(btn) btn.style.background = x===l ? 'rgba(168,85,247,.4)' : 'rgba(255,255,255,.06)';
-    if(btn) btn.style.borderColor = x===l ? '#a855f7' : 'rgba(255,255,255,.2)';
-  });
-  // 피로도 값 복사
-  const fv = document.getElementById('navFatigue')?.textContent || '--';
-  ['A','B','C'].forEach(x => { const e=document.getElementById('fatigue'+x); if(e) e.textContent=fv; });
-  // 포인트 복사
-  const pv = pts;
-  const fmt = n => n.toLocaleString()+' <span style="font-size:16px;font-weight:500;opacity:.8">P</span>';
-  ['A','B','C'].forEach(x => { const e=document.getElementById('homePoints'+x); if(e) e.innerHTML=fmt(pv); });
-}
-
-function _syncDashData(viewers, feed, ranking, annHtml) {
-  // 시청자 수
-  ['A','B','C'].forEach(x => {
-    const e=document.getElementById('statViewers'+x);
-    if(e) e.innerHTML=viewers+' <span style="font-size:16px;font-weight:500;opacity:.8">명</span>';
-  });
-  // 피드
-  ['A','B','C'].forEach(x => { const e=document.getElementById('feedList'+x); if(e) e.innerHTML=feed; });
-  // 랭킹
-  ['A','B','C'].forEach(x => { const e=document.getElementById('rankList'+x); if(e) e.innerHTML=ranking; });
-  // 공지
-  ['A','B','C'].forEach(x => { const e=document.getElementById('annScroll'+x); if(e) e.innerHTML=annHtml; });
-}
-
 function renderFeed(items) {
   const feedEl = document.getElementById('feedList');
   if (!feedEl) return;
   if (!items || !items.length) {
-    const empty = `<div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">아직 활동 기록이 없습니다</span></div></div>`;
-    feedEl.innerHTML = empty;
-    ['A','B','C'].forEach(x=>{ const e=document.getElementById('feedList'+x); if(e) e.innerHTML=empty; });
+    feedEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">아직 활동 기록이 없습니다</span></div></div>`;
     return;
   }
-  const html = items.slice(0,10).map(f => {
+  feedEl.innerHTML = items.slice(0,10).map(f => {
     const t = relTime(f.at);
     const reason = f.reason || '';
     return `<div class="list-item">
@@ -1972,8 +1867,6 @@ function renderFeed(items) {
       </div>
     </div>`;
   }).join('');
-  feedEl.innerHTML = html;
-  ['A','B','C'].forEach(x=>{ const e=document.getElementById('feedList'+x); if(e) e.innerHTML=html; });
 }
 
 async function loadRanking(){
@@ -1983,16 +1876,12 @@ async function loadRanking(){
     if(!rankEl) return;
     if(d.ranking && d.ranking.length){
       const medals = ['#ffd700','#c0c0c0','#cd7f32'];
-      const rHtml = d.ranking.slice(0,7).map((r,i)=>{
+      rankEl.innerHTML = d.ranking.slice(0,7).map((r,i)=>{
         const c = medals[i] || 'var(--text-muted)';
         return `<div class="list-item"><div class="list-item-left"><span style="color:${c};font-weight:bold;width:20px">${i+1}</span><span style="font-size:14px;font-weight:500">${escapeHtml(r.name)}</span></div><span class="text-green" style="font-weight:600;font-size:14px">${fmtNum(r.points)} P</span></div>`;
       }).join('');
-      rankEl.innerHTML = rHtml;
-      ['A','B','C'].forEach(x=>{ const e=document.getElementById('rankList'+x); if(e) e.innerHTML=rHtml; });
     } else {
-      const empty = `<div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">랭킹 데이터 없음</span></div></div>`;
-      rankEl.innerHTML = empty;
-      ['A','B','C'].forEach(x=>{ const e=document.getElementById('rankList'+x); if(e) e.innerHTML=empty; });
+      rankEl.innerHTML = `<div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">랭킹 데이터 없음</span></div></div>`;
     }
   }catch{}
 }
@@ -2003,11 +1892,9 @@ async function loadSnapshot(){
     const d = await r.json();
     if(!d.ok) throw new Error(d.error||'snapshot_failed');
 
-    // Stats row — 모든 레이아웃에 동기화
-    const svHTML = fmtNum(d.viewers_total)+' <span style="font-size:16px;font-weight:500;opacity:.8">명</span>';
+    // Stats row
     const svEl = document.getElementById('statViewers');
-    if(svEl) svEl.innerHTML = svHTML;
-    ['A','B','C'].forEach(x=>{ const e=document.getElementById('statViewers'+x); if(e) e.innerHTML=svHTML; });
+    if(svEl) svEl.innerHTML = fmtNum(d.viewers_total)+' <span style="font-size:16px;font-weight:500;opacity:.8">명</span>';
 
     // Feed
     if(d.feed) renderFeed(d.feed);
@@ -2027,18 +1914,16 @@ async function loadAnnouncements(){
     const d = await r.json();
     const items = d.items || [];
     const wrap = document.getElementById('annScroll');
-    const annElems = [wrap, ...['A','B','C'].map(x=>document.getElementById('annScroll'+x))].filter(Boolean);
     if(!items.length){
-      const empty = `<div class="card card-gradient-purple ann-card">
+      wrap.innerHTML = `<div class="card card-gradient-purple ann-card">
         <div class="card-label" style="opacity:.9">EVENT MATCH</div>
         <div class="card-title">공지사항 대기중</div>
         <div class="card-desc">아직 등록된 공지가 없습니다</div>
         <div class="card-footer-link" style="margin-top:auto">관리자가 공지를 등록하면 표시됩니다</div>
       </div>`;
-      annElems.forEach(e=>{ if(e) e.innerHTML=empty; });
       return;
     }
-    const annHtmlStr = items.map(it => {
+    wrap.innerHTML = items.map(it => {
       const title = cleanMentions(it.title);
       const body  = cleanMentions(it.body);
       let descHtml = escapeHtml(body);
@@ -2050,7 +1935,6 @@ async function loadAnnouncements(){
         <div class="card-footer-link" style="margin-top:auto;font-size:12px">${relTime(it.at)} · 디스코드 공지</div>
       </div>`;
     }).join('');
-    annElems.forEach(e=>{ if(e) e.innerHTML=annHtmlStr; });
   }catch(e){
     console.warn('[announcements]', e.message);
   }
