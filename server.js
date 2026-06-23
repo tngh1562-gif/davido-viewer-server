@@ -251,6 +251,18 @@ app.post('/api/auth/confirm', (req, res) => {
 });
 
 // ── Auth: login (nickname only for now) ──
+// ── 로컬 개발용 빠른 로그인 (localhost 에서만 동작) ──
+app.get('/dev-login', (req, res) => {
+  const host = req.headers.host || '';
+  if (!host.startsWith('localhost') && !host.startsWith('127.')) {
+    return res.status(403).send('로컬에서만 사용 가능');
+  }
+  const name = req.query.name || '다비도';
+  const token = makeSessionToken(name);
+  res.setHeader('Set-Cookie', `vsession=${token}; Path=/; Max-Age=${10*365*24*3600}`);
+  res.redirect('/');
+});
+
 app.post('/api/login', (req, res) => {
   const { name } = req.body;
   if (!name || name.trim().length < 2 || name.trim().length > 16)

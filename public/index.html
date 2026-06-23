@@ -538,7 +538,8 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 
 <!-- ═══ HOME ═══ -->
 <div id="page-home" class="page active">
-  <div class="stats-row">
+  <!-- B안: 큰 스탯 2개 + 3열 콘텐츠 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
     <div class="card card-solid-blue">
       <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div><div class="dash short"></div></div>
       <div class="card-label">Platform Stats</div>
@@ -548,38 +549,35 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     </div>
     <div class="card card-solid-green">
       <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
-      <div class="card-label">My Points</div>
+      <div class="card-label">My Points · Fatigue</div>
       <div class="card-title">보유 포인트</div>
-      <div class="stat-val" id="homePoints">0 <span style="font-size:16px;font-weight:500;opacity:.8">P</span></div>
-      <div class="card-footer-brand">Davido Inhouse</div>
+      <div class="stat-val" id="homePoints" style="color:#000">0 <span style="font-size:16px;font-weight:500;opacity:.8">P</span></div>
+      <div style="font-size:.82rem;color:#000;opacity:.65;margin-top:8px;font-weight:600">⚡ 피로도 <span id="homePageFatigue">--</span>/100</div>
+      <div class="card-footer-brand" style="color:#000">Davido Inhouse</div>
     </div>
   </div>
-  <div class="main-grid">
-    <div class="main-content">
-      <div class="ann-section">
-        <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
-        <div class="ann-scroll" id="annScroll">
-          <div class="card card-gradient-purple ann-card">
-            <div class="card-label" style="opacity:.9">EVENT MATCH</div>
-            <div class="card-title">공지사항 대기중</div>
-            <div class="card-desc">아직 등록된 공지가 없습니다</div>
-            <div class="card-footer-link" style="margin-top:auto">관리자가 공지를 등록하면 표시됩니다</div>
-          </div>
+  <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
+      <div class="ann-scroll" id="annScroll">
+        <div class="card card-gradient-purple ann-card">
+          <div class="card-label" style="opacity:.9">EVENT MATCH</div>
+          <div class="card-title">공지사항 대기중</div>
+          <div class="card-desc">아직 등록된 공지가 없습니다</div>
+          <div class="card-footer-link" style="margin-top:auto">관리자가 공지를 등록하면 표시됩니다</div>
         </div>
       </div>
     </div>
-    <div class="side-stack">
-      <div class="card">
-        <div class="h-section">실시간 피드</div>
-        <div id="feedList">
-          <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">데이터 로딩 중...</span></div></div>
-        </div>
+    <div class="card">
+      <div class="h-section">⚡ 실시간 피드</div>
+      <div id="feedList">
+        <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">데이터 로딩 중...</span></div></div>
       </div>
-      <div class="card">
-        <div class="h-section">포인트 랭킹</div>
-        <div id="rankList">
-          <div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">로딩 중</span></div></div>
-        </div>
+    </div>
+    <div class="card">
+      <div class="h-section">🏆 포인트 랭킹</div>
+      <div id="rankList">
+        <div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">로딩 중</span></div></div>
       </div>
     </div>
   </div>
@@ -825,6 +823,7 @@ function saveFatigue(n){
   fill.style.background = n<=20?'#f87171':n<=50?'#fbbf24':'#4ade80';
   badge.className = 'fatigue-badge' + (n<=20?' low':'');
   const sf=document.getElementById('shopFatigue');if(sf)sf.textContent=n;
+  const hf=document.getElementById('homePageFatigue');if(hf)hf.textContent=n;
 }
 
 async function loadFatigue(){
