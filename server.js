@@ -118,7 +118,7 @@ function getViewer(name) {
   // 피로도 초기화 (필드 없으면 기본값)
   if (v.fatigue === undefined) v.fatigue = 100;
   // 매일 자정 KST 자동 30 회복
-  const today = getTodayKST ? getTodayKST() : new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  const today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
   if (v.fatigueResetDate !== today) {
     v.fatigue = Math.min(100, (v.fatigue || 0) + 30);
     v.fatigueResetDate = today;
@@ -480,9 +480,6 @@ app.post('/api/shop/buy', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ══════════ MINI GAMES ══════════
-function hVal(hand){let v=0,a=0;for(const c of hand){v+=cVal(c);if(c.r==='A')a++}while(v>21&&a>0){v-=10;a--}return v}
-
 // ── Inhouse Snapshot (for index_5 dashboard) ──
 const ANN_FILE = path.join(DATA_DIR, 'announcements.json');
 if (!fs.existsSync(ANN_FILE)) writeJSON(ANN_FILE, { items: [] });
@@ -593,8 +590,7 @@ app.post('/api/game/timing/press', async (req, res) => {
   if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
-  if (diff <= 100) { // ±0.1초 (네트워크 지연 감안)
-    if (timingWinnerSaving) return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs, error: '이미 당첨자 있음' });
+  if (diff <= 5) { // ±0.005초 (5ms)
     timingWinnerSaving = true;
     let newPoints = null;
     try {
