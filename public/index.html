@@ -113,7 +113,7 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 }
 @keyframes flameSideWave{from{transform:scaleY(.7)}to{transform:scaleY(1.1)}}
 /* HUD 오버레이 — 상단 중앙 고정, 로켓 영역 침범 안 함 */
-.cs-hud{
+.cs-hud{z-index:7;
   position:absolute;top:18px;left:0;right:0;
   display:flex;flex-direction:column;align-items:center;
   pointer-events:none;z-index:10;
@@ -2057,9 +2057,12 @@ function initCrash(wrap) {
     <!-- 씬 -->
     <div class="crash-scene" id="crashScene">
       <div class="cs-bg" id="csBg"></div>
-      <div class="cs-stars" id="csStars"></div>
-      <div id="csClouds" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
-      <div class="cs-ground" id="csGround" style="height:18%"></div>
+      <!-- AI 생성 우주 배경 영상 -->
+      <video id="csSpaceVideo" src="/space-loop.mp4" autoplay loop muted playsinline
+        style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.5s;pointer-events:none;z-index:1"></video>
+      <div class="cs-stars" id="csStars" style="z-index:2"></div>
+      <div id="csClouds" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3"></div>
+      <div class="cs-ground" id="csGround" style="height:18%;z-index:4"></div>
       <!-- 발사대 SVG (지면 바로 위) -->
       <div class="cs-pad" id="csPad" style="bottom:17%;width:130px">
         <svg viewBox="0 0 130 90" fill="none" style="width:130px;height:90px">
@@ -2073,12 +2076,14 @@ function initCrash(wrap) {
         </svg>
       </div>
       <!-- 로켓 (JS가 bottom 값 계산해서 제어) -->
-      <div class="cs-rocket-wrap" id="csRocket" style="bottom:22%">
-        ${ROCKET_SVG}
+      <div class="cs-rocket-wrap" id="csRocket" style="bottom:22%;z-index:5">
+        <img src="/rocket-cartoon.png"
+          style="width:100px;height:auto;mix-blend-mode:screen;filter:drop-shadow(0 0 18px rgba(255,140,30,.8)) drop-shadow(0 0 40px rgba(255,80,0,.5))"
+          alt="rocket">
         <div id="csFlame" style="display:none">${FLAME_SVG}</div>
       </div>
       <!-- 파티클 캔버스 -->
-      <canvas class="cs-particles" id="csParticles"></canvas>
+      <canvas class="cs-particles" id="csParticles" style="z-index:6"></canvas>
       <!-- HUD -->
       <div class="cs-hud" id="csHud">
         <div class="cs-mult cs-mult-white" id="csMultText">1.00x</div>
@@ -2174,6 +2179,9 @@ function _updateBg(alt){
     topCol='rgb(0,0,5)';botCol='rgb(2,0,12)';
   }
   bg.style.background=`linear-gradient(180deg,${topCol} 0%,${botCol} 100%)`;
+  // 고도 높아질수록 우주 배경 영상 페이드인
+  const spaceVid=$c('csSpaceVideo');
+  if(spaceVid) spaceVid.style.opacity=Math.min(1,Math.max(0,(alt-.35)/.4));
   // 별 표시
   const stEl=$c('csStars');
   if(stEl)stEl.style.opacity=Math.min(1,Math.max(0,(alt-.2)/.4));
