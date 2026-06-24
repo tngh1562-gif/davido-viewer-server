@@ -364,36 +364,6 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .games-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .game-card{aspect-ratio:16/10;cursor:pointer}
 .game-card:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
-.tg-target{font-size:56px;font-weight:900;letter-spacing:-2px;color:#c4b5fd;margin:8px 0 4px;font-variant-numeric:tabular-nums}
-.tg-timer{font-size:40px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:20px}
-.tg-stop-btn{width:100%;padding:18px;font-size:1.3rem;font-weight:900;border:none;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:2px;box-shadow:0 0 30px rgba(168,85,247,.4);transition:all .1s}
-.tg-stop-btn:active{transform:scale(.96)}
-.tg-start-btn{width:100%;padding:14px;font-size:1rem;font-weight:900;border:none;border-radius:10px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:1px}
-.tg-won-box{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(168,85,247,.2));border:1px solid rgba(168,85,247,.4);border-radius:12px;padding:20px;margin-top:16px;text-align:center}
-.s-chip{background:rgba(255,200,68,.1);border:1px solid rgba(255,200,68,.3);border-radius:8px;color:var(--gold);font-size:.82rem;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit;transition:all .15s}
-.s-chip:hover,.s-chip.active{background:rgba(255,200,68,.22);border-color:var(--gold);box-shadow:0 0 12px rgba(255,200,68,.3)}
-.ms-stats{display:flex;justify-content:space-around;gap:12px;background:rgba(0,0,0,.4);border-radius:12px;padding:10px;margin-bottom:14px}
-.ms-stat{text-align:center;flex:1}
-.ms-stat-l{font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.ms-stat-v{font-size:1.1rem;font-weight:700;color:var(--gold)}
-.ms-grid{display:grid;gap:4px;background:rgba(0,0,0,.4);border-radius:12px;padding:8px;justify-content:center;margin-bottom:14px}
-.ms-cell{width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;cursor:pointer;transition:transform .08s,background .15s;user-select:none}
-.ms-cell:hover:not(.open):not(.flag){background:rgba(255,255,255,.15);transform:scale(1.05)}
-.ms-cell.open{background:rgba(255,255,255,.03);cursor:default}
-.ms-cell.open.safe{background:rgba(76,255,80,.18);border-color:rgba(76,255,80,.3);color:var(--ref-green);animation:msPop .2s}
-.ms-cell.flag{background:rgba(255,200,68,.18);border-color:rgba(255,200,68,.4)}
-.ms-cell.mine{background:rgba(255,71,87,.25);border-color:rgba(255,71,87,.4);animation:msBoom .3s}
-@keyframes msPop{from{transform:scale(.6)}to{transform:scale(1)}}
-@keyframes msBoom{0%{transform:scale(.5);background:#ff4757}50%{transform:scale(1.2);background:#ff4757}100%{transform:scale(1)}}
-.ms-c1{color:#4da3ff}.ms-c2{color:#4ade80}.ms-c3{color:#facc15}.ms-c4{color:#a855f7}
-.ms-actions{display:flex;gap:10px}
-.ms-btn{flex:1;padding:11px;border-radius:10px;border:none;font-family:inherit;font-weight:700;cursor:pointer;font-size:.85rem;transition:all .15s}
-.ms-btn.cash{background:linear-gradient(135deg,#4ade80,#22c55e);color:#000}
-.ms-btn.cash:hover{box-shadow:0 0 24px rgba(74,222,128,.5)}
-.ms-btn.cash:disabled{opacity:.4;cursor:not-allowed}
-.ms-btn.new{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15)}
-.ms-btn.new:hover{background:rgba(255,255,255,.14)}
-.ms-bet-row{display:flex;gap:6px;margin-bottom:10px;justify-content:center}
 
 /* COMMUNITY */
 .comm-nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
@@ -1615,34 +1585,23 @@ function fmtTG(ms) {
   const cs = Math.floor((ms % 1000) / 10);
   return `${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
 }
-function fmtTGHint(ms) {
-  return Math.floor(ms / 1000);
-}
+// 목표 시간 표시용 — 소수점 숨김 (약 XX초로만 표시)
 
 async function initTiming(wrap) {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch('/api/game/timing/state', { signal: ctrl.signal })
-      .then(res=>res.json()).finally(()=>clearTimeout(timer));
-    renderTiming(wrap, r);
-  } catch {
-    wrap.innerHTML = `<div style="text-align:center;padding:40px">
-      <div style="color:var(--text-muted);margin-bottom:12px">연결 중...</div>
-      <button class="s-chip" onclick="initTiming(document.getElementById('gmContent'))">↺ 다시 시도</button>
-    </div>`;
-  }
+  const r = await fetch('/api/game/timing/state').then(r=>r.json()).catch(()=>({ok:false}));
+  renderTiming(wrap, r);
 }
 
 function renderTiming(wrap, state) {
   if (!state || !state.ok) { wrap.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:40px">로딩 실패</div>'; return; }
-  const targetHint = fmtTGHint(state.targetMs);
+  // ±3초 범위로만 표시 (정확한 순간 비공개)
+  const target = fmtTG(state.targetMs);
 
   if (state.status === 'won') {
     wrap.innerHTML = `
       <div style="text-align:center;padding:20px">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">오늘의 목표 시간</div>
-        <div class="tg-target">${fmtTG(state.targetMs)}초</div>
+        <div class="tg-target">${target}초</div>
         <div class="tg-won-box">
           <div style="font-size:28px;margin-bottom:8px">🏆</div>
           <div style="font-size:18px;font-weight:700;color:#c4b5fd">${escapeHtml(state.winner?.name||'?')}님이 당첨!</div>
@@ -1656,8 +1615,8 @@ function renderTiming(wrap, state) {
   wrap.innerHTML = `
     <div style="text-align:center;padding:20px" id="tgWrap">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
-      <div class="tg-target">${fmtTG(state.targetMs)}초</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · 선착순 1명 100P</div>
+      <div class="tg-target">${target}초</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · <b style="color:#f87171">±0.005초(5ms) 이내</b> 선착순 1명 100P</div>
       <div id="tgPhase">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
         <div class="tg-timer" id="tgTimerDisp">00.00</div>
@@ -1669,18 +1628,26 @@ function renderTiming(wrap, state) {
 
 async function tgStart(targetMs) {
   if (tgRaf) cancelAnimationFrame(tgRaf);
-  const tgBtn = document.getElementById('tgStartBtn') || document.querySelector('#tgPhase .tg-start-btn');
-  if (tgBtn) { tgBtn.disabled = true; tgBtn.textContent = '시작 중...'; }
+  document.getElementById('tgStartBtn').disabled = true;
+  document.getElementById('tgStartBtn').textContent = '시작 중...';
 
+  const reqSentAt = Date.now(); // 요청 보낸 시각
   const r = await fetch('/api/game/timing/start', {method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).catch(()=>({ok:false}));
+  const reqReceivedAt = Date.now(); // 응답 받은 시각
   if (!r.ok) {
     toast(r.error || '오류 발생', 'err');
-    if (tgBtn) { tgBtn.disabled = false; tgBtn.textContent = '다시 도전 (1P)'; }
+    document.getElementById('tgStartBtn').disabled = false;
+    document.getElementById('tgStartBtn').textContent = '도전하기 (1P 차감)';
     return;
   }
   if (r.points != null) savePts(r.points);
-  tgSession = { sessionId: r.sessionId, startedAt: r.startedAt, targetMs };
+  if (r.fatigue != null) saveFatigue(r.fatigue);
+  // 네트워크 왕복의 절반만큼 이미 경과됐으므로 보정
+  // → 서버-클라이언트 시계 차이 + 네트워크 지연 모두 해결
+  const halfRtt = Math.round((reqReceivedAt - reqSentAt) / 2);
+  tgSession = { sessionId: r.sessionId, startedAt: reqReceivedAt - halfRtt, targetMs };
 
+  // 타이머 보임 — 단, 정확한 목표 시간은 범위로만 알려줌
   document.getElementById('tgPhase').innerHTML = `
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
     <div class="tg-timer" id="tgTimerDisp">00.00</div>
@@ -1705,6 +1672,9 @@ async function tgStop() {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ sessionId })
   }).then(r=>r.json()).catch(()=>({ok:false}));
+
+  const timerEl = document.getElementById('tgTimerDisp');
+  if (timerEl && r.elapsed) timerEl.textContent = fmtTG(r.elapsed);
 
   const resultEl = document.getElementById('tgResult');
   if (!resultEl) return;
@@ -1910,7 +1880,7 @@ async function loadRanking(){
     if(!rankEl) return;
     if(d.ranking && d.ranking.length){
       const medals = ['#ffd700','#c0c0c0','#cd7f32'];
-      rankEl.innerHTML = d.ranking.slice(0,10).map((r,i)=>{
+      rankEl.innerHTML = d.ranking.slice(0,7).map((r,i)=>{
         const c = medals[i] || 'var(--text-muted)';
         return `<div class="list-item"><div class="list-item-left"><span style="color:${c};font-weight:bold;width:20px">${i+1}</span><span style="font-size:14px;font-weight:500">${escapeHtml(r.name)}</span></div><span class="text-green" style="font-weight:600;font-size:14px">${fmtNum(r.points)} P</span></div>`;
       }).join('');
