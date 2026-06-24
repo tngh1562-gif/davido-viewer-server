@@ -1618,7 +1618,7 @@ function renderTiming(wrap, state) {
     wrap.innerHTML = `
       <div style="text-align:center;padding:20px">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">오늘의 목표 시간</div>
-        <div class="tg-target">약 ${targetHint}초</div>
+        <div class="tg-target">${fmtTG(state.targetMs)}초</div>
         <div class="tg-won-box">
           <div style="font-size:28px;margin-bottom:8px">🏆</div>
           <div style="font-size:18px;font-weight:700;color:#c4b5fd">${escapeHtml(state.winner?.name||'?')}님이 당첨!</div>
@@ -1632,8 +1632,8 @@ function renderTiming(wrap, state) {
   wrap.innerHTML = `
     <div style="text-align:center;padding:20px" id="tgWrap">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
-      <div class="tg-target">약 ${targetHint}초</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · <b style="color:#f87171">±0.005초(5ms) 이내</b> 선착순 1명 100P</div>
+      <div class="tg-target">${fmtTG(state.targetMs)}초</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · 선착순 1명 100P</div>
       <div id="tgPhase">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
         <div class="tg-timer" id="tgTimerDisp">00.00</div>
