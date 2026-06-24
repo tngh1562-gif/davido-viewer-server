@@ -589,26 +589,29 @@ app.post('/api/game/timing/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   if (await getTimingWinner()) return res.json({ ok: false, error: '오늘은 이미 당첨자가 나왔습니다!' });
-  // 피로도 체크
-  const fg = checkFatigue(name, FATIGUE_COST.timing);
-  if (!fg.ok) return res.json({ ok: false, error: fg.error, fatigue: fg.fatigue });
-  // 하루 50회 제한 (브루트포스 방지)
-  if (!rl(`timing-day:${name}`, 50, 86400)) return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
-  // 분당 5회 제한
-  if (!rl(`timing-min:${name}`, 5, 60)) return res.status(429).json({ ok: false, error: '너무 빠르게 시도하고 있습니다. 잠시 후 다시 시도하세요.' });
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
+    // 포인트 차감 먼저 (실패 시 레이트리밋 카운트 소모 안 됨)
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
       { nickname: name, amount: 1 },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
+    // 포인트 차감 성공 후에만 레이트리밋 체크
+    if (!rl(`timing-day:${name}`, 50, 86400)) {
+      // 이미 차감됐으므로 환불
+      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: 1 }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
+      return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
+    }
+    if (!rl(`timing-min:${name}`, 5, 60)) {
+      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: 1 }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
+      return res.status(429).json({ ok: false, error: '너무 빠르게 시도하고 있습니다. 잠시 후 다시 시도하세요.' });
+    }
     const sessionId = crypto.randomBytes(16).toString('hex');
     const startedAt = Date.now();
     timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
     setTimeout(() => timingSessions.delete(sessionId), 30000);
-    res.json({ ok: true, sessionId, startedAt, points: r.points, fatigue: fg.fatigue });
+    res.json({ ok: true, sessionId, startedAt, points: r.points });
   } catch(e) {
-    recoverFatigue(name, FATIGUE_COST.timing); // 오류 시 피로도 환불
     res.json({ ok: false, error: e.message });
   }
 });
@@ -841,27 +844,28 @@ async function msGrantPayout(name, payout) {
 app.post('/api/game/ms/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  // 피로도 체크
-  const fg = checkFatigue(name, FATIGUE_COST.ms);
-  if (!fg.ok) return res.json({ ok: false, error: fg.error, fatigue: fg.fatigue });
-  if (!rl(`ms-min:${name}`, 20, 60)) return res.status(429).json({ ok: false, error: '너무 빠릅니다' });
   const mineCount = Math.max(3, Math.min(7, parseInt(req.body.mineCount) || 5));
   const TOTAL = 25;
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
+    // 포인트 차감 먼저 (포인트 없으면 레이트리밋 소모 없음)
     const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
       { nickname: name, amount: 1 },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
+    // 포인트 차감 성공 후 레이트리밋 (포인트 없으면 카운트 소모 안 됨)
+    if (!rl(`ms-min:${name}`, 20, 60)) {
+      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: 1 }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
+      return res.status(429).json({ ok: false, error: '너무 빠릅니다. 잠시 후 다시 시도하세요.' });
+    }
     // 지뢰 위치 서버에서 생성 — 클라이언트에 절대 안 보냄
     const mineSet = new Set();
     while (mineSet.size < mineCount) mineSet.add(Math.floor(Math.random() * TOTAL));
     const sessionId = crypto.randomBytes(16).toString('hex');
     msSessions.set(sessionId, { name, mineSet, revealed: new Set(), bet: 1, mineCount, total: TOTAL, alive: true, cashed: false });
     setTimeout(() => msSessions.delete(sessionId), 30 * 60 * 1000);
-    res.json({ ok: true, sessionId, total: TOTAL, mineCount, points: dr.points, fatigue: fg.fatigue });
+    res.json({ ok: true, sessionId, total: TOTAL, mineCount, points: dr.points });
   } catch(e) {
-    recoverFatigue(name, FATIGUE_COST.ms); // 오류 시 피로도 환불
     res.json({ ok: false, error: e.message });
   }
 });
