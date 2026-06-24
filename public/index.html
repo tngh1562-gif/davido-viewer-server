@@ -1039,7 +1039,11 @@ async function placeBet(team) {
       }
     } catch {}
   };
-  ws.onclose = () => setTimeout(initBettingWS, 2500);
+  ws.onclose = () => {
+    setTimeout(initBettingWS, 2500);
+    // 재연결 시 피드·스냅샷 즉시 갱신
+    setTimeout(()=>{ loadSnapshot(); loadRanking(); }, 3000);
+  };
   // 초기 상태 로드
   fetch('/api/bet/status').then(r=>r.json()).then(renderBetting).catch(()=>{});
 })();

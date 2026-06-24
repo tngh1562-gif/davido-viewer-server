@@ -1135,8 +1135,18 @@ app.post('/api/fatigue/recover', async (req, res) => {
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
-  const shop = readJSON(SHOP_FILE, { items: [] });
+  const shop    = readJSON(SHOP_FILE, { items: [] });
+  const feed    = readJSON(FEED_FILE, { items: [] }).items.slice(0, 10);
+  // 연결 즉시 현재 상태 전송 (재연결 후 피드 복원)
   ws.send(JSON.stringify({ type: 'init', betting, shop }));
+  ws.send(JSON.stringify({ type: 'feed_update', items: feed }));
+  ws.send(JSON.stringify({
+    type: 'crash_state', phase: crash.phase, roundId: crash.roundId,
+    mult: crash.mult, betEndAt: crash.betEndAt, history: crash.history,
+    players: Object.entries(crash.bets).map(([n, b]) => ({
+      name: n, cashedOut: b.cashedOut, cashMult: b.cashedOut ? b.cashMult : null,
+    })),
+  }));
 });
 
 server.listen(PORT, () => {
