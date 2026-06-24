@@ -868,7 +868,7 @@ app.post('/api/game/ms/start', async (req, res) => {
   try {
     // 포인트 차감 먼저 (포인트 없으면 레이트리밋 소모 없음)
     const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1 },
+      { nickname: name, amount: 1, reason: '💣 지뢰찾기 시작 (-1P)' },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
     // 포인트 차감 성공 후 레이트리밋 (포인트 없으면 카운트 소모 안 됨)
