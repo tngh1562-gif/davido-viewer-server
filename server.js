@@ -628,6 +628,7 @@ app.post('/api/game/timing/start', async (req, res) => {
     const startedAt = Date.now();
     timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
     setTimeout(() => timingSessions.delete(sessionId), 30000);
+    addFeed('game', name, { reason: '⏱ 타이밍 복권 도전 (-1P)' });
     res.json({ ok: true, sessionId, startedAt, points: r.points });
   } catch(e) {
     res.json({ ok: false, error: e.message });
@@ -690,7 +691,7 @@ app.get('/api/ranking', async (req, res) => {
       .map(v => ({ name: (v.name || '').replace(/#.+$/, '').trim(), points: Math.max(0, Number(v.pass) || 0) }))
       .filter(v => v.name && v.points > 0)
       .sort((a, b) => b.points - a.points)
-      .slice(0, 10);
+      .slice(0, 30);
     res.json({ ok: true, ranking });
   } catch(e) { res.json({ ok: false, ranking: [], error: e.message }); }
 });
