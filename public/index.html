@@ -1645,14 +1645,13 @@ function renderTiming(wrap, state) {
 
 async function tgStart(targetMs) {
   if (tgRaf) cancelAnimationFrame(tgRaf);
-  document.getElementById('tgStartBtn').disabled = true;
-  document.getElementById('tgStartBtn').textContent = '시작 중...';
+  const tgBtn = document.getElementById('tgStartBtn') || document.querySelector('#tgPhase .tg-start-btn');
+  if (tgBtn) { tgBtn.disabled = true; tgBtn.textContent = '시작 중...'; }
 
   const r = await fetch('/api/game/timing/start', {method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).catch(()=>({ok:false}));
   if (!r.ok) {
     toast(r.error || '오류 발생', 'err');
-    document.getElementById('tgStartBtn').disabled = false;
-    document.getElementById('tgStartBtn').textContent = '도전하기 (1P 차감)';
+    if (tgBtn) { tgBtn.disabled = false; tgBtn.textContent = '다시 도전 (1P)'; }
     return;
   }
   if (r.points != null) savePts(r.points);
