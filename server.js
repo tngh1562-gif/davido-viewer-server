@@ -58,6 +58,7 @@ function addFeed(kind, viewer, data) {
 
 const ADMIN_SECRET          = process.env.ADMIN_SECRET          || 'davido-admin';
 const VIEWER_SERVER_SECRET  = process.env.VIEWER_SERVER_SECRET  || 'davido-admin';
+const SESSION_SECRET        = process.env.SESSION_SECRET        || 'davido-timing-secret';
 
 function readJSON(file, def) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
@@ -580,8 +581,8 @@ app.get('/api/game/timing/state', async (req, res) => {
     res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
   } catch(e) {
     console.error('[TIMING STATE]', e.message);
-    // 오류 시에도 ok:true로 기본값 반환 (로딩 실패 방지)
-    res.json({ ok: true, targetMs: getDailyTargetMs(), status: 'open', winner: null, date: getTodayKST() });
+    try { res.json({ ok: true, targetMs: getDailyTargetMs(), status: 'open', winner: null, date: getTodayKST() }); }
+    catch { res.json({ ok: true, targetMs: 10000, status: 'open', winner: null, date: getTodayKST() }); }
   }
 });
 
