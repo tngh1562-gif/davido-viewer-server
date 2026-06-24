@@ -611,13 +611,13 @@ app.post('/api/game/timing/start', async (req, res) => {
   try {
     // 포인트 차감 먼저 (실패 시 레이트리밋 카운트 소모 안 됨)
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1 },
+      { nickname: name, amount: 1, reason: '⏱ 타이밍 복권 도전 (-1P)' },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 부족' });
     // 포인트 차감 성공 후에만 레이트리밋 체크
     if (!rl(`timing-day:${name}`, 50, 86400)) {
       // 이미 차감됐으므로 환불
-      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: 1 }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
+      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: 1, reason: '⏱ 타이밍 복권 환불' }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
       return res.status(429).json({ ok: false, error: '오늘 도전 횟수를 초과했습니다 (하루 50회)' });
     }
     if (!rl(`timing-min:${name}`, 5, 60)) {
@@ -652,7 +652,7 @@ app.post('/api/game/timing/press', async (req, res) => {
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-        { nickname: name, amount: 100 },
+        { nickname: name, amount: 100, reason: '⏱ 타이밍 복권 당첨! (+100P)' },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
       if (r.ok) newPoints = r.points;
       else console.error('[TIMING] 100P 지급 실패:', name, r.error);
@@ -852,7 +852,7 @@ async function msGrantPayout(name, payout) {
   if (!INHOUSE_SERVER_URL) { console.error('[GRANT] INHOUSE_SERVER_URL 미설정 — 포인트 미지급:', name, payout); return null; }
   try {
     const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-      { nickname: name, amount: payout },
+      { nickname: name, amount: payout, reason: `💣 지뢰찾기 성공 (+${payout}P)` },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (r.ok) { addFeed('game', name, { reason: `💣 지뢰찾기 성공 (+${payout}P)` }); return r.points; }
   } catch {}
