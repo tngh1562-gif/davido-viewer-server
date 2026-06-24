@@ -472,6 +472,40 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .modal-pts{font-size:.82rem;color:var(--text-muted);margin-bottom:24px}
 .modal-pts span{color:var(--gold);font-weight:700}
 
+/* TIMING GAME */
+.tg-target{font-size:56px;font-weight:900;letter-spacing:-2px;color:#c4b5fd;margin:8px 0 4px;font-variant-numeric:tabular-nums;text-align:center}
+.tg-timer{font-size:48px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:20px;text-align:center}
+.tg-stop-btn{width:100%;max-width:300px;padding:18px;font-size:1.3rem;font-weight:900;border:none;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:2px;box-shadow:0 0 30px rgba(168,85,247,.4);transition:all .1s;display:block;margin:0 auto}
+.tg-stop-btn:active{transform:scale(.96)}
+.tg-start-btn{width:100%;max-width:300px;padding:14px;font-size:1rem;font-weight:900;border:none;border-radius:10px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:1px;display:block;margin:0 auto}
+.tg-won-box{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(168,85,247,.2));border:1px solid rgba(168,85,247,.4);border-radius:12px;padding:20px;margin-top:16px;text-align:center}
+
+/* MINESWEEPER */
+.ms-stats{display:flex;justify-content:space-around;gap:12px;background:rgba(0,0,0,.4);border-radius:12px;padding:10px;margin-bottom:14px}
+.ms-stat{text-align:center;flex:1}
+.ms-stat-l{font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.ms-stat-v{font-size:1.1rem;font-weight:700;color:var(--gold)}
+.ms-grid{display:grid;gap:4px;background:rgba(0,0,0,.4);border-radius:12px;padding:8px;justify-content:center;margin-bottom:14px}
+.ms-cell{width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;cursor:pointer;transition:transform .08s,background .15s;user-select:none}
+.ms-cell:hover:not(.open):not(.flag){background:rgba(255,255,255,.15);transform:scale(1.05)}
+.ms-cell.open{background:rgba(255,255,255,.03);cursor:default}
+.ms-cell.open.safe{background:rgba(76,255,80,.18);border-color:rgba(76,255,80,.3);color:var(--ref-green);animation:msPop .2s}
+.ms-cell.flag{background:rgba(255,200,68,.18);border-color:rgba(255,200,68,.4)}
+.ms-cell.mine{background:rgba(255,71,87,.25);border-color:rgba(255,71,87,.4);animation:msBoom .3s}
+@keyframes msPop{from{transform:scale(.6)}to{transform:scale(1)}}
+@keyframes msBoom{0%{transform:scale(.5);background:#ff4757}50%{transform:scale(1.2);background:#ff4757}100%{transform:scale(1)}}
+.ms-c1{color:#4da3ff}.ms-c2{color:#4ade80}.ms-c3{color:#facc15}.ms-c4{color:#a855f7}
+.ms-actions{display:flex;gap:10px}
+.ms-btn{flex:1;padding:11px;border-radius:10px;border:none;font-family:inherit;font-weight:700;cursor:pointer;font-size:.85rem;transition:all .15s}
+.ms-btn.cash{background:linear-gradient(135deg,#4ade80,#22c55e);color:#000}
+.ms-btn.cash:hover{box-shadow:0 0 24px rgba(74,222,128,.5)}
+.ms-btn.cash:disabled{opacity:.4;cursor:not-allowed}
+.ms-btn.new{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15)}
+.ms-btn.new:hover{background:rgba(255,255,255,.14)}
+.ms-bet-row{display:flex;gap:6px;margin-bottom:10px;justify-content:center}
+.ms-msg{text-align:center;font-size:.9rem;font-weight:700;min-height:24px;margin-bottom:8px}
+.s-chip{background:rgba(255,200,68,.1);border:1px solid rgba(255,200,68,.3);border-radius:8px;color:var(--gold);font-size:.82rem;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit;transition:all .15s}
+.s-chip:hover,.s-chip.active{background:rgba(255,200,68,.22);border-color:var(--gold)}
 </style>
 </head>
 <body>
