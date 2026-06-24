@@ -540,17 +540,22 @@ function getDailyTargetMs() {
   const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
   return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
 }
-// 당첨자 조회 — 인하우스 서버 우선, fallback 로컬
+// 당첨자 조회 — 인하우스 서버 우선 (3초 타임아웃), fallback 로컬
 async function getTimingWinner() {
   if (INHOUSE_SERVER_URL) {
     try {
-      const d = await getJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`);
-      if (d.date === getTodayKST()) return d.winner || null;
+      const d = await Promise.race([
+        getJson(`${INHOUSE_SERVER_URL}/api/viewer-timing-winner`),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 3000))
+      ]);
+      if (d && d.date === getTodayKST()) return d.winner || null;
       return null;
     } catch {}
   }
-  const saved = readJSON(TIMING_WIN_FILE, {});
-  return saved.date === getTodayKST() ? (saved.winner || null) : null;
+  try {
+    const saved = readJSON(TIMING_WIN_FILE, {});
+    return saved.date === getTodayKST() ? (saved.winner || null) : null;
+  } catch { return null; }
 }
 
 // 당첨자 저장 — 인하우스 서버 + 로컬 동시
@@ -569,9 +574,15 @@ async function saveTimingWinner(date, winner) {
 }
 
 app.get('/api/game/timing/state', async (req, res) => {
-  const targetMs = getDailyTargetMs();
-  const winner = await getTimingWinner();
-  res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
+  try {
+    const targetMs = getDailyTargetMs();
+    const winner = await getTimingWinner();
+    res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
+  } catch(e) {
+    console.error('[TIMING STATE]', e.message);
+    // 오류 시에도 ok:true로 기본값 반환 (로딩 실패 방지)
+    res.json({ ok: true, targetMs: getDailyTargetMs(), status: 'open', winner: null, date: getTodayKST() });
+  }
 });
 
 app.post('/api/game/timing/start', async (req, res) => {

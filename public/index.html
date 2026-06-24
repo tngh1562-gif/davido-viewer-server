@@ -1588,8 +1588,18 @@ function fmtTG(ms) {
 // 목표 시간 표시용 — 소수점 숨김 (약 XX초로만 표시)
 
 async function initTiming(wrap) {
-  const r = await fetch('/api/game/timing/state').then(r=>r.json()).catch(()=>({ok:false}));
-  renderTiming(wrap, r);
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch('/api/game/timing/state', { signal: ctrl.signal })
+      .then(res=>res.json()).finally(()=>clearTimeout(timer));
+    renderTiming(wrap, r);
+  } catch {
+    wrap.innerHTML = `<div style="text-align:center;padding:40px">
+      <div style="color:var(--text-muted);margin-bottom:12px">연결 중...</div>
+      <button class="s-chip" onclick="initTiming(document.getElementById('gmContent'))">↺ 다시 시도</button>
+    </div>`;
+  }
 }
 
 function renderTiming(wrap, state) {
