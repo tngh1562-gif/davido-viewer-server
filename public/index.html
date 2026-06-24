@@ -1885,7 +1885,7 @@ async function loadRanking(){
     if(!rankEl) return;
     if(d.ranking && d.ranking.length){
       const medals = ['#ffd700','#c0c0c0','#cd7f32'];
-      rankEl.innerHTML = d.ranking.slice(0,7).map((r,i)=>{
+      rankEl.innerHTML = d.ranking.slice(0,10).map((r,i)=>{
         const c = medals[i] || 'var(--text-muted)';
         return `<div class="list-item"><div class="list-item-left"><span style="color:${c};font-weight:bold;width:20px">${i+1}</span><span style="font-size:14px;font-weight:500">${escapeHtml(r.name)}</span></div><span class="text-green" style="font-weight:600;font-size:14px">${fmtNum(r.points)} P</span></div>`;
       }).join('');
