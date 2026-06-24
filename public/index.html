@@ -1662,16 +1662,15 @@ function renderTiming(wrap, state) {
 
 async function tgStart(targetMs) {
   if (tgRaf) cancelAnimationFrame(tgRaf);
-  document.getElementById('tgStartBtn').disabled = true;
-  document.getElementById('tgStartBtn').textContent = '시작 중...';
+  const startBtn = document.getElementById('tgStartBtn');
+  if (startBtn) { startBtn.disabled = true; startBtn.textContent = '시작 중...'; }
 
-  const reqSentAt = Date.now(); // 요청 보낸 시각
+  const reqSentAt = Date.now();
   const r = await fetch('/api/game/timing/start', {method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).catch(()=>({ok:false}));
-  const reqReceivedAt = Date.now(); // 응답 받은 시각
+  const reqReceivedAt = Date.now();
   if (!r.ok) {
     toast(r.error || '오류 발생', 'err');
-    document.getElementById('tgStartBtn').disabled = false;
-    document.getElementById('tgStartBtn').textContent = '도전하기 (1P 차감)';
+    if (startBtn) { startBtn.disabled = false; startBtn.textContent = '도전하기 (1P 차감)'; }
     return;
   }
   if (r.points != null) savePts(r.points);
@@ -1723,7 +1722,7 @@ async function tgStop() {
     document.getElementById('tgPhase').innerHTML = '<div style="color:var(--text-muted);font-size:14px">오늘의 당첨자가 나왔습니다 🎉</div>';
   } else if (r.error) {
     resultEl.innerHTML = `<div style="color:#ff6b81;font-size:14px">${escapeHtml(r.error)}</div>`;
-    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs||0})">다시 도전 (1P)</button>`;
+    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs||0})" id="tgStartBtn">다시 도전 (1P)</button>`;
   } else {
     const diff = r.diff || 0;
     const elapsed = r.elapsed || 0;
@@ -1733,7 +1732,7 @@ async function tgStop() {
       <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:8px">아쉽네요! 다시 도전해보세요</div>
     </div>`;
-    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs})">다시 도전 (1P)</button>`;
+    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs})" id="tgStartBtn">다시 도전 (1P)</button>`;
   }
 }
 
