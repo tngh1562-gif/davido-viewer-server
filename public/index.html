@@ -364,6 +364,12 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .games-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .game-card{aspect-ratio:16/10;cursor:pointer}
 .game-card:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.tg-target{font-size:56px;font-weight:900;letter-spacing:-2px;color:#c4b5fd;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.tg-timer{font-size:40px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:20px}
+.tg-stop-btn{width:100%;padding:18px;font-size:1.3rem;font-weight:900;border:none;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:2px;box-shadow:0 0 30px rgba(168,85,247,.4);transition:all .1s}
+.tg-stop-btn:active{transform:scale(.96)}
+.tg-start-btn{width:100%;padding:14px;font-size:1rem;font-weight:900;border:none;border-radius:10px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;cursor:pointer;font-family:inherit;letter-spacing:1px}
+.tg-won-box{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(168,85,247,.2));border:1px solid rgba(168,85,247,.4);border-radius:12px;padding:20px;margin-top:16px;text-align:center}
 
 /* COMMUNITY */
 .comm-nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
@@ -1629,7 +1635,8 @@ function renderTiming(wrap, state) {
       <div class="tg-target">약 ${targetHint}초</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · <b style="color:#f87171">±0.005초(5ms) 이내</b> 선착순 1명 100P</div>
       <div id="tgPhase">
-        <div style="font-size:13px;color:rgba(255,255,255,.3);margin-bottom:8px">타이머는 시작 후 숨겨집니다 — 감으로 맞춰보세요!</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
+        <div class="tg-timer" id="tgTimerDisp">00.00</div>
         <button class="tg-start-btn" id="tgStartBtn" onclick="tgStart(${state.targetMs})">도전하기 (1P 차감)</button>
       </div>
       <div id="tgResult" style="margin-top:16px"></div>
@@ -1652,10 +1659,17 @@ async function tgStart(targetMs) {
   tgSession = { sessionId: r.sessionId, startedAt: r.startedAt, targetMs };
 
   document.getElementById('tgPhase').innerHTML = `
-    <div style="font-size:13px;color:rgba(255,200,68,.7);margin-bottom:12px;letter-spacing:1px">⏱ 타이머 실행 중...</div>
-    <button class="tg-stop-btn" onclick="tgStop()">⏹ STOP!</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.2);margin-top:8px">지금 몇 초인지 보이지 않습니다</div>`;
-  tgRaf = null;
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
+    <div class="tg-timer" id="tgTimerDisp">00.00</div>
+    <button class="tg-stop-btn" onclick="tgStop()">⏹ STOP!</button>`;
+
+  const tick = () => {
+    const el = document.getElementById('tgTimerDisp');
+    if (!el || !tgSession) return;
+    el.textContent = fmtTG(Date.now() - tgSession.startedAt);
+    tgRaf = requestAnimationFrame(tick);
+  };
+  tgRaf = requestAnimationFrame(tick);
 }
 
 async function tgStop() {
