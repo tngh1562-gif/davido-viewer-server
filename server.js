@@ -45,6 +45,9 @@ if (!fs.existsSync(POSTS_FILE))    writeJSON(POSTS_FILE,    { posts: [] });
 if (!fs.existsSync(COMMENTS_FILE)) writeJSON(COMMENTS_FILE, {});
 if (!fs.existsSync(FEED_FILE))     writeJSON(FEED_FILE,     { items: [] });
 
+const POINT_LOG_CHANNEL = process.env.POINT_LOG_CHANNEL_ID || '1519309432394219583';
+const BOT_API_SECRET_VIEWER = process.env.BOT_API_SECRET || '';
+
 // ── 피드 헬퍼 ──
 function addFeed(kind, viewer, data) {
   try {
@@ -316,6 +319,20 @@ function postJson(url, payload, extraHeaders) {
     req.write(body);
     req.end();
   });
+}
+
+// 디스코드 포인트 로그 전송 (postJson 이후에 위치)
+function sendPointLog(nickname, delta, afterPts, reason) {
+  if (!BOT_API_URL || !BOT_API_SECRET_VIEWER) return;
+  const sign = delta >= 0 ? '+' : '';
+  const emoji = delta >= 0 ? '🟢' : '🔴';
+  const src = '시청자사이트';
+  const content = `${emoji} [${src}] **${nickname}** ${sign}${delta}P → ${afterPts}P${reason ? `  |  ${reason}` : ''}`;
+  postJson(`${BOT_API_URL}/api/send-channel-message`, {
+    secret: BOT_API_SECRET_VIEWER,
+    channelId: POINT_LOG_CHANNEL,
+    content
+  }).catch(e => console.warn('[POINT_LOG]', e.message));
 }
 
 function getJson(url) {
