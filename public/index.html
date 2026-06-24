@@ -2002,9 +2002,7 @@ let _cTrailTimer=null,_cCountdownTimer=null;
 function $c(id){return document.getElementById(id);}
 
 /* SVG 로켓 마크업 */
-// AI 생성 로켓 이미지 사용
-const ROCKET_SVG=`<img src="/rocket.png" style="width:90px;height:auto;filter:drop-shadow(0 0 20px rgba(255,160,50,.7)) drop-shadow(0 0 40px rgba(255,100,0,.4));object-fit:contain" alt="rocket">
-<svg style="display:none" viewBox="0 0 70 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+const ROCKET_SVG=`<svg viewBox="0 0 70 180" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:150px;filter:drop-shadow(0 0 12px rgba(180,140,255,.5))">
 <defs>
   <linearGradient id="rBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8892a4"/><stop offset="25%" stop-color="#d4daea"/><stop offset="50%" stop-color="#ffffff"/><stop offset="75%" stop-color="#c8cede"/><stop offset="100%" stop-color="#7a8090"/></linearGradient>
   <linearGradient id="rNose" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8892a4"/><stop offset="40%" stop-color="#e8ecf8"/><stop offset="100%" stop-color="#6a7080"/></linearGradient>
@@ -2159,27 +2157,6 @@ function _buildClouds(){
 /* ── 배경 업데이트 ── */
 function _updateBg(alt){
   const bg=$c('csBg');if(!bg)return;
-  // 고도에 따라 AI 생성 우주 이미지 오버레이
-  if(alt>.5){
-    const spaceOpacity=Math.min(1,(alt-.5)/.4);
-    bg.style.background=`linear-gradient(180deg,rgb(0,0,8) 0%,rgb(2,0,15) 100%)`;
-    bg.style.backgroundImage=`url('/space-bg.png')`;
-    bg.style.backgroundSize='cover';
-    bg.style.backgroundPosition='center';
-    bg.style.opacity=1;
-    // 별도 오버레이로 페이드인
-    let spaceOverlay=$c('csSpaceBg');
-    if(!spaceOverlay){
-      spaceOverlay=document.createElement('div');
-      spaceOverlay.id='csSpaceBg';
-      spaceOverlay.style.cssText='position:absolute;inset:0;background:url(/space-bg.png) center/cover;transition:opacity .5s';
-      $c('crashScene')?.appendChild(spaceOverlay);
-    }
-    spaceOverlay.style.opacity=spaceOpacity;
-  } else {
-    const spaceOverlay=$c('csSpaceBg');
-    if(spaceOverlay)spaceOverlay.style.opacity=0;
-  }
   let topCol,botCol;
   if(alt<.2){
     const t=alt/.2;
@@ -2196,7 +2173,6 @@ function _updateBg(alt){
   } else {
     topCol='rgb(0,0,5)';botCol='rgb(2,0,12)';
   }
-  bg.style.backgroundImage='none';
   bg.style.background=`linear-gradient(180deg,${topCol} 0%,${botCol} 100%)`;
   // 별 표시
   const stEl=$c('csStars');
