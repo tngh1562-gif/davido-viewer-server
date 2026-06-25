@@ -134,7 +134,7 @@ function getViewer(name) {
   // 매일 자정 KST 자동 30 회복
   const today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
   if (v.fatigueResetDate !== today) {
-    v.fatigue = Math.min(100, (v.fatigue || 0) + 30);
+    v.fatigue = 100; // 매일 자정 완전 충전
     v.fatigueResetDate = today;
   }
   return { viewers, viewer: v };
