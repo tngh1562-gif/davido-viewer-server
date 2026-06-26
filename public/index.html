@@ -507,6 +507,24 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .s-chip{background:rgba(255,200,68,.1);border:1px solid rgba(255,200,68,.3);border-radius:8px;color:var(--gold);font-size:.82rem;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit;transition:all .15s}
 .s-chip:hover,.s-chip.active{background:rgba(255,200,68,.22);border-color:var(--gold)}
 
+/* ── 관리자 패널 ── */
+.admin-user-row{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;padding:10px 14px;
+}
+.admin-user-row.banned{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.05)}
+.admin-user-name{font-size:.85rem;font-weight:800;flex:1}
+.admin-user-meta{font-size:.68rem;color:var(--text-muted)}
+.admin-btn{padding:5px 12px;border-radius:7px;border:none;font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .12s}
+.admin-btn-kick{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25)}
+.admin-btn-kick:hover{background:rgba(251,191,36,.25)}
+.admin-btn-ban{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.25)}
+.admin-btn-ban:hover{background:rgba(239,68,68,.22)}
+.admin-btn-unban{background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.25)}
+.admin-btn-unban:hover{background:rgba(16,185,129,.2)}
+.ban-badge{font-size:.62rem;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-weight:700}
+
 /* ══════════════════════════════════════
    MOBILE RESPONSIVE
 ══════════════════════════════════════ */
@@ -664,6 +682,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item" onclick="switchTab('page-community',this);loadCommunity('notice')">커뮤니티</div>
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
+      <div class="nav-item" id="adminNavTab" style="display:none;color:#ef4444" onclick="switchTab('page-admin',this);loadAdminUsers()">🛡 관리자</div>
     </div>
     <div class="user-profile">
       <div class="fatigue-badge" id="fatigueBadge" title="피로도 — 게임할 때마다 소모, 매일 자정 30 회복">
@@ -888,6 +907,27 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   </div>
 </div>
 
+<!-- ═══ ADMIN ═══ -->
+<div id="page-admin" class="page">
+  <div class="h-section" style="margin-bottom:6px">🛡 관리자 패널</div>
+  <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:20px">현재 로그인된 시청자 목록 · 세션 삭제 또는 영구 밴 가능</div>
+
+  <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+    <button onclick="loadAdminUsers()" style="padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#f0f0f8;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 새로고침</button>
+    <span id="adminUserCount" style="font-size:.75rem;color:var(--text-muted)"></span>
+  </div>
+
+  <!-- 유저 목록 -->
+  <div id="adminUserList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:32px">
+    <div style="color:var(--text-muted);font-size:.82rem">불러오는 중...</div>
+  </div>
+
+  <!-- 밴 목록 -->
+  <div class="h-section" style="margin-bottom:12px;font-size:14px">🚫 밴 목록</div>
+  <div id="adminBanList" style="display:flex;flex-direction:column;gap:6px">
+    <div style="color:var(--text-muted);font-size:.82rem">없음</div>
+  </div>
+</div>
 </main>
 
 <!-- 모바일 하단 탭바 -->
@@ -1007,6 +1047,11 @@ function showApp(viewer, inhousePoints){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainNav').style.display = '';
   document.getElementById('mainContent').style.display = '';
+  // 관리자 탭 표시
+  const ADMINS = ['다비도'];
+  if(ADMINS.includes(viewer.name)){
+    document.getElementById('adminNavTab').style.display = '';
+  }
   loadSnapshot();
   loadRanking();
   loadAnnouncements();
@@ -1678,6 +1723,72 @@ function syncMobileTab(tab) {
 })()
 
 /* ══════════ TOAST ══════════ */
+/* ══════════════════════════════════════
+   관리자 패널
+══════════════════════════════════════ */
+async function loadAdminUsers(){
+  const r = await fetch('/api/admin/users').then(r=>r.json()).catch(()=>({ok:false}));
+  if(!r.ok){ document.getElementById('adminUserList').innerHTML='<div style="color:#ef4444">불러오기 실패 (권한 없음)</div>'; return; }
+
+  const users = r.users || [];
+  const banned = r.banned || [];
+
+  document.getElementById('adminUserCount').textContent = `총 ${users.length}명 로그인 중 · 밴 ${banned.length}명`;
+
+  // 유저 목록
+  const ul = document.getElementById('adminUserList');
+  if(!users.length){ ul.innerHTML='<div style="color:var(--text-muted);font-size:.82rem">로그인된 유저 없음</div>'; }
+  else {
+    ul.innerHTML = users.map(u=>`
+      <div class="admin-user-row ${u.banned?'banned':''}">
+        <div>
+          <div class="admin-user-name">${escapeHtml(u.name)} ${u.banned?'<span class="ban-badge">밴됨</span>':''}</div>
+          <div class="admin-user-meta">세션 ${u.sessions}개 · 마지막 접속 ${relTime(u.lastSeen)}</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:auto">
+          ${!u.banned ? `
+            <button class="admin-btn admin-btn-kick" onclick="adminKick('${escapeHtml(u.name)}')">🔄 세션삭제</button>
+            <button class="admin-btn admin-btn-ban"  onclick="adminBan('${escapeHtml(u.name)}')">🚫 밴</button>
+          ` : `
+            <button class="admin-btn admin-btn-unban" onclick="adminUnban('${escapeHtml(u.name)}')">✅ 밴해제</button>
+          `}
+        </div>
+      </div>`).join('');
+  }
+
+  // 밴 목록
+  const bl = document.getElementById('adminBanList');
+  if(!banned.length){ bl.innerHTML='<div style="color:var(--text-muted);font-size:.82rem">밴된 유저 없음</div>'; }
+  else {
+    bl.innerHTML = banned.map(name=>`
+      <div class="admin-user-row banned">
+        <div class="admin-user-name">${escapeHtml(name)} <span class="ban-badge">밴됨</span></div>
+        <button class="admin-btn admin-btn-unban" onclick="adminUnban('${escapeHtml(name)}')" style="margin-left:auto">✅ 밴해제</button>
+      </div>`).join('');
+  }
+}
+
+async function adminKick(name){
+  if(!confirm(`${name}의 세션을 삭제하시겠습니까?\n(해당 유저는 로그아웃됩니다. 재로그인은 가능합니다)`)) return;
+  const r = await fetch('/api/admin/kick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}).then(r=>r.json());
+  toast(r.ok ? `${name} 세션 삭제됨` : r.error, r.ok?'ok':'err');
+  loadAdminUsers();
+}
+
+async function adminBan(name){
+  if(!confirm(`${name}을 영구 밴 하시겠습니까?\n(밴된 유저는 치지직 인증을 해도 로그인이 차단됩니다)`)) return;
+  const r = await fetch('/api/admin/ban',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}).then(r=>r.json());
+  toast(r.ok ? `${name} 밴됨` : r.error, r.ok?'ok':'err');
+  loadAdminUsers();
+}
+
+async function adminUnban(name){
+  if(!confirm(`${name} 밴을 해제하시겠습니까?`)) return;
+  const r = await fetch('/api/admin/unban',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}).then(r=>r.json());
+  toast(r.ok ? `${name} 밴 해제됨` : r.error, r.ok?'ok':'err');
+  loadAdminUsers();
+}
+
 function toast(msg,type='info'){
   const el=document.createElement('div');
   el.className='t-toast '+type;el.textContent=msg;

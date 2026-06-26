@@ -256,6 +256,78 @@ app.get('/api/auth/poll/:token', (req, res) => {
 const RESERVED_NAMES = (process.env.RESERVED_NAMES || '다비도,관리자,admin,ADMIN,운영자,davido')
   .split(',').map(s => s.trim().toLowerCase());
 
+// ── 밴 시스템 ──
+const BANNED_FILE = path.join(DATA_DIR, 'banned.json');
+if (!fs.existsSync(BANNED_FILE)) writeJSON(BANNED_FILE, []);
+let _banned = readJSON(BANNED_FILE, []);
+
+function isBanned(name) { return _banned.includes(name); }
+function banUser(name) {
+  if (!_banned.includes(name)) { _banned.push(name); writeJSON(BANNED_FILE, _banned); }
+  // 기존 세션 전부 삭제
+  for (const [t, s] of Object.entries(_sessions)) {
+    if ((typeof s === 'string' ? s : s?.name) === name) delete _sessions[t];
+  }
+  writeJSON(SESSIONS_FILE, _sessions);
+}
+function unbanUser(name) {
+  _banned = _banned.filter(n => n !== name);
+  writeJSON(BANNED_FILE, _banned);
+}
+function kickUser(name) {
+  for (const [t, s] of Object.entries(_sessions)) {
+    if ((typeof s === 'string' ? s : s?.name) === name) delete _sessions[t];
+  }
+  writeJSON(SESSIONS_FILE, _sessions);
+}
+
+// ── 관리자 확인 미들웨어 ──
+function requireAdmin(req, res, next) {
+  const name = getSessionName(req);
+  const admins = (process.env.ADMIN_NICKNAMES || '다비도').split(',').map(s => s.trim());
+  if (!name || !admins.includes(name)) return res.status(403).json({ ok: false, error: '관리자 권한 필요' });
+  next();
+}
+
+// ── 관리자 API: 유저 목록 ──
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  const nameMap = {};
+  for (const [t, s] of Object.entries(_sessions)) {
+    const name = typeof s === 'string' ? s : s?.name;
+    const createdAt = typeof s === 'object' ? s?.createdAt : 0;
+    if (!name) continue;
+    if (!nameMap[name]) nameMap[name] = { name, sessions: 0, lastSeen: 0, banned: isBanned(name) };
+    nameMap[name].sessions++;
+    if (createdAt > nameMap[name].lastSeen) nameMap[name].lastSeen = createdAt;
+  }
+  const users = Object.values(nameMap).sort((a, b) => b.lastSeen - a.lastSeen);
+  res.json({ ok: true, users, banned: _banned });
+});
+
+// ── 관리자 API: 킥 (세션 삭제, 재로그인 가능) ──
+app.post('/api/admin/kick', requireAdmin, (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.json({ ok: false, error: 'name 필요' });
+  kickUser(name);
+  res.json({ ok: true, message: `${name} 세션 삭제됨` });
+});
+
+// ── 관리자 API: 밴 (영구 차단) ──
+app.post('/api/admin/ban', requireAdmin, (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.json({ ok: false, error: 'name 필요' });
+  banUser(name);
+  res.json({ ok: true, message: `${name} 밴됨` });
+});
+
+// ── 관리자 API: 언밴 ──
+app.post('/api/admin/unban', requireAdmin, (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.json({ ok: false, error: 'name 필요' });
+  unbanUser(name);
+  res.json({ ok: true, message: `${name} 밴 해제됨` });
+});
+
 app.post('/api/auth/confirm', (req, res) => {
   const secret = req.headers['x-admin-secret'];
   if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
@@ -266,6 +338,11 @@ app.post('/api/auth/confirm', (req, res) => {
   const nameLower = name.trim().toLowerCase();
   if (RESERVED_NAMES.some(r => nameLower === r || nameLower.includes(r))) {
     return res.json({ ok: false, error: '사용할 수 없는 닉네임입니다' });
+  }
+
+  // 밴 유저 차단
+  if (isBanned(name.trim())) {
+    return res.json({ ok: false, error: '접근이 차단된 계정입니다' });
   }
 
   const key = token.toUpperCase();
