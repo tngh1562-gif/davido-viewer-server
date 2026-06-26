@@ -99,9 +99,9 @@ if (!fs.existsSync(SESSIONS_FILE)) writeJSON(SESSIONS_FILE, {});
 // 인메모리 세션 캐시 (파일 I/O 최소화)
 let _sessions = readJSON(SESSIONS_FILE, {});
 
-function makeSessionToken(name, chzzkUid = '') {
+function makeSessionToken(name, chzzkUid = '', ip = '') {
   const token = crypto.randomBytes(32).toString('hex');
-  _sessions[token] = { name, chzzkUid, createdAt: Date.now() };
+  _sessions[token] = { name, chzzkUid, ip, createdAt: Date.now() };
   // 오래된 세션 정리 (1년 이상)
   const cutoff = Date.now() - 365 * 24 * 3600 * 1000;
   let dirty = false;
@@ -228,11 +228,16 @@ function cleanPending() {
 }
 
 // 임시 코드 발급
-app.get('/api/auth/pending', (req, res) => {
+app.get('/api/auth/pending', async (req, res) => {
   cleanPending();
+  const ip = getClientIp(req);
+
+  // IP 밴 즉시 차단
+  if (ip && _banned.ips.includes(ip)) return res.json({ ok: false, status: 'banned' });
+
   const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const token = Array.from({length:5}, ()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join(''); // 5자리 (e.g. PK7X9)
-  pendingAuth[token] = { name: null, createdAt: Date.now(), expiresAt: Date.now() + 5 * 60 * 1000 };
+  const token = Array.from({length:5}, ()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join('');
+  pendingAuth[token] = { name: null, ip, createdAt: Date.now(), expiresAt: Date.now() + 5 * 60 * 1000 };
   res.json({ ok: true, token });
 });
 
@@ -244,8 +249,24 @@ app.get('/api/auth/poll/:token', (req, res) => {
   // 확인 완료 → 세션 발급
   const name = p.name;
   const chzzkUid = p.chzzkUid || '';
+  const ip = p.ip || getClientIp(req);
+
+  // IP 밴 재확인
+  if (isBanned(null, null, ip)) {
+    delete pendingAuth[req.params.token.toUpperCase()];
+    return res.json({ ok: false, status: 'expired' }); // 조용히 만료 처리
+  }
+
+  // VPN/프록시 탐지 (비동기, 결과 기다림)
+  const vpnCheck = await checkVpn(ip);
+  if (vpnCheck.isVpn) {
+    console.log(`[auth] VPN/프록시 감지 차단: ${name} @ ${ip} (proxy:${vpnCheck.proxy} hosting:${vpnCheck.hosting})`);
+    delete pendingAuth[req.params.token.toUpperCase()];
+    return res.json({ ok: false, status: 'expired' }); // 조용히 만료 처리
+  }
+
   delete pendingAuth[req.params.token.toUpperCase()];
-  const sessionToken = makeSessionToken(name, chzzkUid);
+  const sessionToken = makeSessionToken(name, chzzkUid, ip);
   const { viewers, viewer } = getViewer(name);
   saveViewer(viewers);
   res.setHeader('Set-Cookie', `vsession=${sessionToken}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=${10 * 365 * 24 * 3600}`);
@@ -257,43 +278,70 @@ app.get('/api/auth/poll/:token', (req, res) => {
 const RESERVED_NAMES = (process.env.RESERVED_NAMES || '다비도,관리자,admin,ADMIN,운영자,davido')
   .split(',').map(s => s.trim().toLowerCase());
 
-// ── 밴 시스템 ──
+// ── 밴 시스템 (닉네임 + Chzzk UID + IP) ──
 const BANNED_FILE = path.join(DATA_DIR, 'banned.json');
-if (!fs.existsSync(BANNED_FILE)) writeJSON(BANNED_FILE, { names: [], uids: [] });
+if (!fs.existsSync(BANNED_FILE)) writeJSON(BANNED_FILE, { names: [], uids: [], ips: [] });
 let _banned = (() => {
-  const d = readJSON(BANNED_FILE, { names: [], uids: [] });
-  // 구버전 호환 (배열 형태였으면 마이그레이션)
-  if (Array.isArray(d)) return { names: d, uids: [] };
-  return { names: d.names || [], uids: d.uids || [] };
+  const d = readJSON(BANNED_FILE, { names: [], uids: [], ips: [] });
+  if (Array.isArray(d)) return { names: d, uids: [], ips: [] };
+  return { names: d.names || [], uids: d.uids || [], ips: d.ips || [] };
 })();
 
+function getClientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+    || req.headers['x-real-ip']
+    || req.socket?.remoteAddress
+    || '';
+}
+
 function saveBanned() { writeJSON(BANNED_FILE, _banned); }
-function isBanned(name, uid) {
+
+function isBanned(name, uid, ip) {
   if (name && _banned.names.includes(name)) return true;
   if (uid  && _banned.uids.includes(uid))   return true;
+  if (ip   && _banned.ips.includes(ip))     return true;
   return false;
 }
-function banUser(name, uid) {
+
+function banUser(name, uid, ip) {
   if (name && !_banned.names.includes(name)) _banned.names.push(name);
   if (uid  && !_banned.uids.includes(uid))   _banned.uids.push(uid);
+  if (ip   && !_banned.ips.includes(ip))     _banned.ips.push(ip);
   saveBanned();
-  // 기존 세션 전부 삭제
   for (const [t, s] of Object.entries(_sessions)) {
     const sName = typeof s === 'string' ? s : s?.name;
     if (sName === name) delete _sessions[t];
   }
   writeJSON(SESSIONS_FILE, _sessions);
 }
+
 function unbanUser(name) {
   _banned.names = _banned.names.filter(n => n !== name);
-  // UID는 유지 (같은 치지직 계정으로 재가입 방지)
   saveBanned();
 }
+
+function unbanIp(ip) {
+  _banned.ips = _banned.ips.filter(i => i !== ip);
+  saveBanned();
+}
+
 function kickUser(name) {
   for (const [t, s] of Object.entries(_sessions)) {
     if ((typeof s === 'string' ? s : s?.name) === name) delete _sessions[t];
   }
   writeJSON(SESSIONS_FILE, _sessions);
+}
+
+// VPN/프록시 탐지 (ip-api.com 무료)
+async function checkVpn(ip) {
+  if (!ip || ip === '::1' || ip.startsWith('127.') || ip.startsWith('192.168.')) return { isVpn: false };
+  try {
+    const r = await Promise.race([
+      getJson(`http://ip-api.com/json/${ip}?fields=status,proxy,hosting,query`),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
+    ]);
+    return { isVpn: !!(r.proxy || r.hosting), proxy: r.proxy, hosting: r.hosting };
+  } catch { return { isVpn: false }; }
 }
 
 // ── 관리자 확인 미들웨어 ──
@@ -310,14 +358,15 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
   for (const [t, s] of Object.entries(_sessions)) {
     const name = typeof s === 'string' ? s : s?.name;
     const uid  = typeof s === 'object' ? (s?.chzzkUid || '') : '';
+    const ip   = typeof s === 'object' ? (s?.ip || '') : '';
     const createdAt = typeof s === 'object' ? s?.createdAt : 0;
     if (!name) continue;
-    if (!nameMap[name]) nameMap[name] = { name, uid, sessions: 0, lastSeen: 0, banned: isBanned(name, uid) };
+    if (!nameMap[name]) nameMap[name] = { name, uid, ip, sessions: 0, lastSeen: 0, banned: isBanned(name, uid, ip) };
     nameMap[name].sessions++;
-    if (createdAt > nameMap[name].lastSeen) nameMap[name].lastSeen = createdAt;
+    if (createdAt > nameMap[name].lastSeen) { nameMap[name].lastSeen = createdAt; nameMap[name].ip = ip; }
   }
   const users = Object.values(nameMap).sort((a, b) => b.lastSeen - a.lastSeen);
-  res.json({ ok: true, users, banned: _banned.names, bannedUids: _banned.uids });
+  res.json({ ok: true, users, banned: _banned.names, bannedUids: _banned.uids, bannedIps: _banned.ips });
 });
 
 // ── 관리자 API: 킥 (세션 삭제, 재로그인 가능) ──
@@ -328,14 +377,31 @@ app.post('/api/admin/kick', requireAdmin, (req, res) => {
   res.json({ ok: true, message: `${name} 세션 삭제됨` });
 });
 
-// ── 관리자 API: 밴 (영구 차단 — 닉네임+UID 동시) ──
+// ── 관리자 API: 밴 (닉네임 + UID + IP 동시) ──
 app.post('/api/admin/ban', requireAdmin, (req, res) => {
   const { name } = req.body;
   if (!name) return res.json({ ok: false, error: 'name 필요' });
-  // 현재 세션에서 UID 찾기
-  const uid = Object.values(_sessions).find(s => (typeof s === 'object' ? s?.name : s) === name)?.chzzkUid || '';
-  banUser(name, uid);
-  res.json({ ok: true, message: `${name} 밴됨 (UID: ${uid ? uid.slice(0,8)+'...' : '없음'})` });
+  const sess = Object.values(_sessions).find(s => (typeof s === 'object' ? s?.name : s) === name);
+  const uid = sess?.chzzkUid || '';
+  const ip  = sess?.ip || '';
+  banUser(name, uid, ip);
+  res.json({ ok: true, message: `${name} 밴됨`, uid: uid ? uid.slice(0,8)+'...' : '없음', ip: ip || '없음' });
+});
+
+// ── 관리자 API: IP 단독 밴 ──
+app.post('/api/admin/ban-ip', requireAdmin, (req, res) => {
+  const { ip } = req.body;
+  if (!ip) return res.json({ ok: false, error: 'ip 필요' });
+  if (!_banned.ips.includes(ip)) { _banned.ips.push(ip); saveBanned(); }
+  res.json({ ok: true, message: `${ip} IP 밴됨` });
+});
+
+// ── 관리자 API: IP 언밴 ──
+app.post('/api/admin/unban-ip', requireAdmin, (req, res) => {
+  const { ip } = req.body;
+  if (!ip) return res.json({ ok: false, error: 'ip 필요' });
+  unbanIp(ip);
+  res.json({ ok: true, message: `${ip} IP 밴 해제됨` });
 });
 
 // ── 관리자 API: 언밴 ──

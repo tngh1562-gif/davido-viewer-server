@@ -1741,14 +1741,18 @@ async function loadAdminUsers(){
   else {
     ul.innerHTML = users.map(u=>`
       <div class="admin-user-row ${u.banned?'banned':''}">
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="admin-user-name">${escapeHtml(u.name)} ${u.banned?'<span class="ban-badge">밴됨</span>':''}</div>
-          <div class="admin-user-meta">세션 ${u.sessions}개 · 마지막 접속 ${relTime(u.lastSeen)}</div>
+          <div class="admin-user-meta">
+            세션 ${u.sessions}개 · ${relTime(u.lastSeen)}
+            ${u.ip?` · IP: <span style="font-family:monospace;font-size:.65rem;color:#94a3b8">${escapeHtml(u.ip)}</span>`:''}
+          </div>
         </div>
-        <div style="display:flex;gap:6px;margin-left:auto">
+        <div style="display:flex;gap:5px;flex-shrink:0">
           ${!u.banned ? `
-            <button class="admin-btn admin-btn-kick" onclick="adminKick('${escapeHtml(u.name)}')">🔄 세션삭제</button>
+            <button class="admin-btn admin-btn-kick" onclick="adminKick('${escapeHtml(u.name)}')">🔄 킥</button>
             <button class="admin-btn admin-btn-ban"  onclick="adminBan('${escapeHtml(u.name)}')">🚫 밴</button>
+            ${u.ip?`<button class="admin-btn" style="background:rgba(168,85,247,.1);color:#a855f7;border:1px solid rgba(168,85,247,.25)" onclick="adminBanIp('${escapeHtml(u.ip)}')">🌐 IP밴</button>`:''}
           ` : `
             <button class="admin-btn admin-btn-unban" onclick="adminUnban('${escapeHtml(u.name)}')">✅ 밴해제</button>
           `}
@@ -1756,16 +1760,27 @@ async function loadAdminUsers(){
       </div>`).join('');
   }
 
-  // 밴 목록
+  // 밴 목록 (닉네임)
   const bl = document.getElementById('adminBanList');
-  if(!banned.length){ bl.innerHTML='<div style="color:var(--text-muted);font-size:.82rem">밴된 유저 없음</div>'; }
-  else {
-    bl.innerHTML = banned.map(name=>`
+  const bannedIps = r.bannedIps || [];
+  let blHtml = '';
+  if(banned.length){
+    blHtml += '<div style="font-size:.68rem;color:#64748b;font-weight:700;letter-spacing:1px;margin-bottom:6px">닉네임/UID 밴</div>';
+    blHtml += banned.map(name=>`
       <div class="admin-user-row banned">
-        <div class="admin-user-name">${escapeHtml(name)} <span class="ban-badge">밴됨</span></div>
-        <button class="admin-btn admin-btn-unban" onclick="adminUnban('${escapeHtml(name)}')" style="margin-left:auto">✅ 밴해제</button>
+        <div class="admin-user-name" style="flex:1">${escapeHtml(name)} <span class="ban-badge">밴됨</span></div>
+        <button class="admin-btn admin-btn-unban" onclick="adminUnban('${escapeHtml(name)}')">✅ 밴해제</button>
       </div>`).join('');
   }
+  if(bannedIps.length){
+    blHtml += '<div style="font-size:.68rem;color:#64748b;font-weight:700;letter-spacing:1px;margin:10px 0 6px">IP 밴</div>';
+    blHtml += bannedIps.map(ip=>`
+      <div class="admin-user-row banned">
+        <div class="admin-user-name" style="flex:1;font-family:monospace;font-size:.78rem">${escapeHtml(ip)} <span class="ban-badge">IP밴</span></div>
+        <button class="admin-btn admin-btn-unban" onclick="adminUnbanIp('${escapeHtml(ip)}')">✅ IP해제</button>
+      </div>`).join('');
+  }
+  bl.innerHTML = blHtml || '<div style="color:var(--text-muted);font-size:.82rem">밴된 유저 없음</div>';
 }
 
 async function adminKick(name){
@@ -1786,6 +1801,20 @@ async function adminUnban(name){
   if(!confirm(`${name} 밴을 해제하시겠습니까?`)) return;
   const r = await fetch('/api/admin/unban',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}).then(r=>r.json());
   toast(r.ok ? `${name} 밴 해제됨` : r.error, r.ok?'ok':'err');
+  loadAdminUsers();
+}
+
+async function adminBanIp(ip){
+  if(!confirm(`IP ${ip} 를 밴 하시겠습니까?\n(해당 IP에서는 로그인이 불가합니다)`)) return;
+  const r = await fetch('/api/admin/ban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip})}).then(r=>r.json());
+  toast(r.ok ? `${ip} IP 밴됨` : r.error, r.ok?'ok':'err');
+  loadAdminUsers();
+}
+
+async function adminUnbanIp(ip){
+  if(!confirm(`IP ${ip} 밴을 해제하시겠습니까?`)) return;
+  const r = await fetch('/api/admin/unban-ip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip})}).then(r=>r.json());
+  toast(r.ok ? `${ip} IP 밴 해제됨` : r.error, r.ok?'ok':'err');
   loadAdminUsers();
 }
 
