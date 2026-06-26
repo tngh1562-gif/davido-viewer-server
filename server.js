@@ -768,6 +768,17 @@ app.get('/api/posts', async (req, res) => {
   const data = readJSON(POSTS_FILE, { posts: [] });
   let posts = data.posts;
   if (board) posts = posts.filter(p => p.board === board);
+
+  // 문의게시판: 관리자는 전체, 일반 유저는 본인 글만
+  if (board === 'inquiry') {
+    const name = getSessionName(req);
+    const adminNames = (process.env.ADMIN_NICKNAMES || '다비도').split(',').map(s => s.trim());
+    const isAdmin = name && adminNames.includes(name);
+    if (!isAdmin) {
+      posts = name ? posts.filter(p => p.author === name) : [];
+    }
+  }
+
   posts = posts.sort((a, b) => b.createdAt - a.createdAt);
   const PAGE = 15;
   const total = posts.length;
