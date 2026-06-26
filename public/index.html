@@ -506,6 +506,115 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .ms-msg{text-align:center;font-size:.9rem;font-weight:700;min-height:24px;margin-bottom:8px}
 .s-chip{background:rgba(255,200,68,.1);border:1px solid rgba(255,200,68,.3);border-radius:8px;color:var(--gold);font-size:.82rem;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit;transition:all .15s}
 .s-chip:hover,.s-chip.active{background:rgba(255,200,68,.22);border-color:var(--gold)}
+
+/* ══════════════════════════════════════
+   MOBILE RESPONSIVE
+══════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── 기본 ── */
+  main { padding:0 14px; margin:16px auto; }
+
+  /* ── 헤더 ── */
+  header, .nav-container { padding:0 14px; }
+  .nav-inner { height:56px; }
+  .hdr-logo { display:none; }
+  .hdr-nav { display:none; } /* 하단 탭바로 대체 */
+  .hdr-right { gap:8px; }
+  .pts-badge { font-size:.72rem; padding:4px 8px; }
+  .fatigue-badge { display:none; } /* 모바일에서 헤더 생략 */
+  #mainContent { padding-bottom:70px; } /* 하단 탭바 공간 */
+
+  /* ── 하단 탭바 (모바일 전용) ── */
+  #mobileTabBar {
+    display:flex !important;
+    position:fixed;bottom:0;left:0;right:0;
+    background:rgba(9,9,11,.97);
+    border-top:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(12px);
+    z-index:200;
+    height:60px;
+  }
+  .mtab {
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;
+    font-size:.58rem;font-weight:600;color:rgba(255,255,255,.4);
+    cursor:pointer;transition:color .15s;padding:6px 0;
+    border:none;background:none;font-family:inherit;
+  }
+  .mtab.active { color:var(--ref-green); }
+  .mtab-icon { font-size:18px; line-height:1; }
+
+  /* ── 대시보드 ── */
+  .stats-row { grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .stat-val { font-size:28px; }
+  .main-grid { grid-template-columns:1fr; gap:14px; }
+  .side-stack { gap:14px; }
+  .h-section { font-size:15px; }
+
+  /* ── 배팅 히어로 ── */
+  .betting-hero { padding:20px 14px; }
+  .vs-container { gap:16px; }
+  .team { font-size:20px; }
+  .slider-container { max-width:100%; }
+
+  /* ── 게임 그리드 ── */
+  .games-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .game-card { aspect-ratio:1; }
+  .card-title { font-size:16px; }
+  .card-desc { font-size:12px; }
+  .card-footer-link { margin-top:16px; font-size:12px; }
+
+  /* ── 인라인 게임 패널 ── */
+  .game-back-bar { padding:8px 12px; margin-bottom:14px; }
+  .game-play-title { font-size:1rem; }
+  .game-play-pts { font-size:.7rem; }
+
+  /* ── 배당폭발 ── */
+  .crash-section { padding:14px 14px; }
+  .crash-scene { height:300px; }
+  .crash-history { gap:4px; flex-wrap:wrap; }
+  .crash-hist-item { font-size:.6rem; padding:2px 5px; }
+  .crash-main { flex-direction:column; gap:10px; }
+  .crash-right { width:100%; }
+  .crash-chip-row { gap:4px; }
+  .crash-chip { padding:6px; font-size:.72rem; }
+  .crash-action-btn { padding:12px; font-size:.85rem; }
+
+  /* ── 상점 ── */
+  .store-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .product-price { font-size:18px; }
+  .s-card, .card { padding:14px; }
+
+  /* ── 타이밍 복권 ── */
+  .tg-target { font-size:42px; }
+  .tg-timer { font-size:32px; }
+
+  /* ── 지뢰찾기 ── */
+  .ms-cell { width:30px; height:30px; font-size:.82rem; }
+
+  /* ── 커뮤니티 ── */
+  .comm-tabs { gap:4px; flex-wrap:wrap; }
+  .comm-tab-btn { padding:6px 10px; font-size:.72rem; }
+  .comm-post-item { padding:10px 12px; }
+  .comm-write-btn { width:100%; }
+
+  /* ── 공지사항 ── */
+  .ann-card { padding:14px; }
+  .ann-scroll { gap:10px; }
+}
+
+@media (max-width: 480px) {
+  main { padding:0 10px; }
+  .games-grid { grid-template-columns:1fr; }
+  .store-grid { grid-template-columns:1fr; }
+  .stats-row { gap:8px; }
+  .stat-val { font-size:24px; }
+  .crash-scene { height:260px; }
+  .ms-cell { width:26px; height:26px; font-size:.75rem; }
+  .tg-target { font-size:36px; }
+  .crash-chip-row { flex-wrap:wrap; }
+}
 </style>
 </head>
 <body>
@@ -780,6 +889,22 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 </div>
 
 </main>
+
+<!-- 모바일 하단 탭바 -->
+<div id="mobileTabBar" style="display:none">
+  <button class="mtab active" id="mtab-bet" onclick="switchTab('page-home',this);syncMobileTab('bet')">
+    <span class="mtab-icon">⚔️</span>배팅
+  </button>
+  <button class="mtab" id="mtab-minigame" onclick="switchTab('page-minigames',this);syncMobileTab('minigame')">
+    <span class="mtab-icon">🎮</span>게임
+  </button>
+  <button class="mtab" id="mtab-shop" onclick="switchTab('page-store',this);syncMobileTab('shop')">
+    <span class="mtab-icon">🛒</span>상점
+  </button>
+  <button class="mtab" id="mtab-community" onclick="switchTab('page-community',this);syncMobileTab('community');loadCommunity('free')">
+    <span class="mtab-icon">💬</span>커뮤니티
+  </button>
+</div>
 
 <div id="toast-cont"></div>
 
@@ -1520,16 +1645,37 @@ async function deletePost(id, board) {
 
 /* ══════════ NAV ══════════ */
 function switchTab(pageId, el){
-  // 상점 탭 열 때 피로도 최신값 표시
   if(pageId==='page-store'){
     const sf=document.getElementById('shopFatigue');
     if(sf)sf.textContent=myFatigue;
   }
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
-  el.classList.add('active');
+  if(el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
 }
+
+/* ── 모바일 탭 동기화 ── */
+function syncMobileTab(tab) {
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+  const el = document.getElementById('mtab-'+tab);
+  if(el) el.classList.add('active');
+  // 상단 PC 탭도 동기화
+  const pageMap = {bet:'page-home',minigame:'page-minigames',shop:'page-store',community:'page-community'};
+  const navMap  = {bet:0,minigame:1,shop:2,community:3};
+  const navItems = document.querySelectorAll('.nav-item');
+  if(navItems[navMap[tab]]) navItems[navMap[tab]].classList.add('active');
+}
+
+/* 모바일 여부 감지 — 하단 탭바 표시 */
+(function initMobile(){
+  const isMobile = window.innerWidth <= 768;
+  const bar = document.getElementById('mobileTabBar');
+  if(bar) bar.style.display = isMobile ? 'flex' : 'none';
+  window.addEventListener('resize', () => {
+    if(bar) bar.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  });
+})()
 
 /* ══════════ TOAST ══════════ */
 function toast(msg,type='info'){
