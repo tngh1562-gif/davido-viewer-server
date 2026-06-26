@@ -340,15 +340,16 @@ app.post('/api/auth/confirm', (req, res) => {
     return res.json({ ok: false, error: '사용할 수 없는 닉네임입니다' });
   }
 
-  // 밴 유저 차단
-  if (isBanned(name.trim())) {
-    return res.json({ ok: false, error: '접근이 차단된 계정입니다' });
-  }
-
   const key = token.toUpperCase();
   const p = pendingAuth[key];
   if (!p) return res.json({ ok: false, error: '코드 없음 또는 만료' });
   if (p.expiresAt < Date.now()) { delete pendingAuth[key]; return res.json({ ok: false, error: '코드 만료' }); }
+
+  // 밴 유저: 성공인 척 응답하되 p.name 미설정 → 클라이언트는 계속 pending 상태로 타임아웃
+  if (isBanned(name.trim())) {
+    return res.json({ ok: true, message: '인증 완료' });
+  }
+
   p.name = name.trim();
   res.json({ ok: true, message: `${name} 인증 완료` });
 });
