@@ -59,7 +59,8 @@ function addFeed(kind, viewer, data) {
   } catch {}
 }
 
-const ADMIN_SECRET          = process.env.ADMIN_SECRET          || 'davido-admin';
+const ADMIN_SECRET          = process.env.ADMIN_SECRET;
+if (!ADMIN_SECRET) { console.error('[SECURITY] ADMIN_SECRET 환경변수 미설정 — 서버를 시작할 수 없습니다'); process.exit(1); }
 const VIEWER_SERVER_SECRET  = process.env.VIEWER_SERVER_SECRET  || 'davido-admin';
 const SESSION_SECRET        = process.env.SESSION_SECRET        || 'davido-timing-secret';
 
