@@ -251,11 +251,22 @@ app.get('/api/auth/poll/:token', (req, res) => {
 });
 
 // 봇이 채팅 감지 후 호출
+// 사칭 방지용 예약 닉네임 목록
+const RESERVED_NAMES = (process.env.RESERVED_NAMES || '다비도,관리자,admin,ADMIN,운영자,davido')
+  .split(',').map(s => s.trim().toLowerCase());
+
 app.post('/api/auth/confirm', (req, res) => {
   const secret = req.headers['x-admin-secret'];
   if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
   const { token, name } = req.body;
   if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
+
+  // 예약 닉네임 사칭 차단
+  const nameLower = name.trim().toLowerCase();
+  if (RESERVED_NAMES.some(r => nameLower === r || nameLower.includes(r))) {
+    return res.json({ ok: false, error: '사용할 수 없는 닉네임입니다' });
+  }
+
   const key = token.toUpperCase();
   const p = pendingAuth[key];
   if (!p) return res.json({ ok: false, error: '코드 없음 또는 만료' });
