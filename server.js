@@ -288,16 +288,9 @@ app.get('/dev-login', (req, res) => {
   res.redirect('/');
 });
 
+// /api/login 비활성화 — 치지직 인증(auth/confirm)만 허용, 직접 닉네임 입력은 사칭 방지를 위해 차단
 app.post('/api/login', (req, res) => {
-  const { name } = req.body;
-  if (!name || name.trim().length < 2 || name.trim().length > 16)
-    return res.json({ ok: false, error: '닉네임은 2~16자로 입력해주세요' });
-  const n = name.trim();
-  const token = makeSessionToken(n);
-  const { viewers, viewer } = getViewer(n);
-  saveViewer(viewers);
-  res.setHeader('Set-Cookie', `vsession=${token}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=${30*24*3600}`);
-  res.json({ ok: true, viewer });
+  return res.status(403).json({ ok: false, error: '직접 로그인은 지원하지 않습니다. 치지직 채팅 인증을 이용해주세요.' });
 });
 
 app.post('/api/logout', (req, res) => {
