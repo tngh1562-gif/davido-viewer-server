@@ -1077,7 +1077,7 @@ async function loadCommunity(board) {
     html += `<div class="comm-post-list">${posts.map(p => `
       <div class="comm-post-item" onclick="showPost('${p.id}','${board}')">
         <div class="comm-post-title">${escapeHtml(p.title)}</div>
-        <div class="comm-post-preview">${escapeHtml((p.content||'').slice(0,80))}</div>
+        <div class="comm-post-preview">${escapeHtml((p.content||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim().slice(0,80))}</div>
         <div class="comm-post-meta">${escapeHtml(p.author)} · ${relTime(p.createdAt)}</div>
       </div>`).join('')}</div>`;
   }
