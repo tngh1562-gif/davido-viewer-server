@@ -117,7 +117,12 @@ function getSessionName(req) {
   const m = cookie.match(/vsession=([a-f0-9]{64})/);
   if (!m) return null;
   const session = _sessions[m[1]];
-  return session ? session.name : null;
+  if (!session) return null;
+  const name = typeof session === 'object' ? session.name : session;
+  const uid  = typeof session === 'object' ? (session.chzzkUid || '') : '';
+  const ip   = typeof session === 'object' ? (session.ip || '') : '';
+  if (isBanned(name, uid, ip)) return null; // 밴된 유저는 세션 있어도 차단
+  return name;
 }
 
 function deleteSession(token) {
@@ -385,7 +390,16 @@ app.post('/api/admin/ban', requireAdmin, (req, res) => {
   const uid = sess?.chzzkUid || '';
   const ip  = sess?.ip || '';
   banUser(name, uid, ip);
-  res.json({ ok: true, message: `${name} 밴됨`, uid: uid ? uid.slice(0,8)+'...' : '없음', ip: ip || '없음' });
+  // 기존 세션 전부 삭제 (밴 즉시 강제 로그아웃)
+  let kicked = 0;
+  for (const [token, s] of Object.entries(_sessions)) {
+    const sName = typeof s === 'object' ? s?.name : s;
+    const sUid  = typeof s === 'object' ? (s?.chzzkUid || '') : '';
+    const sIp   = typeof s === 'object' ? (s?.ip || '') : '';
+    if (isBanned(sName, sUid, sIp)) { delete _sessions[token]; kicked++; }
+  }
+  if (kicked) writeJSON(SESSIONS_FILE, _sessions);
+  res.json({ ok: true, message: `${name} 밴됨 (세션 ${kicked}개 삭제)`, uid: uid ? uid.slice(0,8)+'...' : '없음', ip: ip || '없음' });
 });
 
 // ── 관리자 API: IP 단독 밴 ──
