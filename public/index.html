@@ -2346,8 +2346,8 @@ function initCrash(wrap) {
       <div class="cs-stars" id="csStars"></div>
       <div id="csClouds" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
       <div class="cs-ground" id="csGround" style="height:18%"></div>
-      <!-- 발사대 SVG (지면 바로 위) -->
-      <div class="cs-pad" id="csPad" style="bottom:17%;width:130px">
+      <!-- 발사대 SVG (지면 위, ground와 동일 bottom) -->
+      <div class="cs-pad" id="csPad" style="bottom:18%;width:130px">
         <svg viewBox="0 0 130 90" fill="none" style="width:130px;height:90px">
           <rect x="15" y="80" width="100" height="8" rx="2" fill="#4a5568"/>
           <rect x="55" y="20" width="20" height="62" rx="2" fill="#606878"/>
@@ -2359,7 +2359,7 @@ function initCrash(wrap) {
         </svg>
       </div>
       <!-- 로켓 (JS가 bottom 값 계산해서 제어) -->
-      <div class="cs-rocket-wrap" id="csRocket" style="bottom:22%">
+      <div class="cs-rocket-wrap" id="csRocket">
         ${ROCKET_SVG}
         <div id="csFlame" style="display:none">${FLAME_SVG}</div>
       </div>
@@ -2484,10 +2484,10 @@ const FLAME_H  = 55;  // SVG 화염 높이(px)
 function _updateRocket(m,phase){
   const scene=$c('crashScene');if(!scene)return;
   const H=scene.offsetHeight;
-  const groundH=Math.round(H*.17);      // 지면 높이
-  const padPlatformH=70;                 // 발사대 플랫폼까지 높이
-  // 로켓 하단 = 지면 + 발사대 플랫폼 (베팅 중 or 발사 직후)
-  const rocketOnPad = groundH + padPlatformH;  // 발사대 위 위치
+  const groundH=Math.round(H*.18);      // 지면 높이 (CSS height:18% 와 동일)
+  // pad캡 상단 = groundH+72, 로켓SVG 하단 여백 20px → 52
+  const padPlatformH=52;
+  const rocketOnPad = groundH + padPlatformH;
   // 비행 중엔 같은 위치에 고정 (세계가 내려감)
   const rocketFixedBottom = rocketOnPad;
 
