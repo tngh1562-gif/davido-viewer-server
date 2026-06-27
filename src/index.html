@@ -1820,33 +1820,51 @@ function switchStoreTab(tab) {
   if(!isShop) loadPawnItems();
 }
 
+// 전당포 전체 항목 정의 (항상 표시)
+const PAWN_ALL = [
+  {name:'선참권',      icon:'⭐', price:70,  shopPrice:120},
+  {name:'노밴권',      icon:'🛡️', price:190, shopPrice:240},
+  {name:'종일권',      icon:'🌙', price:410, shopPrice:460},
+  {name:'연장권',      icon:'⚡', price:550, shopPrice:600},
+  {name:'내전 1판 연장권', icon:'⚡', price:550, shopPrice:600},
+];
+
 async function loadPawnItems() {
   const list = document.getElementById('pawnItemList');
   list.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;grid-column:1/-1">보관함 불러오는 중...</div>';
   const r = await fetch('/api/pawn/inventory').then(r=>r.json()).catch(()=>({ok:false}));
-  if(!r.ok){ list.innerHTML=`<div style="color:#ef4444;grid-column:1/-1">${r.error||'불러오기 실패'}</div>`; return; }
 
   pawnUsedToday = r.usedToday || 0;
   document.getElementById('pawnLimitBadge').textContent = `오늘 ${pawnUsedToday}/10회`;
 
-  const items = r.items || [];
-  const sellable = items.filter(i => PAWN_PRICES[i.name] && i.count > 0);
-  if(!sellable.length){
-    list.innerHTML='<div style="color:var(--text-muted);font-size:.85rem;grid-column:1/-1">판매 가능한 아이템이 없습니다</div>';
-    return;
-  }
-  list.innerHTML = sellable.map(i=>`
-    <div class="card" style="text-align:center">
-      <div style="font-size:2rem;margin-bottom:6px">${PAWN_ICONS[i.name]||'📦'}</div>
-      <div class="card-title" style="font-size:.88rem">${escapeHtml(i.name)}</div>
-      <div style="font-size:.72rem;color:var(--text-muted);margin:4px 0">보유 ${i.count}개</div>
-      <div style="font-size:1.2rem;font-weight:900;color:#f59e0b;margin:6px 0">+${PAWN_PRICES[i.name]}P</div>
-      <div style="font-size:.62rem;color:var(--text-muted);margin-bottom:8px">상점가 대비 −50P</div>
-      <button onclick="pawnSell('${escapeHtml(i.name)}',this)"
-        style="width:100%;padding:8px;border:none;border-radius:8px;background:#f59e0b;color:#000;font-weight:900;font-size:.78rem;cursor:pointer;font-family:inherit">
-        판매하기
+  // 보유 수량 맵
+  const countMap = {};
+  (r.items||[]).forEach(i=>{ countMap[i.name]=(countMap[i.name]||0)+i.count; });
+
+  // 중복 제거 (연장권 / 내전 1판 연장권 둘 다 있으면 합산)
+  const display = PAWN_ALL.filter((item,idx,arr)=>arr.findIndex(a=>a.name===item.name)===idx);
+
+  list.innerHTML = display.map(item=>{
+    const count = countMap[item.name] || 0;
+    const hasItem = count > 0;
+    return `<div class="card" style="text-align:center;opacity:${hasItem?1:.55}">
+      <div style="font-size:2rem;margin-bottom:6px">${item.icon}</div>
+      <div class="card-title" style="font-size:.88rem">${escapeHtml(item.name)}</div>
+      <div style="font-size:.72rem;color:${hasItem?'#f0f0f8':'var(--text-muted)'};margin:4px 0">
+        ${hasItem ? `보유 ${count}개` : '보유 없음'}
+      </div>
+      <div style="font-size:1.2rem;font-weight:900;color:${hasItem?'#f59e0b':'var(--text-muted)'};margin:6px 0">+${item.price}P</div>
+      <div style="font-size:.62rem;color:var(--text-muted);margin-bottom:8px">상점가(${item.shopPrice}P) 대비 −50P</div>
+      <button onclick="pawnSell('${escapeHtml(item.name)}',this)" ${hasItem?'':'disabled'}
+        style="width:100%;padding:8px;border:none;border-radius:8px;
+               background:${hasItem?'#f59e0b':'rgba(255,255,255,.08)'};
+               color:${hasItem?'#000':'var(--text-muted)'};
+               font-weight:900;font-size:.78rem;
+               cursor:${hasItem?'pointer':'not-allowed'};font-family:inherit">
+        ${hasItem ? '판매하기' : '보유 없음'}
       </button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function pawnSell(itemName, btn) {
