@@ -1878,7 +1878,6 @@ async function pawnSell(itemName, btn) {
     savePts(r.points);
     pawnUsedToday = r.usedToday;
     document.getElementById('pawnLimitBadge').textContent = `오늘 ${pawnUsedToday}/10회`;
-    toast(`${itemName} 판매완료! +${PAWN_PRICES[itemName]}P`,'ok');
     loadPawnItems();
   } else {
     toast(r.error||'판매 실패','err');
