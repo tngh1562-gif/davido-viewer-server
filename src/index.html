@@ -1835,9 +1835,11 @@ async function loadMyPage() {
 
   // 승률
   const wrHtml = ih
-    ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:2rem;font-weight:900;color:#10b981">${ih.winRate||0}%</span>
-        <span style="font-size:.78rem;color:var(--text-muted)">승 ${ih.wins} / 패 ${ih.losses} · ${ih.wins+ih.losses}판</span>
+        <span style="font-size:.75rem;color:var(--text-muted);line-height:1.5">
+          ${ih.wins}승 ${ih.draws?ih.draws+'무 ':''}${ih.losses}패<br>총 ${ih.total}판
+        </span>
        </div>`
     : '<span style="color:var(--text-muted);font-size:.82rem">내전 기록 없음</span>';
 

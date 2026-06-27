@@ -945,7 +945,8 @@ app.get('/api/mypage', async (req, res) => {
   const { viewer } = getViewer(name);
   const stats = viewer.stats || {};
 
-  // 내전 승률 (인하우스)
+  // 내전 승률 — inhouse-db의 viewers 배열에서 chzzk 닉네임으로 찾기
+  // viewer.stats = { w, l, d }
   let inhouseStats = null;
   if (INHOUSE_SERVER_URL) {
     try {
@@ -953,8 +954,18 @@ app.get('/api/mypage', async (req, res) => {
         getJson(`${INHOUSE_SERVER_URL}/api/inhouse-db`),
         new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),3000))
       ]);
-      const p = (db?.players||[]).find(p=>(p.name||p.chzzk||'').trim()===name.trim());
-      if (p) inhouseStats = { wins: p.wins||0, losses: p.losses||0, winRate: p.winRate||0 };
+      const norm = s => String(s||'').toLowerCase().replace(/\s+/g,'').replace(/#.+$/,'');
+      const key  = norm(name);
+      const v = (db?.viewers||[]).find(v =>
+        norm(v.chzzk) === key || norm(v.name) === key
+      );
+      if (v && v.stats) {
+        const w = Math.max(0, Number(v.stats.w)||0);
+        const l = Math.max(0, Number(v.stats.l)||0);
+        const d = Math.max(0, Number(v.stats.d)||0);
+        const total = w + l + d;
+        inhouseStats = { wins: w, losses: l, draws: d, total, winRate: total ? Math.round(w/total*100) : 0 };
+      }
     } catch {}
   }
 
