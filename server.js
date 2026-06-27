@@ -937,6 +937,26 @@ app.get('/api/inhouse-lineup', async (req, res) => {
 });
 
 // 포인트 랭킹 — 인하우스 DB에서 가져오기 (별도 엔드포인트, 타임아웃 3초)
+// ── 프로필 이미지 업로드/조회 ──
+app.post('/api/profile/avatar', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false, error: '로그인 필요' });
+  const { imageData } = req.body; // base64 data URL
+  if (!imageData || !imageData.startsWith('data:image/')) return res.json({ ok: false, error: '잘못된 이미지' });
+  if (imageData.length > 500 * 1024) return res.json({ ok: false, error: '이미지가 너무 큽니다 (최대 500KB)' });
+  const { viewers, viewer } = getViewer(name);
+  viewer.avatar = imageData;
+  saveViewer(viewers);
+  res.json({ ok: true });
+});
+
+app.get('/api/profile/avatar', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false });
+  const { viewer } = getViewer(name);
+  res.json({ ok: true, avatar: viewer.avatar || null });
+});
+
 // ── 마이페이지 통합 API ──
 app.get('/api/mypage', async (req, res) => {
   const name = getSessionName(req);
@@ -985,6 +1005,7 @@ app.get('/api/mypage', async (req, res) => {
   res.json({
     ok: true,
     name,
+    avatar: viewer.avatar || null,
     stats: {
       rocketLaunched: stats.rocketLaunched || 0,
       mineBombed:     stats.mineBombed     || 0,
