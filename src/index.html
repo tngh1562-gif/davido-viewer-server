@@ -2466,6 +2466,7 @@ var balloonState={
   animId:null,pingId:null,
   phase:'idle', // idle | playing | cashed | popped
 };
+var blMouseDown=false; // 실제 마우스/터치 누름 상태 (비동기 fetch와 분리)
 var BALLOON_RATE=0.38; // x/sec 증가 속도
 
 function initBalloon(wrap){
@@ -2529,28 +2530,29 @@ function blSetBet(n,el){
 
 function blPumpStart(e){
   e.preventDefault();
+  blMouseDown=true;
   if(balloonState.phase==='cashed'||balloonState.phase==='popped') return;
 
   if(balloonState.phase==='idle'){
-    // 첫 누름 → 게임 시작
     blStartGame();
     return;
   }
-  if(balloonState.phase==='playing'){
+  if(balloonState.phase==='playing'&&!balloonState.holding){
     balloonState.holding=true;
-    balloonState.lastHoldStart=performance.now();
     var btn=document.getElementById('blPumpBtn');
     if(btn){btn.className='pump-btn pumping';btn.querySelector('span:last-child').textContent='팽창 중...';}
+    blLastTs=null;
     blAnimate();
   }
 }
 
 function blPumpStop(e){
   if(e) e.preventDefault();
+  blMouseDown=false;
   if(!balloonState.holding) return;
   balloonState.holding=false;
-  balloonState.lastHoldStart=null;
   if(balloonState.animId){cancelAnimationFrame(balloonState.animId);balloonState.animId=null;}
+  blLastTs=null;
   var btn=document.getElementById('blPumpBtn');
   if(btn&&balloonState.phase==='playing'){btn.className='pump-btn idle';btn.querySelector('span:last-child').textContent='다시 눌러 계속';}
 }
@@ -2564,8 +2566,8 @@ function blStartGame(){
     balloonState.gameId=d.gameId;
     balloonState.mult=1.00;
     balloonState.phase='playing';
-    balloonState.holding=true;
-    balloonState.lastHoldStart=performance.now();
+    // 마우스가 아직 눌려있을 때만 holding 시작 (비동기 fetch 응답 시점 체크)
+    balloonState.holding=blMouseDown;
     savePts(d.points);
     if(d.fatigue!=null)saveFatigue(d.fatigue);
 
@@ -2575,9 +2577,12 @@ function blStartGame(){
     document.getElementById('blCashBtn').disabled=false;
 
     var btn=document.getElementById('blPumpBtn');
-    if(btn){btn.className='pump-btn pumping';btn.querySelector('span:last-child').textContent='팽창 중...';}
+    if(btn){
+      if(balloonState.holding){btn.className='pump-btn pumping';btn.querySelector('span:last-child').textContent='팽창 중...';}
+      else{btn.className='pump-btn idle';btn.querySelector('span:last-child').textContent='눌러서 팽창';}
+    }
 
-    blAnimate();
+    if(balloonState.holding){blLastTs=null;blAnimate();}
     // ping loop
     balloonState.pingId=setInterval(blPing,200);
   }).catch(function(){toast('오류','err');});
