@@ -242,7 +242,7 @@ app.get('/api/auth/pending', async (req, res) => {
 });
 
 // 프론트가 2초마다 폴링
-app.get('/api/auth/poll/:token', (req, res) => {
+app.get('/api/auth/poll/:token', async (req, res) => {
   const p = pendingAuth[req.params.token?.toUpperCase()];
   if (!p || p.expiresAt < Date.now()) return res.json({ ok: false, status: 'expired' });
   if (!p.name) return res.json({ ok: false, status: 'pending' });
