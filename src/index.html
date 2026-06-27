@@ -2585,10 +2585,10 @@ function _updateRocket(m,phase){
     gr.style.transform=`translateY(${worldY}px)`;
     gr.style.opacity=Math.max(0,1-progress/.1).toFixed(2);
   }
-  // 발사대 (로켓보다 빠르게 사라짐)
+  // 발사대 (로켓보다 빠르게 사라짐) — translateX(-50%) 유지해야 중앙 정렬 유지
   const pad=$c('csPad');
   if(pad){
-    pad.style.transform=`translateY(${worldY*1.05}px)`;
+    pad.style.transform=`translateX(-50%) translateY(${worldY*1.05}px)`;
     pad.style.opacity=Math.max(0,1-progress/.07).toFixed(2);
   }
   // 구름 시차
