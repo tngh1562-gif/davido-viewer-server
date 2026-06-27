@@ -871,6 +871,13 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-desc" style="color:rgba(255,255,255,.8)">💥 배당이 올라갈 때 현금화<br>폭발 전에 빠져나와라 · 10~50P</div>
         <div class="card-footer-link" style="color:#c084fc">참여하기 +</div>
       </div>
+      <div class="card game-card" style="background:linear-gradient(135deg,#0d1a2e,#1e3a5f);color:#fff;border:1px solid rgba(99,179,237,.2)" onclick="openGame('bridge')">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
+        <div class="card-label">SOLO · 혼자</div>
+        <div class="card-title">⚡ 번개 피하기</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">두 돌 중 하나엔 번개가 친다<br>살아남을수록 배당 증가 · 5~50P</div>
+        <div class="card-footer-link" style="color:#63b3ed">도전하기 +</div>
+      </div>
       <div class="card game-card" style="background:linear-gradient(135deg,#1a0a2e,#6d28d9);color:#fff;border:none" onclick="openGame('balloon')">
         <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
         <div class="card-label">SOLO · 혼자</div>
@@ -2320,7 +2327,7 @@ async function buyFatigue(itemId, btn){
 let currentGame=null;
 function openGame(g){
   currentGame=g;
-  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권',crash:'💥 배당 폭발',balloon:'🎈 풍선 폭발'};
+  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권',crash:'💥 배당 폭발',balloon:'🎈 풍선 폭발',bridge:'⚡ 번개 피하기'};
   document.getElementById('gmTitle').textContent=titles[g]||g;
   document.getElementById('gmPts').textContent=pts.toLocaleString();
   const content=document.getElementById('gmContent');
@@ -2329,6 +2336,7 @@ function openGame(g){
   else if(g==='timing')initTiming(content);
   else if(g==='crash')initCrash(content);
   else if(g==='balloon')initBalloon(content);
+  else if(g==='bridge')initBridge(content);
   document.getElementById('gameListSection').style.display='none';
   document.getElementById('gamePlaySection').style.display='block';
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2471,6 +2479,331 @@ async function tgStop() {
 }
 
 /* ══════════════════════════════════════
+   BRIDGE GAME (번개 피하기)
+*/
+(function(){
+var st=document.createElement('style');
+st.textContent=`
+/* ── 번개 피하기 ── */
+.br-scene{
+  background:radial-gradient(ellipse at 50% 0%,#0a1628 0%,#050b15 70%);
+  border-radius:14px;padding:20px 16px;position:relative;overflow:hidden;
+  min-height:380px;
+}
+.br-rows{display:flex;flex-direction:column;gap:10px}
+.br-row{display:flex;gap:16px;justify-content:center;align-items:center}
+.br-row-num{width:24px;text-align:right;font-size:.62rem;color:rgba(255,255,255,.2);font-weight:700;flex-shrink:0}
+.br-stone{
+  width:110px;height:52px;border-radius:8px;
+  cursor:pointer;position:relative;overflow:hidden;
+  transition:transform .1s,box-shadow .1s;
+  font-size:.78rem;font-weight:800;font-family:inherit;border:none;
+  display:flex;align-items:center;justify-content:center;
+}
+.br-stone.idle{
+  background:linear-gradient(180deg,#1e3a5f 0%,#152d4a 100%);
+  border:1px solid rgba(99,179,237,.2);
+  color:rgba(99,179,237,.5);
+  cursor:not-allowed;
+}
+.br-stone.active{
+  background:linear-gradient(180deg,#2563a8 0%,#1e4d87 100%);
+  border:1px solid rgba(99,179,237,.7);
+  color:#93c5fd;cursor:pointer;
+  box-shadow:0 0 12px rgba(99,179,237,.3),inset 0 1px 0 rgba(255,255,255,.15);
+  animation:brPulse 1.5s ease-in-out infinite;
+}
+.br-stone.active:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(99,179,237,.5);}
+.br-stone.safe{
+  background:linear-gradient(180deg,#166534 0%,#14532d 100%);
+  border:1px solid rgba(74,222,128,.5);color:#4ade80;cursor:default;
+}
+.br-stone.chosen{
+  background:linear-gradient(180deg,#1d4ed8 0%,#1e40af 100%);
+  border:2px solid #60a5fa;color:#93c5fd;cursor:default;
+}
+.br-stone.struck{
+  animation:brStrike .5s ease-out forwards;
+  cursor:default;
+}
+.br-stone.dim{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.1);cursor:not-allowed;}
+@keyframes brPulse{0%,100%{box-shadow:0 0 12px rgba(99,179,237,.3)}50%{box-shadow:0 0 20px rgba(99,179,237,.5),0 0 40px rgba(99,179,237,.2)}}
+@keyframes brStrike{
+  0%{background:#ffe060;border-color:#fff;box-shadow:0 0 30px #ffe060;}
+  20%{background:#ef4444;border-color:#ef4444;transform:scale(1.08);}
+  60%{transform:scale(0.9) skew(3deg);}
+  100%{background:#1a0a0a;border-color:#3d1515;transform:scale(0.95);opacity:.6;}
+}
+/* 번개 SVG 오버레이 */
+.br-lightning{
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  pointer-events:none;opacity:0;
+  animation:brLightningFlash .5s ease-out forwards;
+}
+@keyframes brLightningFlash{
+  0%{opacity:0;transform:translateX(-50%) scaleY(0);transform-origin:top}
+  15%{opacity:1;transform:translateX(-50%) scaleY(1);}
+  40%{opacity:.9;}
+  100%{opacity:0;}
+}
+.br-mult-bar{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.br-mult-pip{
+  padding:3px 8px;border-radius:6px;font-size:.62rem;font-weight:800;
+  border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3);
+  background:rgba(255,255,255,.03);transition:all .2s;
+}
+.br-mult-pip.done{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:#4ade80;}
+.br-mult-pip.current{background:rgba(99,179,237,.15);border-color:rgba(99,179,237,.5);color:#93c5fd;transform:scale(1.1);}
+.br-hud{text-align:center;margin-bottom:12px}
+.br-mult-big{font-size:2.2rem;font-weight:900;letter-spacing:-2px;color:#93c5fd;font-variant-numeric:tabular-nums}
+.br-sub{font-size:.75rem;color:var(--text-muted);margin-top:2px}
+.br-chips{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.br-chip{padding:5px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text-muted);font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+.br-chip.sel{background:rgba(99,179,237,.15);border-color:rgba(99,179,237,.5);color:#93c5fd}
+.br-cashout{padding:10px 28px;border:none;border-radius:10px;background:linear-gradient(135deg,#059669,#047857);color:#fff;font-weight:900;font-size:.85rem;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(5,150,105,.35)}
+.br-cashout:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+`;
+document.head.appendChild(st);
+})();
+
+/* ── 번개 피하기 게임 로직 ── */
+var BRIDGE_MULTS=[1.8,3.0,5.0,8.0,13.0,20.0,30.0,50.0];
+var BRIDGE_ROWS=8;
+var brState={gameId:null,bet:5,row:0,phase:'idle'};
+
+function initBridge(wrap){
+  brState={gameId:null,bet:5,row:0,phase:'idle'};
+  wrap.innerHTML=`
+<div class="br-hud">
+  <div class="br-mult-big" id="brMult">−</div>
+  <div class="br-sub" id="brSub">베팅 후 안전한 돌을 선택하세요</div>
+</div>
+<div class="br-mult-bar" id="brMultBar">${BRIDGE_MULTS.map(function(m,i){return '<div class="br-mult-pip" id="brPip'+i+'">'+m+'x</div>';}).join('')}</div>
+<div class="br-chips" id="brChips">
+  <button class="br-chip sel" onclick="brSetBet(5,this)">5P</button>
+  <button class="br-chip" onclick="brSetBet(10,this)">10P</button>
+  <button class="br-chip" onclick="brSetBet(20,this)">20P</button>
+  <button class="br-chip" onclick="brSetBet(50,this)">50P</button>
+</div>
+<div class="br-scene">
+  <div class="br-rows" id="brRows"></div>
+</div>
+<div style="display:flex;justify-content:center;gap:12px;margin-top:14px;align-items:center">
+  <button class="br-cashout" id="brCash" disabled onclick="brCashout()">현금화</button>
+</div>
+<div style="font-size:.7rem;color:var(--text-muted);text-align:center;margin-top:8px">피로도 −4 · 베팅 <span id="brBetDisp">5</span>P</div>`;
+  brRenderRows();
+}
+
+function brSetBet(n,el){
+  if(brState.phase!=='idle')return;
+  brState.bet=n;
+  document.querySelectorAll('.br-chip').forEach(function(c){c.classList.remove('sel');});
+  el.classList.add('sel');
+  document.getElementById('brBetDisp').textContent=n;
+}
+
+function brRenderRows(){
+  var html='';
+  for(var i=BRIDGE_ROWS-1;i>=0;i--){
+    var rowIdx=i;
+    var state='idle'; // idle | active | done | dim
+    if(brState.phase==='idle'&&rowIdx===0) state='active-start';
+    else if(brState.phase==='playing'){
+      if(rowIdx<brState.row) state='done';
+      else if(rowIdx===brState.row) state='active';
+      else state='dim';
+    }
+    html+='<div class="br-row">';
+    html+='<div class="br-row-num">'+(rowIdx+1)+'</div>';
+    // 왼쪽 돌
+    html+=brStoneHtml(rowIdx,'L',state);
+    // 오른쪽 돌
+    html+=brStoneHtml(rowIdx,'R',state);
+    html+='</div>';
+  }
+  document.getElementById('brRows').innerHTML=html;
+}
+
+function brStoneHtml(rowIdx,side,state){
+  var cls='br-stone ';
+  var txt='';
+  var onclick='';
+  if(state==='active'){
+    cls+='active'; txt=side==='L'?'← 왼쪽':'오른쪽 →';
+    onclick='onclick="brStep(\''+side+'\')"';
+  } else if(state==='done'){
+    cls+='safe'; txt='✓';
+  } else if(state==='dim'){
+    cls+='dim'; txt='?';
+  } else {
+    // idle (before game starts) — show as start prompt on row 0
+    cls+='idle'; txt=state==='active-start'?'▶':' ';
+  }
+  return '<button class="'+cls+'" id="brS'+rowIdx+side+'" '+onclick+'>'+txt+'</button>';
+}
+
+function brStartAndStep(side){
+  // 게임 시작 + 첫 선택 동시
+  fetch('/api/game/bridge/start',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({bet:brState.bet})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){toast(d.error||'시작 실패','err');return;}
+    brState.gameId=d.gameId;
+    brState.phase='playing';
+    brState.row=0;
+    savePts(d.points);
+    if(d.fatigue!=null)saveFatigue(d.fatigue);
+    // 칩 잠금
+    document.getElementById('brChips').style.opacity='.35';
+    document.getElementById('brChips').style.pointerEvents='none';
+    brDoStep(side);
+  }).catch(function(){toast('오류','err');});
+}
+
+function brStep(side){
+  if(brState.phase==='idle'){
+    brStartAndStep(side); return;
+  }
+  if(brState.phase!=='playing') return;
+  brDoStep(side);
+}
+
+function brDoStep(side){
+  // 두 버튼 즉시 비활성화
+  ['L','R'].forEach(function(s){
+    var el=document.getElementById('brS'+brState.row+s);
+    if(el){el.classList.remove('active');el.style.pointerEvents='none';}
+  });
+
+  fetch('/api/game/bridge/step',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({gameId:brState.gameId,choice:side})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){toast(d.error||'오류','err');brRenderRows();return;}
+    if(d.survived){
+      brOnSuccess(d,side);
+    } else {
+      brOnFail(d,side);
+    }
+  }).catch(function(){toast('오류','err');brRenderRows();});
+}
+
+function brOnSuccess(d,side){
+  // 선택한 돌 → safe 스타일
+  var safeEl=document.getElementById('brS'+brState.row+side);
+  if(safeEl){safeEl.className='br-stone chosen';safeEl.textContent='✓';}
+  // 반대 돌 → dim
+  var otherSide=side==='L'?'R':'L';
+  var otherEl=document.getElementById('brS'+brState.row+otherSide);
+  if(otherEl){otherEl.className='br-stone dim';otherEl.textContent='?';}
+
+  brState.row++;
+  var mult=BRIDGE_MULTS[brState.row-1];
+
+  // HUD 업데이트
+  var multEl=document.getElementById('brMult');
+  if(multEl){multEl.textContent=mult+'x';multEl.style.color='#4ade80';}
+  var subEl=document.getElementById('brSub');
+  if(subEl)subEl.textContent=d.completed?'🎉 완주! 모두 통과했습니다!':'현금화하거나 계속 도전!';
+
+  // 배율 pip
+  for(var i=0;i<BRIDGE_ROWS;i++){
+    var pip=document.getElementById('brPip'+i);
+    if(!pip)continue;
+    pip.className='br-mult-pip'+(i<brState.row?' done':i===brState.row?' current':'');
+  }
+
+  if(d.completed){
+    brState.phase='done';
+    savePts(d.points);
+    var subE=document.getElementById('brSub');
+    if(subE)subE.textContent='🏆 완주! +'+d.gain+'P 획득!';
+    document.getElementById('brCash').disabled=true;
+    // 완주 처리 후 다음 게임 허용
+    setTimeout(brResetAfterEnd,3000);
+    return;
+  }
+
+  // 다음 행 활성화
+  if(brState.row<BRIDGE_ROWS){
+    ['L','R'].forEach(function(s){
+      var el=document.getElementById('brS'+brState.row+s);
+      if(el){
+        el.className='br-stone active';
+        el.textContent=s==='L'?'← 왼쪽':'오른쪽 →';
+        el.style.pointerEvents='';
+        el.setAttribute('onclick','brStep(\''+s+'\')');
+      }
+    });
+  }
+  document.getElementById('brCash').disabled=false;
+}
+
+function brOnFail(d,side){
+  brState.phase='fail';
+  var wrongEl=document.getElementById('brS'+brState.row+side);
+  if(wrongEl){
+    wrongEl.className='br-stone struck';
+    wrongEl.textContent='⚡';
+    // 번개 SVG 추가
+    var lightning=document.createElement('div');
+    lightning.className='br-lightning';
+    lightning.innerHTML='<svg width="30" height="80" viewBox="0 0 30 80"><path d="M15 0 L8 35 L15 35 L5 80 L22 30 L15 30 Z" fill="#ffe060" stroke="#fff" stroke-width="1"/></svg>';
+    wrongEl.appendChild(lightning);
+  }
+  // 정답 돌 공개
+  var correctSide=d.correctWas;
+  var correctEl=document.getElementById('brS'+brState.row+correctSide);
+  if(correctEl){
+    setTimeout(function(){
+      if(correctEl){correctEl.className='br-stone safe';correctEl.textContent='✓ 정답';}
+    },400);
+  }
+
+  var multEl=document.getElementById('brMult');
+  if(multEl){multEl.textContent='⚡ 추락';multEl.style.color='#ef4444';}
+  var subEl=document.getElementById('brSub');
+  if(subEl)subEl.textContent=(brState.row+1)+'번째 돌에서 번개를 맞았습니다!';
+
+  document.getElementById('brCash').disabled=true;
+  setTimeout(brResetAfterEnd,3000);
+}
+
+function brCashout(){
+  if(brState.phase!=='playing'||!brState.gameId||brState.row===0)return;
+  brState.phase='cashing';
+  document.getElementById('brCash').disabled=true;
+  fetch('/api/game/bridge/cashout',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({gameId:brState.gameId})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){toast(d.error||'실패','err');brState.phase='playing';document.getElementById('brCash').disabled=false;return;}
+    savePts(d.points);
+    var mult=document.getElementById('brMult');
+    if(mult){mult.textContent='+'+d.gain+'P';mult.style.color='#10b981';}
+    var sub=document.getElementById('brSub');
+    if(sub)sub.textContent=d.mult+'x 현금화 성공!';
+    setTimeout(brResetAfterEnd,2500);
+  }).catch(function(){brState.phase='playing';document.getElementById('brCash').disabled=false;});
+}
+
+function brResetAfterEnd(){
+  brState={gameId:null,bet:brState.bet,row:0,phase:'idle'};
+  var multEl=document.getElementById('brMult');if(multEl){multEl.textContent='−';multEl.style.color='#93c5fd';}
+  var subEl=document.getElementById('brSub');if(subEl)subEl.textContent='베팅 후 안전한 돌을 선택하세요';
+  document.getElementById('brCash').disabled=true;
+  document.getElementById('brChips').style.opacity='1';
+  document.getElementById('brChips').style.pointerEvents='';
+  for(var i=0;i<BRIDGE_ROWS;i++){
+    var pip=document.getElementById('brPip'+i);
+    if(pip)pip.className='br-mult-pip';
+  }
+  brRenderRows();
+}
+
+/*
    BALLOON GAME (풍선 폭발)
 */
 (function(){
