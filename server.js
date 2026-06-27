@@ -705,7 +705,7 @@ app.get('/api/shop', (req, res) => {
 //  🪟 유리다리 게임 (오징어게임)
 // ══════════════════════════════════════
 const BRIDGE_ROWS  = 8;
-const BRIDGE_MULTS = [1.5, 2.0, 2.8, 3.8, 5.0, 7.0, 9.5, 13.0];
+const BRIDGE_MULTS = [1.3, 1.6, 2.1, 2.8, 3.8, 5.2, 7.0, 9.5];
 const BRIDGE_FATIGUE = 4;
 const bridgeSessions = new Map();
 
