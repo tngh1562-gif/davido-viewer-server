@@ -761,10 +761,10 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-footer-brand" style="color:#000">Davido Inhouse</div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px">
-    <div class="card">
-      <div class="h-section" style="margin-bottom:12px">📢 공지사항</div>
-      <div class="ann-scroll" id="annScroll">
+  <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px;align-items:start">
+    <div class="card" style="height:480px;display:flex;flex-direction:column">
+      <div class="h-section" style="margin-bottom:12px;flex-shrink:0">📢 공지사항</div>
+      <div class="ann-scroll" id="annScroll" style="flex:1;overflow-y:auto;overflow-x:hidden">
         <div class="card card-gradient-purple ann-card">
           <div class="card-label" style="opacity:.9">EVENT MATCH</div>
           <div class="card-title">공지사항 대기중</div>
@@ -773,15 +773,15 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="h-section">⚡ 실시간 피드</div>
-      <div id="feedList">
+    <div class="card" style="height:480px;display:flex;flex-direction:column">
+      <div class="h-section" style="flex-shrink:0">⚡ 실시간 피드</div>
+      <div id="feedList" style="flex:1;overflow-y:auto">
         <div class="list-item"><div class="list-item-left"><span class="text-muted" style="font-size:12px">—</span><span style="font-size:14px">데이터 로딩 중...</span></div></div>
       </div>
     </div>
-    <div class="card">
-      <div class="h-section">🏆 포인트 랭킹</div>
-      <div id="rankList">
+    <div class="card" style="height:480px;display:flex;flex-direction:column">
+      <div class="h-section" style="flex-shrink:0">🏆 포인트 랭킹</div>
+      <div id="rankList" style="flex:1;overflow-y:auto">
         <div class="list-item"><div class="list-item-left"><span style="color:var(--text-muted);width:20px">—</span><span style="font-size:14px">로딩 중</span></div></div>
       </div>
     </div>
@@ -2278,7 +2278,7 @@ async function loadRanking(){
     if(!rankEl) return;
     if(d.ranking && d.ranking.length){
       const medals = ['#ffd700','#c0c0c0','#cd7f32'];
-      rankEl.innerHTML = d.ranking.slice(0,20).map((r,i)=>{
+      rankEl.innerHTML = d.ranking.slice(0,10).map((r,i)=>{
         const c = medals[i] || 'var(--text-muted)';
         return `<div class="list-item"><div class="list-item-left"><span style="color:${c};font-weight:bold;width:20px">${i+1}</span><span style="font-size:14px;font-weight:500">${escapeHtml(r.name)}</span></div><span class="text-green" style="font-weight:600;font-size:14px">${fmtNum(r.points)} P</span></div>`;
       }).join('');
