@@ -682,7 +682,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item" onclick="switchTab('page-community',this);loadCommunity('notice')">커뮤니티</div>
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
-      <div class="nav-item" id="adminNavTab" style="display:none;color:#ef4444" onclick="switchTab('page-admin',this);loadAdminUsers()">🛡 관리자</div>
+      <div class="nav-item" id="adminNavTab" style="display:none;color:#ef4444" onclick="switchTab('page-admin',this);loadAdminUsers();loadBanAttempts()">🛡 관리자</div>
     </div>
     <div class="user-profile">
       <div class="fatigue-badge" id="fatigueBadge" title="피로도 — 게임할 때마다 소모, 매일 자정 30 회복">
@@ -913,7 +913,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:20px">현재 로그인된 시청자 목록 · 세션 삭제 또는 영구 밴 가능</div>
 
   <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
-    <button onclick="loadAdminUsers()" style="padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#f0f0f8;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 새로고침</button>
+    <button onclick="loadAdminUsers();loadBanAttempts()" style="padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#f0f0f8;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 새로고침</button>
     <span id="adminUserCount" style="font-size:.75rem;color:var(--text-muted)"></span>
   </div>
 
@@ -924,7 +924,16 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 
   <!-- 밴 목록 -->
   <div class="h-section" style="margin-bottom:12px;font-size:14px">🚫 밴 목록</div>
-  <div id="adminBanList" style="display:flex;flex-direction:column;gap:6px">
+  <div id="adminBanList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:32px">
+    <div style="color:var(--text-muted);font-size:.82rem">없음</div>
+  </div>
+
+  <!-- 우회 시도 로그 -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <div class="h-section" style="font-size:14px;margin-bottom:0">🔴 우회 시도 로그</div>
+    <button onclick="loadBanAttempts()" style="padding:4px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#f0f0f8;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit">🔄</button>
+  </div>
+  <div id="adminBanAttempts" style="display:flex;flex-direction:column;gap:6px">
     <div style="color:var(--text-muted);font-size:.82rem">없음</div>
   </div>
 </div>
@@ -1726,6 +1735,29 @@ function syncMobileTab(tab) {
 /* ══════════════════════════════════════
    관리자 패널
 ══════════════════════════════════════ */
+async function loadBanAttempts(){
+  const el = document.getElementById('adminBanAttempts');
+  if(!el) return;
+  const r = await fetch('/api/admin/ban-attempts').then(r=>r.json()).catch(()=>({ok:false}));
+  if(!r.ok){ el.innerHTML='<div style="color:#ef4444">불러오기 실패</div>'; return; }
+  const list = r.attempts || [];
+  if(!list.length){ el.innerHTML='<div style="color:var(--text-muted);font-size:.82rem">시도 없음</div>'; return; }
+  el.innerHTML = list.map(a=>{
+    const d = new Date(a.at);
+    const timeStr = d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const reasonColor = a.reason.includes('VPN') ? '#f59e0b' : '#ef4444';
+    return `<div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:8px 12px;font-size:.75rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="color:${reasonColor};font-weight:800">${escapeHtml(a.reason)}</span>
+        <span style="color:var(--text-muted)">${timeStr}</span>
+      </div>
+      <div style="color:var(--text-main)">닉네임: <b>${escapeHtml(a.name||'-')}</b></div>
+      ${a.uid ? `<div style="color:var(--text-muted);font-family:monospace;font-size:.7rem">UID: ${escapeHtml(a.uid)}</div>`:''}
+      ${a.ip  ? `<div style="color:var(--text-muted);font-family:monospace;font-size:.7rem">IP: ${escapeHtml(a.ip)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 async function loadAdminUsers(){
   const r = await fetch('/api/admin/users').then(r=>r.json()).catch(()=>({ok:false}));
   if(!r.ok){ document.getElementById('adminUserList').innerHTML='<div style="color:#ef4444">불러오기 실패 (권한 없음)</div>'; return; }

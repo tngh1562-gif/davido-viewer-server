@@ -238,7 +238,10 @@ app.get('/api/auth/pending', async (req, res) => {
   const ip = getClientIp(req);
 
   // IP 밴 즉시 차단
-  if (ip && _banned.ips.includes(ip)) return res.json({ ok: false, status: 'banned' });
+  if (ip && _banned.ips.includes(ip)) {
+    logBanAttempt('IP밴 로그인 시도', '-', '', ip);
+    return res.json({ ok: false, status: 'banned' });
+  }
 
   const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const token = Array.from({length:5}, ()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join('');
@@ -265,7 +268,7 @@ app.get('/api/auth/poll/:token', async (req, res) => {
   // VPN/프록시 탐지 (비동기, 결과 기다림)
   const vpnCheck = await checkVpn(ip);
   if (vpnCheck.isVpn) {
-    console.log(`[auth] VPN/프록시 감지 차단: ${name} @ ${ip} (proxy:${vpnCheck.proxy} hosting:${vpnCheck.hosting})`);
+    logBanAttempt(`VPN/프록시 탐지 차단 (proxy:${vpnCheck.proxy} hosting:${vpnCheck.hosting})`, name, chzzkUid, ip);
     delete pendingAuth[req.params.token.toUpperCase()];
     return res.json({ ok: false, status: 'expired' }); // 조용히 만료 처리
   }
@@ -300,6 +303,14 @@ function getClientIp(req) {
 }
 
 function saveBanned() { writeJSON(BANNED_FILE, _banned); }
+
+// 밴 우회 시도 로그 (인메모리, 최대 200개)
+const _banAttemptLog = [];
+function logBanAttempt(reason, name, uid, ip) {
+  console.log(`[BAN-BLOCK] ${reason} | name:${name} uid:${uid||'-'} ip:${ip||'-'}`);
+  _banAttemptLog.unshift({ reason, name, uid: uid||'', ip: ip||'', at: Date.now() });
+  if (_banAttemptLog.length > 200) _banAttemptLog.pop();
+}
 
 function isBanned(name, uid, ip) {
   if (name && _banned.names.includes(name)) return true;
@@ -419,6 +430,10 @@ app.post('/api/admin/unban-ip', requireAdmin, (req, res) => {
 });
 
 // ── 관리자 API: 언밴 ──
+app.get('/api/admin/ban-attempts', requireAdmin, (req, res) => {
+  res.json({ ok: true, attempts: _banAttemptLog });
+});
+
 app.post('/api/admin/unban', requireAdmin, (req, res) => {
   const { name } = req.body;
   if (!name) return res.json({ ok: false, error: 'name 필요' });
@@ -447,6 +462,9 @@ app.post('/api/auth/confirm', (req, res) => {
 
   // 밴 유저: 닉네임 OR UID 중 하나라도 밴되면 조용히 무시 (타임아웃)
   if (isBanned(name.trim(), chzzkUid)) {
+    const ip = p.ip || '';
+    const reason = _banned.uids.includes(chzzkUid) ? 'UID밴 우회 시도' : '닉네임밴 우회 시도';
+    logBanAttempt(reason, name.trim(), chzzkUid, ip);
     return res.json({ ok: true, message: '인증 완료' });
   }
 
