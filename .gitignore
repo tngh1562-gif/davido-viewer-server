@@ -3,3 +3,4 @@ data/sessions.json
 data/viewers.json
 data/betting.json
 .env
+public/index.html
