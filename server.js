@@ -740,9 +740,8 @@ app.post('/api/pawn/sell', async (req, res) => {
     );
     if (r.ok) {
       _sessions._pawnLog[PAWN_LOG_KEY] = usedToday + 1;
-      // 포인트 로컬 반영
-      const { viewers, viewer } = getViewer(name);
-      res.json({ ok: true, points: viewer.points || 0, usedToday: usedToday + 1 });
+      // 인하우스 서버가 반환한 최신 포인트 그대로 사용 (로컬 캐시 X)
+      res.json({ ok: true, points: r.points, usedToday: usedToday + 1 });
     } else {
       res.json(r);
     }
