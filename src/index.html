@@ -1124,6 +1124,39 @@ function copyCode() {
 let pts = 0;
 let myName = '';
 let myAvatar = null; // 내 프로필 사진 (base64)
+var avatarCache = {}; // name → url | null | 'loading'
+
+function makeAvatarEl(author, size) {
+  var sz = size || 32;
+  var url = (author === myName && myAvatar) ? myAvatar : (avatarCache[author] || null);
+  if (url) {
+    return `<div class="cmt-avatar" style="width:${sz}px;height:${sz}px;padding:0;overflow:hidden;flex-shrink:0" data-av="${escapeHtml(author)}"><img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>`;
+  }
+  return `<div class="cmt-avatar" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.23)}px;flex-shrink:0" data-av="${escapeHtml(author)}">${(author||'?')[0].toUpperCase()}</div>`;
+}
+
+// 댓글 렌더 후 호출 — 모르는 아바타 일괄 fetch 후 DOM 교체
+function fetchAndApplyAvatars(authors) {
+  var unknown = [];
+  authors.forEach(function(n){
+    if(n && avatarCache[n] === undefined) { avatarCache[n] = 'loading'; unknown.push(n); }
+  });
+  if(!unknown.length) return;
+  fetch('/api/avatars?names=' + encodeURIComponent(unknown.join(',')))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok) return;
+      Object.keys(d.avatars).forEach(function(name){
+        avatarCache[name] = d.avatars[name]; // null or url
+        if(!d.avatars[name]) return;
+        // 해당 유저의 아바타 엘리먼트 교체
+        document.querySelectorAll('[data-av="'+name+'"]').forEach(function(el){
+          el.style.padding='0'; el.style.overflow='hidden';
+          el.innerHTML='<img src="'+d.avatars[name]+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">';
+        });
+      });
+    }).catch(function(){});
+}
 let myFatigue = 100;
 
 function saveFatigue(n){
@@ -1504,6 +1537,8 @@ async function showPost(id, board) {
       </div>
     </div>`;
   loadComments(post.id);
+  // 게시글 작성자 아바타 로드
+  fetchAndApplyAvatars([post.author]);
 }
 
 let pendingImages = [];
@@ -1649,15 +1684,16 @@ async function loadComments(postId) {
 
   listEl.innerHTML = comments.length ? comments.map(c => renderComment(postId, c)).join('') :
     '<div style="color:var(--text-muted);font-size:.85rem;padding:12px 0">아직 댓글이 없습니다.</div>';
-}
 
-function makeAvatarEl(author, size) {
-  var sz = size || 32;
-  var isMe = author === myName && myAvatar;
-  if (isMe) {
-    return `<div class="cmt-avatar" style="width:${sz}px;height:${sz}px;padding:0;overflow:hidden"><img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>`;
+  // 모든 댓글/답글 작성자 아바타 비동기 로드
+  if (comments.length) {
+    const authors = new Set();
+    comments.forEach(c => {
+      authors.add(c.author);
+      (c.replies||[]).forEach(r => authors.add(r.author));
+    });
+    fetchAndApplyAvatars([...authors]);
   }
-  return `<div class="cmt-avatar" style="width:${sz}px;height:${sz}px;font-size:${sz*.23}rem">${(author||'?')[0].toUpperCase()}</div>`;
 }
 
 function renderComment(postId, c) {

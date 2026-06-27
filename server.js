@@ -938,6 +938,15 @@ app.get('/api/inhouse-lineup', async (req, res) => {
 
 // 포인트 랭킹 — 인하우스 DB에서 가져오기 (별도 엔드포인트, 타임아웃 3초)
 // ── 프로필 이미지 업로드/조회 ──
+// 여러 유저 아바타 일괄 조회 (댓글 표시용)
+app.get('/api/avatars', (req, res) => {
+  const names = String(req.query.names || '').split(',').map(s=>s.trim()).filter(Boolean).slice(0, 50);
+  const viewers = readJSON(VIEWERS_FILE, {});
+  const result = {};
+  names.forEach(n => { result[n] = viewers[n]?.avatar || null; });
+  res.json({ ok: true, avatars: result });
+});
+
 app.post('/api/profile/avatar', (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.status(401).json({ ok: false, error: '로그인 필요' });
