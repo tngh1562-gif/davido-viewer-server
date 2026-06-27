@@ -871,6 +871,13 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-desc" style="color:rgba(255,255,255,.8)">💥 배당이 올라갈 때 현금화<br>폭발 전에 빠져나와라 · 10~50P</div>
         <div class="card-footer-link" style="color:#c084fc">참여하기 +</div>
       </div>
+      <div class="card game-card" style="background:linear-gradient(135deg,#1a0a2e,#6d28d9);color:#fff;border:none" onclick="openGame('balloon')">
+        <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
+        <div class="card-label">SOLO · 혼자</div>
+        <div class="card-title">🎈 풍선 폭발</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">꾹 눌러서 풍선 부풀리기<br>터지기 전에 현금화해라 · 5~50P</div>
+        <div class="card-footer-link" style="color:#a78bfa">도전하기 +</div>
+      </div>
     </div>
   </div>
 
@@ -2267,7 +2274,7 @@ async function buyFatigue(itemId, btn){
 let currentGame=null;
 function openGame(g){
   currentGame=g;
-  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권',crash:'💥 배당 폭발'};
+  const titles={ms:'💣 지뢰찾기',timing:'⏱ 타이밍 복권',crash:'💥 배당 폭발',balloon:'🎈 풍선 폭발'};
   document.getElementById('gmTitle').textContent=titles[g]||g;
   document.getElementById('gmPts').textContent=pts.toLocaleString();
   const content=document.getElementById('gmContent');
@@ -2275,6 +2282,7 @@ function openGame(g){
   if(g==='ms')initMs(content);
   else if(g==='timing')initTiming(content);
   else if(g==='crash')initCrash(content);
+  else if(g==='balloon')initBalloon(content);
   document.getElementById('gameListSection').style.display='none';
   document.getElementById('gamePlaySection').style.display='block';
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2417,6 +2425,290 @@ async function tgStop() {
 }
 
 /* ══════════════════════════════════════
+   BALLOON GAME (풍선 폭발)
+*/
+(function(){
+/* ── 풍선 CSS ── */
+var style=document.createElement('style');
+style.textContent=`
+.balloon-wrap{display:flex;flex-direction:column;align-items:center;gap:0;user-select:none}
+.balloon-scene{position:relative;width:240px;height:280px;display:flex;align-items:flex-end;justify-content:center}
+.balloon-svg{transition:none;transform-origin:center bottom;filter:drop-shadow(0 8px 24px rgba(0,0,0,.4))}
+.balloon-mult{font-size:2.2rem;font-weight:900;letter-spacing:-2px;text-align:center;min-height:3rem;font-variant-numeric:tabular-nums}
+.balloon-sub{font-size:.75rem;color:var(--text-muted);margin-bottom:12px;text-align:center;min-height:1.2rem}
+.pump-btn{
+  width:180px;height:180px;border-radius:50%;border:none;cursor:pointer;
+  font-size:1rem;font-weight:900;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  transition:transform .08s,box-shadow .08s;
+  -webkit-user-select:none;user-select:none;
+  touch-action:none;
+}
+.pump-btn.idle{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 32px rgba(168,85,247,.4)}
+.pump-btn.pumping{background:linear-gradient(135deg,#059669,#10b981);color:#fff;box-shadow:0 4px 16px rgba(16,185,129,.5);transform:scale(.95)}
+.pump-btn.popped{background:rgba(239,68,68,.15);color:#ef4444;border:2px solid rgba(239,68,68,.4);cursor:default}
+.pump-btn:disabled{cursor:default}
+.balloon-chip-row{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
+.balloon-chip{padding:5px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text-muted);font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+.balloon-chip.sel{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.5);color:#a855f7}
+.cashout-btn{padding:11px 32px;border:none;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:900;font-size:.88rem;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(245,158,11,.35);transition:all .12s}
+.cashout-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+@keyframes balShake{0%,100%{transform-origin:center bottom;transform:rotate(-2deg) scale(var(--bs))}50%{transform:rotate(2deg) scale(var(--bs))}}
+@keyframes balPop{0%{opacity:1;transform:scale(var(--bs))}50%{opacity:.5;transform:scale(calc(var(--bs)*1.3))}100%{opacity:0;transform:scale(.2)}}
+`;
+document.head.appendChild(style);
+})();
+
+/* ── 풍선 게임 로직 ── */
+var balloonState={
+  gameId:null,bet:10,mult:1,
+  holding:false,lastHoldStart:null,
+  animId:null,pingId:null,
+  phase:'idle', // idle | playing | cashed | popped
+};
+var BALLOON_RATE=0.38; // x/sec 증가 속도
+
+function initBalloon(wrap){
+  balloonState={gameId:null,bet:10,mult:1,holding:false,lastHoldStart:null,animId:null,pingId:null,phase:'idle'};
+  wrap.innerHTML=`
+<div class="balloon-wrap">
+  <div class="balloon-mult" id="blMult" style="color:#a855f7">1.00x</div>
+  <div class="balloon-sub" id="blSub">베팅 후 꾹 눌러서 팽창!</div>
+  <div class="balloon-scene">
+    <svg id="blSvg" class="balloon-svg" width="160" height="200" viewBox="0 0 160 200" style="--bs:1">
+      <defs>
+        <radialGradient id="blGrad" cx="35%" cy="30%" r="65%">
+          <stop id="blG1" offset="0%" stop-color="#e879f9"/>
+          <stop id="blG2" offset="60%" stop-color="#a855f7"/>
+          <stop id="blG3" offset="100%" stop-color="#6d28d9"/>
+        </radialGradient>
+        <radialGradient id="blShine" cx="30%" cy="25%" r="40%">
+          <stop offset="0%" stop-color="rgba(255,255,255,.55)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      <!-- 풍선 본체 -->
+      <ellipse id="blBody" cx="80" cy="90" rx="60" ry="70" fill="url(#blGrad)"/>
+      <!-- 하이라이트 -->
+      <ellipse cx="60" cy="65" rx="22" ry="16" fill="url(#blShine)"/>
+      <!-- 매듭 -->
+      <ellipse cx="80" cy="162" rx="6" ry="8" fill="#7c3aed"/>
+      <!-- 실 -->
+      <path d="M80 170 Q72 185 80 200" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+    </svg>
+  </div>
+
+  <div class="balloon-chip-row" id="blChips">
+    <button class="balloon-chip sel" onclick="blSetBet(5,this)">5P</button>
+    <button class="balloon-chip" onclick="blSetBet(10,this)">10P</button>
+    <button class="balloon-chip" onclick="blSetBet(20,this)">20P</button>
+    <button class="balloon-chip" onclick="blSetBet(50,this)">50P</button>
+  </div>
+
+  <button class="pump-btn idle" id="blPumpBtn"
+    onmousedown="blPumpStart(event)" onmouseup="blPumpStop(event)"
+    ontouchstart="blPumpStart(event)" ontouchend="blPumpStop(event)"
+    onmouseleave="blPumpStop(event)">
+    <span style="font-size:2rem">🎈</span>
+    <span>눌러서 시작</span>
+  </button>
+
+  <div style="height:12px"></div>
+  <button class="cashout-btn" id="blCashBtn" disabled onclick="blCashout()">현금화</button>
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:8px;text-align:center">피로도 −3 · 베팅 <span id="blBetDisp">5</span>P</div>
+</div>`;
+}
+
+function blSetBet(n,el){
+  if(balloonState.phase!=='idle') return;
+  balloonState.bet=n;
+  document.querySelectorAll('.balloon-chip').forEach(function(c){c.classList.remove('sel');});
+  el.classList.add('sel');
+  document.getElementById('blBetDisp').textContent=n;
+}
+
+function blPumpStart(e){
+  e.preventDefault();
+  if(balloonState.phase==='cashed'||balloonState.phase==='popped') return;
+
+  if(balloonState.phase==='idle'){
+    // 첫 누름 → 게임 시작
+    blStartGame();
+    return;
+  }
+  if(balloonState.phase==='playing'){
+    balloonState.holding=true;
+    balloonState.lastHoldStart=performance.now();
+    var btn=document.getElementById('blPumpBtn');
+    if(btn){btn.className='pump-btn pumping';btn.querySelector('span:last-child').textContent='팽창 중...';}
+    blAnimate();
+  }
+}
+
+function blPumpStop(e){
+  if(e) e.preventDefault();
+  if(!balloonState.holding) return;
+  balloonState.holding=false;
+  balloonState.lastHoldStart=null;
+  if(balloonState.animId){cancelAnimationFrame(balloonState.animId);balloonState.animId=null;}
+  var btn=document.getElementById('blPumpBtn');
+  if(btn&&balloonState.phase==='playing'){btn.className='pump-btn idle';btn.querySelector('span:last-child').textContent='다시 눌러 계속';}
+}
+
+function blStartGame(){
+  fetch('/api/game/balloon/start',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({bet:balloonState.bet})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){toast(d.error||'시작 실패','err');return;}
+    balloonState.gameId=d.gameId;
+    balloonState.mult=1.00;
+    balloonState.phase='playing';
+    balloonState.holding=true;
+    balloonState.lastHoldStart=performance.now();
+    savePts(d.points);
+    if(d.fatigue!=null)saveFatigue(d.fatigue);
+
+    // 베팅 칩 비활성화
+    document.getElementById('blChips').style.opacity='.4';
+    document.getElementById('blChips').style.pointerEvents='none';
+    document.getElementById('blCashBtn').disabled=false;
+
+    var btn=document.getElementById('blPumpBtn');
+    if(btn){btn.className='pump-btn pumping';btn.querySelector('span:last-child').textContent='팽창 중...';}
+
+    blAnimate();
+    // ping loop
+    balloonState.pingId=setInterval(blPing,200);
+  }).catch(function(){toast('오류','err');});
+}
+
+var blLastTs=null;
+function blAnimate(){
+  if(!balloonState.holding||balloonState.phase!=='playing'){blLastTs=null;return;}
+  var now=performance.now();
+  if(blLastTs){
+    var dt=(now-blLastTs)/1000;
+    // 배당이 올라갈수록 약간 빠르게
+    var rate=BALLOON_RATE*(1+Math.max(0,balloonState.mult-1)*0.08);
+    balloonState.mult=Math.min(99,balloonState.mult+rate*dt);
+  }
+  blLastTs=now;
+  blRender();
+  balloonState.animId=requestAnimationFrame(blAnimate);
+}
+
+function blRender(){
+  var m=balloonState.mult;
+  var el=document.getElementById('blMult');
+  if(el){el.textContent=m.toFixed(2)+'x';}
+
+  // 풍선 크기 (1x=1.0, 5x=2.0 scale)
+  var scale=Math.min(2.5,0.75+m*0.25);
+  var svg=document.getElementById('blSvg');
+  if(svg){
+    svg.style.transform='scale('+scale+')';
+    svg.style.setProperty('--bs',scale);
+    // 색상 변화 (보라→노랑→빨강)
+    var t=Math.min(1,(m-1)/6);
+    var r1,g1,b1,r2,g2,b2;
+    if(t<0.5){
+      var tt=t*2;
+      r1=Math.round(232+tt*(253-232));g1=Math.round(121+tt*(211-121));b1=Math.round(249+tt*(0-249));
+      r2=Math.round(168+tt*(245-168));g2=Math.round(85+tt*(158-85));b2=Math.round(247+tt*(11-247));
+    } else {
+      var tt=(t-0.5)*2;
+      r1=Math.round(253+tt*(239-253));g1=Math.round(211+tt*(68-211));b1=Math.round(0+tt*(68-0));
+      r2=Math.round(245+tt*(220-245));g2=Math.round(158+tt*(38-158));b2=Math.round(11+tt*(11-11));
+    }
+    var g=document.getElementById('blG1');if(g)g.setAttribute('stop-color','rgb('+r1+','+g1+','+b1+')');
+    var g2e=document.getElementById('blG2');if(g2e)g2e.setAttribute('stop-color','rgb('+r2+','+g2+','+b2+')');
+    // 다 커지면 흔들림
+    if(m>4&&balloonState.holding){
+      svg.style.animation='balShake '+(0.5-Math.min(0.4,(m-4)*0.02))+'s ease-in-out infinite';
+    } else {
+      svg.style.animation='';
+    }
+  }
+  // 색상 연동
+  if(el){
+    var t2=Math.min(1,(m-1)/6);
+    if(t2<0.4)el.style.color='#a855f7';
+    else if(t2<0.7)el.style.color='#f59e0b';
+    else el.style.color='#ef4444';
+  }
+}
+
+function blPing(){
+  if(balloonState.phase!=='playing'||!balloonState.gameId) return;
+  fetch('/api/game/balloon/pump',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({gameId:balloonState.gameId,mult:balloonState.mult})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.popped) blTriggerPop(d.popAt);
+  }).catch(function(){});
+}
+
+function blTriggerPop(popAt){
+  balloonState.phase='popped';
+  balloonState.holding=false;
+  if(balloonState.animId){cancelAnimationFrame(balloonState.animId);balloonState.animId=null;}
+  if(balloonState.pingId){clearInterval(balloonState.pingId);balloonState.pingId=null;}
+
+  var svg=document.getElementById('blSvg');
+  if(svg){svg.style.animation='balPop .4s ease-out forwards';}
+
+  var el=document.getElementById('blMult');if(el){el.textContent='💥 터짐!';el.style.color='#ef4444';}
+  var sub=document.getElementById('blSub');if(sub)sub.textContent='터지는 지점: '+parseFloat(popAt).toFixed(2)+'x';
+
+  var btn=document.getElementById('blPumpBtn');
+  if(btn){btn.className='pump-btn popped';btn.disabled=true;btn.innerHTML='<span style="font-size:2rem">💥</span><span>터졌습니다...</span>';}
+  document.getElementById('blCashBtn').disabled=true;
+
+  setTimeout(function(){
+    var sub2=document.getElementById('blSub');
+    if(sub2)sub2.textContent='다시 도전하려면 미니게임 목록으로';
+    blReset();
+  },3000);
+}
+
+function blCashout(){
+  if(balloonState.phase!=='playing'||!balloonState.gameId) return;
+  blPumpStop(null);
+  if(balloonState.pingId){clearInterval(balloonState.pingId);balloonState.pingId=null;}
+  balloonState.phase='cashed';
+
+  var m=balloonState.mult;
+  fetch('/api/game/balloon/cashout',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({gameId:balloonState.gameId,mult:m})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.popped||!d.ok){
+      blTriggerPop(d.popAt||m);return;
+    }
+    savePts(d.points);
+    var el=document.getElementById('blMult');if(el){el.textContent='+'+d.gain+'P';el.style.color='#10b981';}
+    var sub=document.getElementById('blSub');if(sub)sub.textContent=m.toFixed(2)+'x 현금화 성공!';
+    var btn=document.getElementById('blPumpBtn');
+    if(btn){btn.className='pump-btn idle';btn.disabled=true;btn.innerHTML='<span style="font-size:2rem">✅</span><span>성공!</span>';}
+    document.getElementById('blCashBtn').disabled=true;
+    setTimeout(blReset,3000);
+  }).catch(function(){balloonState.phase='playing';});
+}
+
+function blReset(){
+  balloonState.phase='idle';balloonState.gameId=null;balloonState.mult=1;balloonState.holding=false;
+  var btn=document.getElementById('blPumpBtn');
+  if(btn){btn.className='pump-btn idle';btn.disabled=false;btn.innerHTML='<span style="font-size:2rem">🎈</span><span>눌러서 시작</span>';}
+  var el=document.getElementById('blMult');if(el){el.textContent='1.00x';el.style.color='#a855f7';}
+  var sub=document.getElementById('blSub');if(sub)sub.textContent='베팅 후 꾹 눌러서 팽창!';
+  var chips=document.getElementById('blChips');if(chips){chips.style.opacity='1';chips.style.pointerEvents='';}
+  var cash=document.getElementById('blCashBtn');if(cash)cash.disabled=true;
+  var svg=document.getElementById('blSvg');if(svg){svg.style.animation='';svg.style.transform='scale(0.75)';}
+  blRender();
+}
+
+/*
    MINESWEEPER (지뢰찾기)
 ══════════════════════════════════════ */
 let msState = null;

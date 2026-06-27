@@ -1208,6 +1208,93 @@ async function msGrantPayout(name, payout) {
   return null;
 }
 
+// ══════════════════════════════════
+//  🎈 풍선 게임
+// ══════════════════════════════════
+const balloonSessions = new Map(); // gameId → { name, popAt, bet, createdAt, totalHeldMs }
+const BALLOON_FATIGUE = 3;
+const BALLOON_RATE    = 0.4; // 배당 증가 속도 x/sec (클라이언트와 동일)
+
+function genBalloonPop() {
+  // 8% 확률 즉사 (1.05~1.3x), 나머지는 지수분포
+  if (Math.random() < 0.08) return 1.05 + Math.random() * 0.25;
+  return Math.max(1.1, Math.min(20, 1 / (1 - Math.random()) * 0.9));
+}
+
+app.post('/api/game/balloon/start', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const bet = Math.max(5, Math.min(50, parseInt(req.body.bet) || 10));
+
+  const fg = checkFatigue(name, BALLOON_FATIGUE);
+  if (!fg.ok) return res.json({ ok: false, error: fg.error });
+
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
+  try {
+    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname: name, amount: bet, reason: `🎈 풍선게임 베팅 (-${bet}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!dr.ok) { recoverFatigue(name, BALLOON_FATIGUE); return res.json({ ok: false, error: dr.error || '포인트 부족' }); }
+
+    const gameId = crypto.randomBytes(8).toString('hex');
+    const popAt  = genBalloonPop();
+    balloonSessions.set(gameId, { name, popAt, bet, createdAt: Date.now(), totalHeldMs: 0 });
+
+    // 통계
+    const { viewers: bvs, viewer: bv } = getViewer(name);
+    bv.stats = bv.stats || {}; bv.stats.balloonPlayed = (bv.stats.balloonPlayed||0) + 1;
+    bv.points = dr.points; saveViewer(bvs);
+
+    res.json({ ok: true, gameId, points: dr.points, fatigue: fg.fatigue });
+  } catch(e) { recoverFatigue(name, BALLOON_FATIGUE); res.json({ ok: false, error: e.message }); }
+});
+
+// 클라이언트가 꾹 누르는 동안 200ms마다 ping — 서버가 터졌는지 확인
+app.post('/api/game/balloon/pump', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { gameId, mult } = req.body;
+  const s = balloonSessions.get(gameId);
+  if (!s || s.name !== name) return res.json({ ok: false, error: '세션 없음' });
+
+  const m = parseFloat(mult) || 1;
+  if (m >= s.popAt) {
+    balloonSessions.delete(gameId);
+    // 통계
+    const { viewers: pvs, viewer: pv } = getViewer(name);
+    pv.stats = pv.stats || {}; pv.stats.balloonPopped = (pv.stats.balloonPopped||0) + 1;
+    saveViewer(pvs);
+    return res.json({ ok: true, popped: true, popAt: s.popAt });
+  }
+  res.json({ ok: true, popped: false });
+});
+
+// 현금화
+app.post('/api/game/balloon/cashout', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { gameId, mult } = req.body;
+  const s = balloonSessions.get(gameId);
+  if (!s || s.name !== name) return res.json({ ok: false, error: '세션 없음 또는 만료' });
+
+  const m = Math.max(1, parseFloat(mult) || 1);
+  if (m >= s.popAt) {
+    balloonSessions.delete(gameId);
+    return res.json({ ok: false, error: '이미 터진 풍선입니다', popped: true, popAt: s.popAt });
+  }
+
+  balloonSessions.delete(gameId);
+  const gain = Math.floor(s.bet * m);
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
+  try {
+    const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      { nickname: name, amount: gain, reason: `🎈 풍선게임 ${m.toFixed(2)}x 현금화 (+${gain}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    addFeed('balloon', name, { mult: m, gain, bet: s.bet, reason: `🎈 풍선 ${m.toFixed(2)}x (+${gain}P)` });
+    res.json({ ok: true, mult: m, gain, points: gr.points });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.post('/api/game/ms/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
