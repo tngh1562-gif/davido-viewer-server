@@ -1123,6 +1123,7 @@ function copyCode() {
 /* ══════════ LOGIN / SESSION ══════════ */
 let pts = 0;
 let myName = '';
+let myAvatar = null; // 내 프로필 사진 (base64)
 let myFatigue = 100;
 
 function saveFatigue(n){
@@ -1171,7 +1172,7 @@ function showApp(viewer, inhousePoints){
   savePts(inhousePoints != null ? inhousePoints : (viewer.points || 0));
   document.getElementById('navName').textContent = viewer.name;
   // 프로필 사진 적용
-  if (viewer.avatar) applyNavAvatar(viewer.avatar);
+  if (viewer.avatar) { myAvatar = viewer.avatar; applyNavAvatar(viewer.avatar); }
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainNav').style.display = '';
   document.getElementById('mainContent').style.display = '';
@@ -1479,8 +1480,9 @@ async function showPost(id, board) {
     <button class="comm-back-btn" onclick="loadCommunity('${board}')">← ${BOARD_LABELS[board]}으로 돌아가기</button>
     <div class="comm-detail">
       <div class="comm-detail-title">${escapeHtml(post.title)}</div>
-      <div class="comm-detail-meta">
-        ${escapeHtml(post.author)} · ${relTime(post.createdAt)}
+      <div class="comm-detail-meta" style="display:flex;align-items:center;gap:8px">
+        ${makeAvatarEl(post.author, 28)}
+        <span>${escapeHtml(post.author)} · ${relTime(post.createdAt)}</span>
         ${canDelete ? `
           <span style="float:right;display:flex;gap:10px">
             <button onclick="editPost('${post.id}','${board}')" style="background:none;border:none;color:#a78bfa;cursor:pointer;font-size:.78rem">수정</button>
@@ -1649,12 +1651,20 @@ async function loadComments(postId) {
     '<div style="color:var(--text-muted);font-size:.85rem;padding:12px 0">아직 댓글이 없습니다.</div>';
 }
 
+function makeAvatarEl(author, size) {
+  var sz = size || 32;
+  var isMe = author === myName && myAvatar;
+  if (isMe) {
+    return `<div class="cmt-avatar" style="width:${sz}px;height:${sz}px;padding:0;overflow:hidden"><img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>`;
+  }
+  return `<div class="cmt-avatar" style="width:${sz}px;height:${sz}px;font-size:${sz*.23}rem">${(author||'?')[0].toUpperCase()}</div>`;
+}
+
 function renderComment(postId, c) {
-  const initial = (c.author||'?')[0].toUpperCase();
   const canDel = c.author === myName;
   const repliesHtml = (c.replies||[]).map(r => renderReply(postId, c.id, r)).join('');
   return `<div class="cmt-item" id="cmt-${c.id}">
-    <div class="cmt-avatar">${initial}</div>
+    ${makeAvatarEl(c.author, 32)}
     <div class="cmt-body">
       <div class="cmt-meta">
         <span class="cmt-author">${escapeHtml(c.author)}</span>
@@ -1672,10 +1682,9 @@ function renderComment(postId, c) {
 }
 
 function renderReply(postId, commentId, r) {
-  const initial = (r.author||'?')[0].toUpperCase();
   const canDel = r.author === myName;
   return `<div class="cmt-item" style="margin-bottom:10px" id="reply-${r.id}">
-    <div class="cmt-avatar" style="width:26px;height:26px;font-size:.65rem">${initial}</div>
+    ${makeAvatarEl(r.author, 26)}
     <div class="cmt-body">
       <div class="cmt-meta">
         <span class="cmt-author">${escapeHtml(r.author)}</span>
@@ -1904,7 +1913,8 @@ function triggerAvatarUpload(){
               if (el) {
                 el.innerHTML = '<img src="' + imageData + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><div class="avatar-hover-overlay">📷</div>';
               }
-              // 우측 상단 네비 아바타
+              // 우측 상단 네비 아바타 + 전역 변수
+              myAvatar = imageData;
               applyNavAvatar(imageData);
             } else {
               toast(r.error || '업로드 실패', 'err');
