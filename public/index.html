@@ -636,6 +636,49 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 </style>
 </head>
 <body>
+<script>
+(function(){
+  // 우클릭 차단
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+  // 단축키 차단 (F12, Ctrl+Shift+I/J/C/U, Ctrl+S, Ctrl+A)
+  document.addEventListener('keydown', function(e){
+    if(e.key==='F12') { e.preventDefault(); return; }
+    if(e.ctrlKey && e.shiftKey && ['I','J','C','i','j','c'].includes(e.key)) { e.preventDefault(); return; }
+    if(e.ctrlKey && ['u','U','s','S'].includes(e.key)) { e.preventDefault(); return; }
+  });
+
+  // DevTools 열림 감지 → 페이지 내용 차단
+  var _devOpen = false;
+  var _threshold = 160;
+  function _checkDevTools(){
+    var w = window.outerWidth - window.innerWidth;
+    var h = window.outerHeight - window.innerHeight;
+    if(w > _threshold || h > _threshold){
+      if(!_devOpen){
+        _devOpen = true;
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#09090b;color:#666;font-size:16px;font-family:sans-serif">접근이 제한되었습니다.</div>';
+      }
+    } else {
+      _devOpen = false;
+    }
+  }
+
+  // debugger trap (DevTools 열려있으면 멈춤)
+  function _trap(){
+    (function(){
+      var d = new Date();
+      debugger;
+      if(new Date() - d > 100){
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#09090b;color:#666;font-size:16px;font-family:sans-serif">접근이 제한되었습니다.</div>';
+      }
+    })();
+  }
+
+  setInterval(_checkDevTools, 500);
+  setInterval(_trap, 1000);
+})();
+</script>
 
 <div class="bg-fx"><div class="particles"></div></div>
 
