@@ -879,9 +879,24 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 
 <!-- ═══ STORE ═══ -->
 <div id="page-store" class="page">
-  <div class="h-section" style="margin-bottom:8px">내전 상점</div>
-  <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:20px">내전 참여 및 미니게임으로 포인트를 모아 아이템을 구매하세요</div>
+  <div class="h-section" style="margin-bottom:12px">내전 상점</div>
 
+  <!-- 상점/전당포 탭 -->
+  <div style="display:flex;gap:0;margin-bottom:24px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.1);width:fit-content">
+    <button id="storeTabShop" onclick="switchStoreTab('shop')"
+      style="padding:8px 24px;border:none;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;
+             background:#10b981;color:#000;transition:all .15s">
+      🛒 상점
+    </button>
+    <button id="storeTabPawn" onclick="switchStoreTab('pawn')"
+      style="padding:8px 24px;border:none;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;
+             background:rgba(255,255,255,.06);color:var(--text-muted);transition:all .15s">
+      🏪 전당포
+    </button>
+  </div>
+
+  <!-- 상점 패널 -->
+  <div id="storePanelShop">
   <!-- 내전 아이템 -->
   <div class="h-section" style="font-size:.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">⚔ 내전 아이템</div>
   <div class="store-grid" style="margin-bottom:32px">
@@ -946,6 +961,18 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-desc">피로도를 100으로 완전 회복합니다.</div>
       <div class="product-price" style="color:#4ade80">180 P</div>
       <button class="btn-buy" id="fatBtnFull" onclick="buyFatigue('fatigue_full',this)">사용하기</button>
+    </div>
+  </div>
+  </div><!-- /storePanelShop -->
+
+  <!-- 전당포 패널 -->
+  <div id="storePanelPawn" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="font-size:.78rem;color:var(--text-muted)">보관함의 아이템을 포인트로 환전할 수 있습니다 · 판매가 = 상점가 − 50P · <b style="color:#fbbf24">하루 10회 제한</b></div>
+      <span id="pawnLimitBadge" style="margin-left:auto;font-size:.72rem;padding:3px 10px;border-radius:8px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:#fbbf24;white-space:nowrap">오늘 0/10회</span>
+    </div>
+    <div id="pawnItemList" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+      <div style="color:var(--text-muted);font-size:.85rem;grid-column:1/-1">보관함 불러오는 중...</div>
     </div>
   </div>
 </div>
@@ -1775,6 +1802,73 @@ function syncMobileTab(tab) {
 })()
 
 /* ══════════ TOAST ══════════ */
+/* ══════════════════════════════════════
+   전당포
+══════════════════════════════════════ */
+const PAWN_PRICES = { '선참권':70, '노밴권':190, '종일권':410, '연장권':550 };
+const PAWN_ICONS  = { '선참권':'⭐','노밴권':'🛡️','종일권':'🌙','연장권':'⚡' };
+let pawnUsedToday = 0;
+
+function switchStoreTab(tab) {
+  const isShop = tab === 'shop';
+  document.getElementById('storePanelShop').style.display = isShop ? '' : 'none';
+  document.getElementById('storePanelPawn').style.display = isShop ? 'none' : '';
+  document.getElementById('storeTabShop').style.background = isShop ? '#10b981' : 'rgba(255,255,255,.06)';
+  document.getElementById('storeTabShop').style.color = isShop ? '#000' : 'var(--text-muted)';
+  document.getElementById('storeTabPawn').style.background = isShop ? 'rgba(255,255,255,.06)' : '#f59e0b';
+  document.getElementById('storeTabPawn').style.color = isShop ? 'var(--text-muted)' : '#000';
+  if(!isShop) loadPawnItems();
+}
+
+async function loadPawnItems() {
+  const list = document.getElementById('pawnItemList');
+  list.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;grid-column:1/-1">보관함 불러오는 중...</div>';
+  const r = await fetch('/api/pawn/inventory').then(r=>r.json()).catch(()=>({ok:false}));
+  if(!r.ok){ list.innerHTML=`<div style="color:#ef4444;grid-column:1/-1">${r.error||'불러오기 실패'}</div>`; return; }
+
+  pawnUsedToday = r.usedToday || 0;
+  document.getElementById('pawnLimitBadge').textContent = `오늘 ${pawnUsedToday}/10회`;
+
+  const items = r.items || [];
+  const sellable = items.filter(i => PAWN_PRICES[i.name] && i.count > 0);
+  if(!sellable.length){
+    list.innerHTML='<div style="color:var(--text-muted);font-size:.85rem;grid-column:1/-1">판매 가능한 아이템이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = sellable.map(i=>`
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;margin-bottom:6px">${PAWN_ICONS[i.name]||'📦'}</div>
+      <div class="card-title" style="font-size:.88rem">${escapeHtml(i.name)}</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin:4px 0">보유 ${i.count}개</div>
+      <div style="font-size:1.2rem;font-weight:900;color:#f59e0b;margin:6px 0">+${PAWN_PRICES[i.name]}P</div>
+      <div style="font-size:.62rem;color:var(--text-muted);margin-bottom:8px">상점가 대비 −50P</div>
+      <button onclick="pawnSell('${escapeHtml(i.name)}',this)"
+        style="width:100%;padding:8px;border:none;border-radius:8px;background:#f59e0b;color:#000;font-weight:900;font-size:.78rem;cursor:pointer;font-family:inherit">
+        판매하기
+      </button>
+    </div>`).join('');
+}
+
+async function pawnSell(itemName, btn) {
+  if(pawnUsedToday >= 10){ toast('오늘 전당포 거래 한도(10회)를 초과했습니다','err'); return; }
+  if(!confirm(`${itemName}을(를) ${PAWN_PRICES[itemName]}P에 판매하시겠습니까?`)) return;
+  btn.disabled=true; btn.textContent='판매 중...';
+  const r = await fetch('/api/pawn/sell',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({itemName})
+  }).then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
+  if(r.ok){
+    savePts(r.points);
+    pawnUsedToday = r.usedToday;
+    document.getElementById('pawnLimitBadge').textContent = `오늘 ${pawnUsedToday}/10회`;
+    toast(`${itemName} 판매완료! +${PAWN_PRICES[itemName]}P`,'ok');
+    loadPawnItems();
+  } else {
+    toast(r.error||'판매 실패','err');
+    btn.disabled=false; btn.textContent='판매하기';
+  }
+}
+
 /* ══════════════════════════════════════
    관리자 패널
 ══════════════════════════════════════ */

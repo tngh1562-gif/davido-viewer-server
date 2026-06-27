@@ -537,10 +537,11 @@ function sendPointLog(nickname, delta, afterPts, reason) {
   }).catch(e => console.warn('[POINT_LOG]', e.message));
 }
 
-function getJson(url) {
+function getJson(url, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http;
-    lib.get(url, res => {
+    const opts = { headers: extraHeaders };
+    lib.get(url, opts, res => {
       let raw = '';
       res.on('data', c => raw += c);
       res.on('end', () => { try { resolve(JSON.parse(raw)); } catch { reject(new Error('parse')); } });
@@ -696,6 +697,56 @@ app.post('/api/admin/points', async (req, res) => {
 // ── Shop ──
 app.get('/api/shop', (req, res) => {
   res.json(readJSON(SHOP_FILE, { items: [] }));
+});
+
+// ── 전당포: 보관함 조회 ──
+app.get('/api/pawn/inventory', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '내전 서버 미연결' });
+  try {
+    const today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+    const r = await getJson(
+      `${INHOUSE_SERVER_URL}/api/viewer-inventory?nickname=${encodeURIComponent(name)}`,
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }
+    );
+    // 오늘 사용 횟수도 함께 내려줌 (뷰어 서버 자체에서 관리)
+    const PAWN_LOG_KEY = `pawn:${name}:${today}`;
+    const pawnCount = (_sessions._pawnLog || {})[PAWN_LOG_KEY] || 0;
+    res.json({ ...r, usedToday: pawnCount });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── 전당포: 판매 ──
+app.post('/api/pawn/sell', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { itemName } = req.body;
+  if (!itemName) return res.json({ ok: false, error: '아이템명 필요' });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '내전 서버 미연결' });
+
+  // 일일 한도 체크
+  const today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  const PAWN_LOG_KEY = `pawn:${name}:${today}`;
+  if (!_sessions._pawnLog) _sessions._pawnLog = {};
+  const usedToday = _sessions._pawnLog[PAWN_LOG_KEY] || 0;
+  if (usedToday >= 10) return res.json({ ok: false, error: '오늘 전당포 거래 한도(10회)를 초과했습니다' });
+
+  try {
+    const r = await postJson(
+      `${INHOUSE_SERVER_URL}/api/viewer-pawn-sell`,
+      { nickname: name, itemName },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }
+    );
+    if (r.ok) {
+      _sessions._pawnLog[PAWN_LOG_KEY] = usedToday + 1;
+      // 포인트 로컬 반영
+      const { viewers, viewer } = getViewer(name);
+      res.json({ ok: true, points: viewer.points || 0, usedToday: usedToday + 1 });
+    } else {
+      res.json(r);
+    }
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 app.post('/api/shop/buy', async (req, res) => {
