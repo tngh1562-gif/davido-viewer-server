@@ -135,6 +135,8 @@ function getViewer(name) {
   const viewers = readJSON(VIEWERS_FILE, {});
   if (!viewers[name]) viewers[name] = { name, points: 0, bets: 0, wins: 0, purchases: [] };
   const v = viewers[name];
+  // 게임 통계 초기화
+  if (!v.stats) v.stats = { rocketLaunched:0, mineBombed:0, timingHit:0, crashCashout:0 };
   // 피로도 초기화 (필드 없으면 기본값)
   if (v.fatigue === undefined) v.fatigue = 100;
   // 매일 자정 KST 자동 30 회복
@@ -915,6 +917,10 @@ app.post('/api/game/timing/press', async (req, res) => {
     timingWinnerSaving = false;
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
     addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
+    // 통계 기록
+    const { viewers: tvs, viewer: tv } = getViewer(name);
+    tv.stats.timingHit = (tv.stats.timingHit||0) + 1;
+    saveViewer(tvs);
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
   }
   return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
@@ -931,6 +937,53 @@ app.get('/api/inhouse-lineup', async (req, res) => {
 });
 
 // 포인트 랭킹 — 인하우스 DB에서 가져오기 (별도 엔드포인트, 타임아웃 3초)
+// ── 마이페이지 통합 API ──
+app.get('/api/mypage', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.status(401).json({ ok: false, error: '로그인 필요' });
+
+  const { viewer } = getViewer(name);
+  const stats = viewer.stats || {};
+
+  // 내전 승률 (인하우스)
+  let inhouseStats = null;
+  if (INHOUSE_SERVER_URL) {
+    try {
+      const db = await Promise.race([
+        getJson(`${INHOUSE_SERVER_URL}/api/inhouse-db`),
+        new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),3000))
+      ]);
+      const p = (db?.players||[]).find(p=>(p.name||p.chzzk||'').trim()===name.trim());
+      if (p) inhouseStats = { wins: p.wins||0, losses: p.losses||0, winRate: p.winRate||0 };
+    } catch {}
+  }
+
+  // 보관함 (봇)
+  let inventory = [];
+  if (INHOUSE_SERVER_URL) {
+    try {
+      const inv = await Promise.race([
+        getJson(`${INHOUSE_SERVER_URL}/api/viewer-inventory?nickname=${encodeURIComponent(name)}`,
+          { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }),
+        new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),3000))
+      ]);
+      if (inv.ok) inventory = inv.items || [];
+    } catch {}
+  }
+
+  res.json({
+    ok: true,
+    name,
+    stats: {
+      rocketLaunched: stats.rocketLaunched || 0,
+      mineBombed:     stats.mineBombed     || 0,
+      timingHit:      stats.timingHit      || 0,
+    },
+    inhouse: inhouseStats,
+    inventory,
+  });
+});
+
 app.get('/api/ranking', async (req, res) => {
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, ranking: [] });
   try {
@@ -1164,6 +1217,10 @@ app.post('/api/game/ms/reveal', async (req, res) => {
   if (s.mineSet.has(idx)) {
     s.alive = false;
     msSessions.delete(sessionId);
+    // 지뢰 밟음 통계
+    const { viewers: mvs, viewer: mv } = getViewer(name);
+    mv.stats.mineBombed = (mv.stats.mineBombed||0) + 1;
+    saveViewer(mvs);
     return res.json({ ok: true, hit: true, mines: [...s.mineSet] });
   }
   s.revealed.add(idx);
@@ -1336,6 +1393,9 @@ app.post('/api/game/crash/bet', async (req, res) => {
     if (!dr.ok) { recoverFatigue(name, FATIGUE_COST.crash); return res.json({ ok: false, error: dr.error || '포인트 부족' }); }
     const { viewers, viewer } = getViewer(name); viewer.points = dr.points; saveViewer(viewers);
     crash.bets[name] = { amount, cashedOut: false, cashMult: null };
+    // 로켓 발사 통계
+    viewer.stats = viewer.stats || {}; viewer.stats.rocketLaunched = (viewer.stats.rocketLaunched||0) + 1;
+    saveViewer(viewers);
     crashBroadcast();
     res.json({ ok: true, viewer, roundId: crash.roundId, fatigue: fg.fatigue });
   } catch(e) { recoverFatigue(name, FATIGUE_COST.crash); res.json({ ok: false, error: e.message }); }

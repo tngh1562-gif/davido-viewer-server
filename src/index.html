@@ -725,6 +725,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item" onclick="switchTab('page-community',this);loadCommunity('notice')">커뮤니티</div>
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
+      <div class="nav-item" onclick="switchTab('page-mypage',this);loadMyPage()">마이페이지</div>
       <div class="nav-item" id="adminNavTab" style="display:none;color:#ef4444" onclick="switchTab('page-admin',this);loadAdminUsers();loadBanAttempts()">🛡 관리자</div>
     </div>
     <div class="user-profile">
@@ -974,6 +975,13 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     <div id="pawnItemList" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
       <div style="color:var(--text-muted);font-size:.85rem;grid-column:1/-1">보관함 불러오는 중...</div>
     </div>
+  </div>
+</div>
+
+<!-- ═══ MYPAGE ═══ -->
+<div id="page-mypage" class="page">
+  <div id="mypageContent">
+    <div style="color:var(--text-muted);font-size:.85rem">로딩 중...</div>
   </div>
 </div>
 
@@ -1802,6 +1810,89 @@ function syncMobileTab(tab) {
 })()
 
 /* ══════════ TOAST ══════════ */
+/* ══════════════════════════════════════
+   마이페이지
+══════════════════════════════════════ */
+async function loadMyPage() {
+  const wrap = document.getElementById('mypageContent');
+  wrap.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;padding:20px 0">불러오는 중...</div>';
+  const d = await fetch('/api/mypage').then(r=>r.json()).catch(()=>({ok:false}));
+  if (!d.ok) { wrap.innerHTML = `<div style="color:#ef4444">${d.error||'오류'}</div>`; return; }
+
+  const inv = d.inventory || [];
+  const s   = d.stats || {};
+  const ih  = d.inhouse;
+
+  // 보관함 아이템
+  const ITEM_ICONS = {'선참권':'⭐','노밴권':'🛡️','종일권':'🌙','내전 1판 연장권':'⚡','승률 초기화권':'🔄','꽝꽝꽝꽝꽝꽝':'💀'};
+  const invHtml = inv.length ? inv.map(i=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border-radius:10px;border:1px solid rgba(255,255,255,.07)">
+      <span style="font-size:1.4rem">${ITEM_ICONS[i.name]||'📦'}</span>
+      <span style="font-weight:700;font-size:.85rem;flex:1">${escapeHtml(i.name)}</span>
+      <span style="font-size:.85rem;font-weight:900;color:#fbbf24">${i.count}개</span>
+    </div>`).join('')
+    : '<div style="color:var(--text-muted);font-size:.82rem;padding:10px 0">보유 중인 아이템 없음</div>';
+
+  // 승률
+  const wrHtml = ih
+    ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:2rem;font-weight:900;color:#10b981">${ih.winRate||0}%</span>
+        <span style="font-size:.78rem;color:var(--text-muted)">승 ${ih.wins} / 패 ${ih.losses} · ${ih.wins+ih.losses}판</span>
+       </div>`
+    : '<span style="color:var(--text-muted);font-size:.82rem">내전 기록 없음</span>';
+
+  // 재치있는 게임 통계
+  const funStats = [
+    { icon:'🚀', label:'로켓을 날린 횟수',    val: s.rocketLaunched||0, sub:'우주로 보낸 소중한 포인트들...' },
+    { icon:'💣', label:'지뢰를 밟은 횟수',    val: s.mineBombed||0,     sub:`${s.mineBombed>=10?'지뢰밭 전문가':'아직 초보 지뢰꾼'}` },
+    { icon:'⏱️', label:'타이밍 복권 당첨 횟수', val: s.timingHit||0,      sub:`${s.timingHit>=1?'찰나의 순간을 포착하다!':'아직 한번도 맞추지 못했다...'}` },
+  ];
+
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+
+      <!-- 프로필 + 승률 -->
+      <div class="card" style="grid-column:1/-1">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;color:#fff;flex-shrink:0">
+            ${escapeHtml(d.name).slice(0,1).toUpperCase()}
+          </div>
+          <div>
+            <div style="font-size:1.1rem;font-weight:900">${escapeHtml(d.name)}</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">DAVIDO INHOUSE 시청자</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:.65rem;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">내전 승률</div>
+            ${wrHtml}
+          </div>
+        </div>
+      </div>
+
+      <!-- 보관함 -->
+      <div class="card">
+        <div class="h-section" style="font-size:.72rem;letter-spacing:2px;margin-bottom:12px">📦 보관함</div>
+        <div style="display:flex;flex-direction:column;gap:6px">${invHtml}</div>
+      </div>
+
+      <!-- 게임 통계 -->
+      <div class="card">
+        <div class="h-section" style="font-size:.72rem;letter-spacing:2px;margin-bottom:12px">🎮 나의 기록</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${funStats.map(f=>`
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.04);border-radius:10px;border:1px solid rgba(255,255,255,.07)">
+              <span style="font-size:1.6rem">${f.icon}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:.78rem;color:var(--text-muted)">${f.label}</div>
+                <div style="font-size:.7rem;color:var(--text-muted);font-style:italic;margin-top:1px">${f.sub}</div>
+              </div>
+              <span style="font-size:1.3rem;font-weight:900;color:#fbbf24;white-space:nowrap">${f.val.toLocaleString()}회</span>
+            </div>`).join('')}
+        </div>
+      </div>
+
+    </div>`;
+}
+
 /* ══════════════════════════════════════
    전당포
 ══════════════════════════════════════ */
