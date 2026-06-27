@@ -564,7 +564,7 @@ app.get('/api/me', async (req, res) => {
       if (data.ok) inhousePoints = data.points;
     } catch {}
   }
-  res.json({ ok: true, viewer, inhousePoints });
+  res.json({ ok: true, viewer, inhousePoints, avatar: viewer.avatar || null });
 });
 
 // ── Betting ──
