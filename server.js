@@ -943,7 +943,7 @@ app.post('/api/profile/avatar', (req, res) => {
   if (!name) return res.status(401).json({ ok: false, error: '로그인 필요' });
   const { imageData } = req.body; // base64 data URL
   if (!imageData || !imageData.startsWith('data:image/')) return res.json({ ok: false, error: '잘못된 이미지' });
-  if (imageData.length > 500 * 1024) return res.json({ ok: false, error: '이미지가 너무 큽니다 (최대 500KB)' });
+  if (imageData.length > 2 * 1024 * 1024) return res.json({ ok: false, error: '이미지가 너무 큽니다' });
   const { viewers, viewer } = getViewer(name);
   viewer.avatar = imageData;
   saveViewer(viewers);
