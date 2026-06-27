@@ -2576,7 +2576,7 @@ function initBridge(wrap){
   wrap.innerHTML=`
 <div class="br-hud">
   <div class="br-mult-big" id="brMult">−</div>
-  <div class="br-sub" id="brSub">베팅 후 안전한 돌을 선택하세요</div>
+  <div class="br-sub" id="brSub">💡 1번 행의 왼쪽 또는 오른쪽 버튼을 눌러 시작!</div>
 </div>
 <div class="br-mult-bar" id="brMultBar">${BRIDGE_MULTS.map(function(m,i){return '<div class="br-mult-pip" id="brPip'+i+'">'+m+'x</div>';}).join('')}</div>
 <div class="br-chips" id="brChips">
@@ -2629,16 +2629,16 @@ function brStoneHtml(rowIdx,side,state){
   var cls='br-stone ';
   var txt='';
   var onclick='';
-  if(state==='active'){
-    cls+='active'; txt=side==='L'?'← 왼쪽':'오른쪽 →';
+  if(state==='active'||state==='active-start'){
+    cls+='active';
+    txt=side==='L'?'← 왼쪽':'오른쪽 →';
     onclick='onclick="brStep(\''+side+'\')"';
   } else if(state==='done'){
     cls+='safe'; txt='✓';
   } else if(state==='dim'){
     cls+='dim'; txt='?';
   } else {
-    // idle (before game starts) — show as start prompt on row 0
-    cls+='idle'; txt=state==='active-start'?'▶':' ';
+    cls+='dim'; txt='';
   }
   return '<button class="'+cls+'" id="brS'+rowIdx+side+'" '+onclick+'>'+txt+'</button>';
 }
@@ -2792,7 +2792,7 @@ function brCashout(){
 function brResetAfterEnd(){
   brState={gameId:null,bet:brState.bet,row:0,phase:'idle'};
   var multEl=document.getElementById('brMult');if(multEl){multEl.textContent='−';multEl.style.color='#93c5fd';}
-  var subEl=document.getElementById('brSub');if(subEl)subEl.textContent='베팅 후 안전한 돌을 선택하세요';
+  var subEl=document.getElementById('brSub');if(subEl)subEl.textContent='💡 1번 행의 왼쪽 또는 오른쪽 버튼을 눌러 시작!';
   document.getElementById('brCash').disabled=true;
   document.getElementById('brChips').style.opacity='1';
   document.getElementById('brChips').style.pointerEvents='';
