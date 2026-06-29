@@ -1343,7 +1343,7 @@ function calcBalloonMult(createdAt) {
 app.post('/api/game/balloon/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  const bet = Math.max(5, Math.min(20, parseInt(req.body.bet) || 10)); // 최대 20P (기존 50P)
+  const bet = Math.max(10, Math.min(20, parseInt(req.body.bet) || 10)); // 10~20P
 
   const fg = checkFatigue(name, BALLOON_FATIGUE);
   if (!fg.ok) return res.json({ ok: false, error: fg.error });
