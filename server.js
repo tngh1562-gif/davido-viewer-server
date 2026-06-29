@@ -358,7 +358,7 @@ async function checkVpn(ip) {
       getJson(`http://ip-api.com/json/${ip}?fields=status,proxy,hosting,query`),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
     ]);
-    return { isVpn: !!(r.proxy || r.hosting), proxy: r.proxy, hosting: r.hosting };
+    return { isVpn: !!(r.proxy), proxy: r.proxy, hosting: r.hosting };
   } catch { return { isVpn: false }; }
 }
 
