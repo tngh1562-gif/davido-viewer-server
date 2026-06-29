@@ -455,7 +455,8 @@ app.post('/api/admin/unban', requireAdmin, (req, res) => {
 
 app.post('/api/auth/confirm', (req, res) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
+  // inhouse 서버가 VIEWER_SERVER_SECRET으로 호출하므로 둘 다 허용
+  if (secret !== VIEWER_SERVER_SECRET && secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
   const { token, name } = req.body;
   if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
 
