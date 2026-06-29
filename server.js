@@ -83,14 +83,24 @@ if (!fs.existsSync(BETTING_FILE))  writeJSON(BETTING_FILE, {
   startedAt: null,
   lockedAt: null,
 });
-if (!fs.existsSync(SHOP_FILE)) writeJSON(SHOP_FILE, {
-  items: [
-    { id: 'priority', name: '선참권',  desc: '다음 내전 팀 배치 선택 우선권', price: 120, stock: -1, icon: '⭐', rarity: 'common'   },
-    { id: 'no_ban',   name: '노밴권',  desc: '다음 내전 밴 페이즈 면제',       price: 240, stock: -1, icon: '🛡️', rarity: 'uncommon' },
-    { id: 'all_day',  name: '종일권',  desc: '당일 모든 내전 참가 가능',       price: 460, stock: -1, icon: '🌙', rarity: 'rare'     },
-    { id: 'extend',   name: '연장권',  desc: '내전 1판 추가 연장',             price: 600, stock: -1, icon: '⚡', rarity: 'epic'     },
-  ]
-});
+// 상점 기본 정의 — 가격/이름/설명은 항상 이 값 기준 (파일엔 stock만 보존)
+const SHOP_DEFAULTS = [
+  { id: 'priority', name: '선참권',  desc: '다음 내전 팀 배치 선택 우선권', price: 120, stock: -1, icon: '⭐', rarity: 'common'   },
+  { id: 'no_ban',   name: '노밴권',  desc: '다음 내전 밴 페이즈 면제',       price: 240, stock: -1, icon: '🛡️', rarity: 'uncommon' },
+  { id: 'all_day',  name: '종일권',  desc: '당일 모든 내전 참가 가능',       price: 460, stock: -1, icon: '🌙', rarity: 'rare'     },
+  { id: 'extend',   name: '연장권',  desc: '내전 1판 추가 연장',             price: 600, stock: -1, icon: '⚡', rarity: 'epic'     },
+];
+// 서버 시작마다 가격/이름/설명 최신화 (stock만 파일에서 유지)
+{
+  const existing = fs.existsSync(SHOP_FILE) ? readJSON(SHOP_FILE, { items: [] }) : { items: [] };
+  const stockMap = {};
+  (existing.items || []).forEach(it => { stockMap[it.id] = it.stock; });
+  const synced = SHOP_DEFAULTS.map(def => ({
+    ...def,
+    stock: (stockMap[def.id] !== undefined) ? stockMap[def.id] : def.stock,
+  }));
+  writeJSON(SHOP_FILE, { items: synced });
+}
 
 // ── 파일 기반 세션 (Railway Volume에 저장 → 배포해도 로그인 유지) ──
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
