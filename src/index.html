@@ -882,7 +882,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-dashes"><div class="dash short"></div><div class="dash long active"></div><div class="dash short"></div></div>
         <div class="card-label">SOLO · 혼자</div>
         <div class="card-title">🎈 풍선 폭발</div>
-        <div class="card-desc" style="color:rgba(255,255,255,.8)">꾹 눌러서 풍선 부풀리기<br>터지기 전에 현금화해라 · 5~50P</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">꾹 눌러서 풍선 부풀리기<br>터지기 전에 현금화해라 · 10~20P</div>
         <div class="card-footer-link" style="color:#a78bfa">도전하기 +</div>
       </div>
     </div>
@@ -2856,10 +2856,10 @@ var balloonState={
   phase:'idle', // idle | playing | cashed | popped
 };
 var blMouseDown=false; // 실제 마우스/터치 누름 상태 (비동기 fetch와 분리)
-var BALLOON_RATE=0.38; // x/sec 증가 속도
+var BALLOON_RATE=0.35; // x/sec 증가 속도
 
 function initBalloon(wrap){
-  balloonState={gameId:null,bet:10,mult:1,holding:false,lastHoldStart:null,animId:null,pingId:null,phase:'idle'};
+  balloonState={gameId:null,bet:10,mult:1,holding:false,lastHoldStart:null,animId:null,pingId:null,phase:'idle'}; // 기본 10P
   wrap.innerHTML=`
 <div class="balloon-wrap">
   <div class="balloon-mult" id="blMult" style="color:#a855f7">1.00x</div>
@@ -2889,10 +2889,9 @@ function initBalloon(wrap){
   </div>
 
   <div class="balloon-chip-row" id="blChips">
-    <button class="balloon-chip sel" onclick="blSetBet(5,this)">5P</button>
-    <button class="balloon-chip" onclick="blSetBet(10,this)">10P</button>
+    <button class="balloon-chip sel" onclick="blSetBet(10,this)">10P</button>
+    <button class="balloon-chip" onclick="blSetBet(15,this)">15P</button>
     <button class="balloon-chip" onclick="blSetBet(20,this)">20P</button>
-    <button class="balloon-chip" onclick="blSetBet(50,this)">50P</button>
   </div>
 
   <button class="pump-btn idle" id="blPumpBtn"

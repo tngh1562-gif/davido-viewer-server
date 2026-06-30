@@ -83,23 +83,23 @@ if (!fs.existsSync(BETTING_FILE))  writeJSON(BETTING_FILE, {
   startedAt: null,
   lockedAt: null,
 });
-if (!fs.existsSync(SHOP_FILE)) writeJSON(SHOP_FILE, {
-  items: [
-    { id: 'priority', name: '선참권',        desc: '다음 내전 팀 배치 선택 우선권', price: 120, stock: -1, icon: '⭐', rarity: 'common'   },
-    { id: 'no_ban',   name: '노밴권',        desc: '다음 내전 밴 페이즈 면제',       price: 240, stock: -1, icon: '🛡️', rarity: 'uncommon' },
-    { id: 'all_day',  name: '종일권',        desc: '당일 모든 내전 참가 가능',       price: 460, stock: -1, icon: '🌙', rarity: 'rare'     },
-    { id: 'extend',   name: '내전 1판 연장권', desc: '내전 1판 추가 연장',           price: 600, stock: -1, icon: '⚡', rarity: 'epic'     },
-  ]
-});
-// 마이그레이션: 이미 생성된 shop.json(Railway Volume)에 옛 이름 '연장권'이 남아있으면 교체
+// 상점 기본 정의 — 가격/이름/설명은 항상 이 값 기준 (파일엔 stock만 보존)
+const SHOP_DEFAULTS = [
+  { id: 'priority', name: '선참권',        desc: '다음 내전 팀 배치 선택 우선권', price: 120, stock: -1, icon: '⭐', rarity: 'common'   },
+  { id: 'no_ban',   name: '노밴권',        desc: '다음 내전 밴 페이즈 면제',       price: 240, stock: -1, icon: '🛡️', rarity: 'uncommon' },
+  { id: 'all_day',  name: '종일권',        desc: '당일 모든 내전 참가 가능',       price: 460, stock: -1, icon: '🌙', rarity: 'rare'     },
+  { id: 'extend',   name: '내전 1판 연장권', desc: '내전 1판 추가 연장',           price: 600, stock: -1, icon: '⚡', rarity: 'epic'     },
+];
+// 서버 시작마다 가격/이름/설명 최신화 (stock만 파일에서 유지)
 {
-  const shopMig = readJSON(SHOP_FILE, { items: [] });
-  const extendItem = shopMig.items.find(i => i.id === 'extend');
-  if (extendItem && extendItem.name !== '내전 1판 연장권') {
-    extendItem.name = '내전 1판 연장권';
-    writeJSON(SHOP_FILE, shopMig);
-    console.log('[migration] shop.json extend 아이템명 → 내전 1판 연장권');
-  }
+  const existing = fs.existsSync(SHOP_FILE) ? readJSON(SHOP_FILE, { items: [] }) : { items: [] };
+  const stockMap = {};
+  (existing.items || []).forEach(it => { stockMap[it.id] = it.stock; });
+  const synced = SHOP_DEFAULTS.map(def => ({
+    ...def,
+    stock: (stockMap[def.id] !== undefined) ? stockMap[def.id] : def.stock,
+  }));
+  writeJSON(SHOP_FILE, { items: synced });
 }
 
 // ── 파일 기반 세션 (Railway Volume에 저장 → 배포해도 로그인 유지) ──
@@ -368,7 +368,7 @@ async function checkVpn(ip) {
       getJson(`http://ip-api.com/json/${ip}?fields=status,proxy,hosting,query`),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
     ]);
-    return { isVpn: !!(r.proxy || r.hosting), proxy: r.proxy, hosting: r.hosting };
+    return { isVpn: !!(r.proxy), proxy: r.proxy, hosting: r.hosting };
   } catch { return { isVpn: false }; }
 }
 
@@ -455,7 +455,8 @@ app.post('/api/admin/unban', requireAdmin, (req, res) => {
 
 app.post('/api/auth/confirm', (req, res) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
+  // inhouse 서버가 VIEWER_SERVER_SECRET으로 호출하므로 둘 다 허용
+  if (secret !== VIEWER_SERVER_SECRET && secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, error: '권한 없음' });
   const { token, name } = req.body;
   if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
 
@@ -1322,20 +1323,27 @@ async function msGrantPayout(name, payout) {
 // ══════════════════════════════════
 //  🎈 풍선 게임
 // ══════════════════════════════════
-const balloonSessions = new Map(); // gameId → { name, popAt, bet, createdAt, totalHeldMs }
-const BALLOON_FATIGUE = 3;
-const BALLOON_RATE    = 0.4; // 배당 증가 속도 x/sec (클라이언트와 동일)
+const balloonSessions = new Map(); // gameId → { name, popAt, bet, createdAt }
+const BALLOON_FATIGUE = 8;          // 피로도 8 (기존 3)
+const BALLOON_RATE    = 0.35;       // 배당 증가 속도 x/sec
+const BALLOON_RAKE    = 0.10;       // 하우스 수수료 10%
 
 function genBalloonPop() {
-  // 8% 확률 즉사 (1.05~1.3x), 나머지는 지수분포
-  if (Math.random() < 0.08) return 1.05 + Math.random() * 0.25;
-  return Math.max(1.1, Math.min(20, 1 / (1 - Math.random()) * 0.9));
+  // 20% 확률 즉사 (1.05~1.3x), 나머지는 지수분포 최대 10x
+  if (Math.random() < 0.20) return 1.05 + Math.random() * 0.25;
+  return Math.max(1.1, Math.min(10, 1 / (1 - Math.random()) * 0.7));
+}
+
+// 서버가 직접 경과 시간으로 배율 계산 (클라이언트 전송값 불신)
+function calcBalloonMult(createdAt) {
+  const sec = (Date.now() - createdAt) / 1000;
+  return Math.max(1, 1 + sec * BALLOON_RATE);
 }
 
 app.post('/api/game/balloon/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  const bet = Math.max(5, Math.min(50, parseInt(req.body.bet) || 10));
+  const bet = Math.max(10, Math.min(20, parseInt(req.body.bet) || 10)); // 10~20P
 
   const fg = checkFatigue(name, BALLOON_FATIGUE);
   if (!fg.ok) return res.json({ ok: false, error: fg.error });
@@ -1360,24 +1368,23 @@ app.post('/api/game/balloon/start', async (req, res) => {
   } catch(e) { recoverFatigue(name, BALLOON_FATIGUE); res.json({ ok: false, error: e.message }); }
 });
 
-// 클라이언트가 꾹 누르는 동안 200ms마다 ping — 서버가 터졌는지 확인
+// 클라이언트가 꾹 누르는 동안 200ms마다 ping — 서버가 경과시간으로 터짐 판정
 app.post('/api/game/balloon/pump', (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  const { gameId, mult } = req.body;
+  const { gameId } = req.body;
   const s = balloonSessions.get(gameId);
   if (!s || s.name !== name) return res.json({ ok: false, error: '세션 없음' });
 
-  const m = parseFloat(mult) || 1;
+  const m = calcBalloonMult(s.createdAt); // 서버가 직접 계산
   if (m >= s.popAt) {
     balloonSessions.delete(gameId);
-    // 통계
     const { viewers: pvs, viewer: pv } = getViewer(name);
     pv.stats = pv.stats || {}; pv.stats.balloonPopped = (pv.stats.balloonPopped||0) + 1;
     saveViewer(pvs);
     return res.json({ ok: true, popped: true, popAt: s.popAt });
   }
-  res.json({ ok: true, popped: false });
+  res.json({ ok: true, popped: false, mult: m });
 });
 
 // 현금화
@@ -1395,14 +1402,16 @@ app.post('/api/game/balloon/cashout', async (req, res) => {
   }
 
   balloonSessions.delete(gameId);
-  const gain = Math.floor(s.bet * m);
+  const serverMult = calcBalloonMult(s.createdAt); // 서버가 직접 계산
+  const finalMult = Math.min(serverMult, s.popAt - 0.001); // popAt 초과 불가
+  const gain = Math.floor(s.bet * finalMult * (1 - BALLOON_RAKE)); // 10% 수수료 차감
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
   try {
     const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-      { nickname: name, amount: gain, reason: `🎈 풍선게임 ${m.toFixed(2)}x 현금화 (+${gain}P)` },
+      { nickname: name, amount: gain, reason: `🎈 풍선게임 ${finalMult.toFixed(2)}x 현금화 (+${gain}P)` },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
-    addFeed('balloon', name, { mult: m, gain, bet: s.bet, reason: `🎈 풍선 ${m.toFixed(2)}x (+${gain}P)` });
-    res.json({ ok: true, mult: m, gain, points: gr.points });
+    addFeed('balloon', name, { mult: finalMult, gain, bet: s.bet, reason: `🎈 풍선 ${finalMult.toFixed(2)}x (+${gain}P)` });
+    res.json({ ok: true, mult: finalMult, gain, points: gr.points });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -1560,7 +1569,7 @@ let crash = {
 function genCrashPoint() {
   const r = crypto.randomBytes(4).readUInt32BE() / 0xFFFFFFFF;
   if (r < 0.20) return 1.00;
-  return Math.round(Math.min(0.90 / (1 - r), 15) * 100) / 100;
+  return Math.round(Math.min(0.95 / (1 - r), 15) * 100) / 100; // 하우스엣지 5% (기존 10%)
 }
 function crashMult(ms) { return Math.round(Math.pow(Math.E, 0.0001 * ms) * 100) / 100; }
 
