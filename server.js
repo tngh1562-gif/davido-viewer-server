@@ -85,12 +85,22 @@ if (!fs.existsSync(BETTING_FILE))  writeJSON(BETTING_FILE, {
 });
 if (!fs.existsSync(SHOP_FILE)) writeJSON(SHOP_FILE, {
   items: [
-    { id: 'priority', name: '선참권',  desc: '다음 내전 팀 배치 선택 우선권', price: 120, stock: -1, icon: '⭐', rarity: 'common'   },
-    { id: 'no_ban',   name: '노밴권',  desc: '다음 내전 밴 페이즈 면제',       price: 240, stock: -1, icon: '🛡️', rarity: 'uncommon' },
-    { id: 'all_day',  name: '종일권',  desc: '당일 모든 내전 참가 가능',       price: 460, stock: -1, icon: '🌙', rarity: 'rare'     },
-    { id: 'extend',   name: '연장권',  desc: '내전 1판 추가 연장',             price: 600, stock: -1, icon: '⚡', rarity: 'epic'     },
+    { id: 'priority', name: '선참권',        desc: '다음 내전 팀 배치 선택 우선권', price: 120, stock: -1, icon: '⭐', rarity: 'common'   },
+    { id: 'no_ban',   name: '노밴권',        desc: '다음 내전 밴 페이즈 면제',       price: 240, stock: -1, icon: '🛡️', rarity: 'uncommon' },
+    { id: 'all_day',  name: '종일권',        desc: '당일 모든 내전 참가 가능',       price: 460, stock: -1, icon: '🌙', rarity: 'rare'     },
+    { id: 'extend',   name: '내전 1판 연장권', desc: '내전 1판 추가 연장',           price: 600, stock: -1, icon: '⚡', rarity: 'epic'     },
   ]
 });
+// 마이그레이션: 이미 생성된 shop.json(Railway Volume)에 옛 이름 '연장권'이 남아있으면 교체
+{
+  const shopMig = readJSON(SHOP_FILE, { items: [] });
+  const extendItem = shopMig.items.find(i => i.id === 'extend');
+  if (extendItem && extendItem.name !== '내전 1판 연장권') {
+    extendItem.name = '내전 1판 연장권';
+    writeJSON(SHOP_FILE, shopMig);
+    console.log('[migration] shop.json extend 아이템명 → 내전 1판 연장권');
+  }
+}
 
 // ── 파일 기반 세션 (Railway Volume에 저장 → 배포해도 로그인 유지) ──
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');

@@ -1984,6 +1984,16 @@ async function loadMyPage() {
   if (!d.ok) { wrap.innerHTML = `<div style="color:#ef4444">${d.error||'오류'}</div>`; return; }
 
   const inv = d.inventory || [];
+  // 연장권 / 내전 1판 연장권 둘 다 있으면 합산 (옛 이름 잔존 데이터 대응)
+  {
+    const old = inv.find(i=>i.name==='연장권');
+    if(old){
+      const cur = inv.find(i=>i.name==='내전 1판 연장권');
+      if(cur) cur.count += old.count;
+      else inv.push({name:'내전 1판 연장권', count:old.count});
+      inv.splice(inv.indexOf(old),1);
+    }
+  }
   const s   = d.stats || {};
   const ih  = d.inhouse;
 
