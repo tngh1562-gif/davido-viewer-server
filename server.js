@@ -1569,7 +1569,7 @@ let crash = {
 function genCrashPoint() {
   const r = crypto.randomBytes(4).readUInt32BE() / 0xFFFFFFFF;
   if (r < 0.20) return 1.00;
-  return Math.round(Math.min(0.90 / (1 - r), 15) * 100) / 100;
+  return Math.round(Math.min(0.95 / (1 - r), 15) * 100) / 100; // 하우스엣지 5% (기존 10%)
 }
 function crashMult(ms) { return Math.round(Math.pow(Math.E, 0.0001 * ms) * 100) / 100; }
 
