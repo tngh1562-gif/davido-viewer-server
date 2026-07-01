@@ -185,6 +185,15 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 
 @keyframes crashShake{0%,100%{transform:none}20%{transform:translate(-8px,-5px)}40%{transform:translate(8px,5px)}60%{transform:translate(-5px,3px)}80%{transform:translate(5px,-3px)}}
 @keyframes cloudDrift{0%{transform:translateX(110vw)}100%{transform:translateX(-110vw)}}
+@keyframes attendRoll{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes attendReveal{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes jackpotShine{0%{text-shadow:0 0 20px #ffd700,0 0 40px #ffd700}100%{text-shadow:0 0 40px #ffd700,0 0 80px #ff8c00,0 0 120px #ff4500}}
+.attend-card{padding:18px 24px;display:flex;align-items:center;gap:24px;margin-bottom:20px;background:linear-gradient(135deg,rgba(99,102,241,.08) 0%,rgba(168,85,247,.05) 100%);border:1px solid rgba(99,102,241,.2)}
+.attend-tiers{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px}
+.attend-tier{font-size:.7rem;font-weight:600;display:flex;align-items:center;gap:3px}
+.attend-tier::before{content:'●';font-size:.6rem}
+.attend-spin{font-size:2.8rem;font-weight:900;min-width:160px;text-align:center;animation:attendRoll .1s ease-in-out infinite;color:var(--accent)}
+.attend-result-pts{font-size:2.8rem;font-weight:900;animation:attendReveal .45s cubic-bezier(.34,1.56,.64,1) forwards}
 
 /* ══ INLINE GAME PANEL ══ */
 #gameListSection{}
@@ -781,6 +790,36 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="card-footer-brand" style="color:#000">Davido Inhouse</div>
     </div>
   </div>
+
+  <!-- 출석체크 -->
+  <div class="card attend-card">
+    <div style="flex:1;min-width:0">
+      <div class="h-section" style="margin-bottom:2px">📅 오늘의 출석 뽑기</div>
+      <div id="attendDate" style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px">--</div>
+      <div class="attend-tiers">
+        <span class="attend-tier" style="color:#9ca3af">50~100P (50%)</span>
+        <span class="attend-tier" style="color:#22c55e">101~200P (30%)</span>
+        <span class="attend-tier" style="color:#3b82f6">201~350P (15%)</span>
+        <span class="attend-tier" style="color:#a855f7">351~499P (4%)</span>
+        <span class="attend-tier" style="color:#ffd700">500P 잭팟 (1%)</span>
+      </div>
+    </div>
+    <div style="text-align:center;min-width:180px;flex-shrink:0">
+      <div id="attendBtnWrap">
+        <button id="attendBtnEl" class="btn btn-g" onclick="doAttendance()" style="font-size:1rem;padding:11px 32px;border-radius:12px;width:100%">🎲 출석 뽑기</button>
+      </div>
+      <div id="attendSpinWrap" style="display:none">
+        <div class="attend-spin" id="attendSpinNum">???</div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px">뽑는 중...</div>
+      </div>
+      <div id="attendResultWrap" style="display:none">
+        <div id="attendResultLabel" style="font-size:.72rem;font-weight:700;letter-spacing:1.5px;margin-bottom:2px">COMMON</div>
+        <div class="attend-result-pts" id="attendResultPts">+100P</div>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px">오늘 출석 완료 ✓</div>
+      </div>
+    </div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px;align-items:start">
     <div class="card" style="height:480px;display:flex;flex-direction:column">
       <div class="h-section" style="margin-bottom:12px;flex-shrink:0">📢 공지사항</div>
@@ -1225,6 +1264,7 @@ function showApp(viewer, inhousePoints){
   loadRanking();
   loadAnnouncements();
   loadFatigue();
+  initAttendance();
 }
 
 async function refreshMe(){
@@ -3275,6 +3315,84 @@ function renderFeed(items) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── 출석체크 ──
+let _attendRollTimer = null;
+
+function _attendTier(pts) {
+  if (pts >= 500) return { label: '✨ JACKPOT', color: '#ffd700', anim: 'jackpotShine 0.6s ease-in-out infinite alternate' };
+  if (pts >= 351) return { label: 'EPIC',      color: '#a855f7', anim: '' };
+  if (pts >= 201) return { label: 'RARE',      color: '#3b82f6', anim: '' };
+  if (pts >= 101) return { label: 'UNCOMMON',  color: '#22c55e', anim: '' };
+  return              { label: 'COMMON',     color: '#9ca3af', anim: '' };
+}
+
+function _showAttendResult(pts) {
+  document.getElementById('attendBtnWrap').style.display  = 'none';
+  document.getElementById('attendSpinWrap').style.display = 'none';
+  const wrap = document.getElementById('attendResultWrap');
+  wrap.style.display = 'block';
+  const tier = _attendTier(pts);
+  const lbl  = document.getElementById('attendResultLabel');
+  const ptEl = document.getElementById('attendResultPts');
+  lbl.textContent  = tier.label;
+  lbl.style.color  = tier.color;
+  ptEl.textContent = `+${pts}P`;
+  ptEl.style.color = tier.color;
+  if (tier.anim) ptEl.style.animation = `attendReveal .45s cubic-bezier(.34,1.56,.64,1) forwards, ${tier.anim}`;
+  else           ptEl.style.animation = 'attendReveal .45s cubic-bezier(.34,1.56,.64,1) forwards';
+}
+
+async function initAttendance() {
+  const d = new Date();
+  const el = document.getElementById('attendDate');
+  if (el) el.textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (오늘)`;
+  try {
+    const r = await fetch('/api/attendance/status').then(r=>r.json());
+    if (r.ok && r.checkedIn) _showAttendResult(r.points);
+  } catch {}
+}
+
+async function doAttendance() {
+  const btn = document.getElementById('attendBtnEl');
+  btn.disabled = true;
+  document.getElementById('attendBtnWrap').style.display  = 'none';
+  document.getElementById('attendSpinWrap').style.display = 'block';
+  const spinEl = document.getElementById('attendSpinNum');
+
+  // 슬롯머신처럼 숫자 롤링
+  _attendRollTimer = setInterval(() => {
+    spinEl.textContent = Math.floor(Math.random() * 451) + 50;
+  }, 70);
+
+  try {
+    const r = await fetch('/api/attendance/check', { method: 'POST' }).then(r=>r.json());
+    await new Promise(res => setTimeout(res, 900)); // 최소 0.9초 롤링
+    clearInterval(_attendRollTimer);
+
+    if (!r.ok) {
+      document.getElementById('attendSpinWrap').style.display = 'none';
+      if (r.points) {
+        _showAttendResult(r.points); // 이미 오늘 출석함
+      } else {
+        document.getElementById('attendBtnWrap').style.display = 'block';
+        btn.disabled = false;
+        toast(r.error || '오류가 발생했습니다', 'err');
+      }
+      return;
+    }
+
+    document.getElementById('attendSpinWrap').style.display = 'none';
+    _showAttendResult(r.points);
+    if (typeof savePts === 'function') savePts(r.totalPoints);
+  } catch(e) {
+    clearInterval(_attendRollTimer);
+    document.getElementById('attendSpinWrap').style.display = 'none';
+    document.getElementById('attendBtnWrap').style.display = 'block';
+    btn.disabled = false;
+    toast('오류: ' + e.message, 'err');
+  }
 }
 
 async function loadRanking(){

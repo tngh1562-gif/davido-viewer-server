@@ -38,11 +38,13 @@ const TIMING_WIN_FILE = path.join(DATA_DIR, 'timing-winner.json');
 const POSTS_FILE      = path.join(DATA_DIR, 'posts.json');
 const COMMENTS_FILE   = path.join(DATA_DIR, 'comments.json');
 const FEED_FILE       = path.join(DATA_DIR, 'feed.json');
+const ATTENDANCE_FILE = path.join(DATA_DIR, 'attendance.json');
 
 // data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
-if (!fs.existsSync(POSTS_FILE))    writeJSON(POSTS_FILE,    { posts: [] });
-if (!fs.existsSync(COMMENTS_FILE)) writeJSON(COMMENTS_FILE, {});
+if (!fs.existsSync(POSTS_FILE))      writeJSON(POSTS_FILE,      { posts: [] });
+if (!fs.existsSync(COMMENTS_FILE))   writeJSON(COMMENTS_FILE,   {});
+if (!fs.existsSync(ATTENDANCE_FILE)) writeJSON(ATTENDANCE_FILE, {});
 if (!fs.existsSync(FEED_FILE))     writeJSON(FEED_FILE,     { items: [] });
 
 const POINT_LOG_CHANNEL = process.env.POINT_LOG_CHANNEL_ID || '1519309432394219583';
@@ -877,6 +879,53 @@ app.post('/api/shop/buy', async (req, res) => {
     broadcast({ type: 'shop_update', items: shopData.items });
     addFeed('shop', name, { item: item.name, price: item.price, reason: `🛒 ${item.name} 구매 (-${item.price}P)` });
     res.json({ ok: true, points: r.points, item });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── 출석체크 ──
+function rollAttendancePoints() {
+  const r = Math.random() * 100;
+  if (r < 50) return Math.floor(Math.random() * 51)  + 50;   // 50~100P  (50%)
+  if (r < 80) return Math.floor(Math.random() * 100) + 101;  // 101~200P (30%)
+  if (r < 95) return Math.floor(Math.random() * 150) + 201;  // 201~350P (15%)
+  if (r < 99) return Math.floor(Math.random() * 149) + 351;  // 351~499P (4%)
+  return 500;                                                  // 500P     (1%)
+}
+
+app.get('/api/attendance/status', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const today = getTodayKST();
+  const data = readJSON(ATTENDANCE_FILE, {});
+  const record = (data[name] || {})[today];
+  res.json({ ok: true, checkedIn: !!record, points: record ? record.points : 0 });
+});
+
+app.post('/api/attendance/check', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: '서버 연결 안됨' });
+  const today = getTodayKST();
+  const data = readJSON(ATTENDANCE_FILE, {});
+  if (!data[name]) data[name] = {};
+  if (data[name][today])
+    return res.json({ ok: false, error: '오늘 이미 출석했습니다', points: data[name][today].points });
+
+  const points = rollAttendancePoints();
+  try {
+    const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      { nickname: name, amount: points, reason: `📅 출석체크 (+${points}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!r.ok) return res.json({ ok: false, error: r.error || '포인트 지급 실패' });
+
+    data[name][today] = { points, at: Date.now() };
+    const keys = Object.keys(data[name]).sort();
+    if (keys.length > 60) keys.slice(0, keys.length - 60).forEach(k => delete data[name][k]);
+    writeJSON(ATTENDANCE_FILE, data);
+
+    addFeed('attendance', name, { points, reason: `📅 출석체크 (+${points}P)` });
+    broadcast({ type: 'points_update', name, points: r.points });
+    res.json({ ok: true, points, totalPoints: r.points });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
