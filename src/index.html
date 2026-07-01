@@ -1420,7 +1420,7 @@ async function loadCommunity(board) {
     html += `<div class="comm-post-list">${posts.map(p => `
       <div class="comm-post-item" onclick="showPost('${p.id}','${board}')">
         <div class="comm-post-title">${escapeHtml(p.title)}</div>
-        <div class="comm-post-preview">${escapeHtml((p.content||'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim().slice(0,80))}</div>
+        <div class="comm-post-preview">${escapeHtml(htmlToPlain(p.content||'', 80))}</div>
         <div class="comm-post-meta">${escapeHtml(p.author)} · ${relTime(p.createdAt)}</div>
       </div>`).join('')}</div>`;
   }
@@ -3250,6 +3250,12 @@ function relTime(ts){
 }
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function htmlToPlain(html, maxLen) {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  const t = (d.textContent || '').replace(/\s+/g,' ').trim();
+  return maxLen ? t.slice(0, maxLen) : t;
 }
 
 function renderFeed(items) {
