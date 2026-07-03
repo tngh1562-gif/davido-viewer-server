@@ -2818,6 +2818,8 @@ function initBridge(wrap){
   <button class="br-chip" onclick="brSetBet(10,this)">10P</button>
   <button class="br-chip" onclick="brSetBet(20,this)">20P</button>
   <button class="br-chip" onclick="brSetBet(50,this)">50P</button>
+  <button class="br-chip" onclick="brSetBet(100,this)">100P</button>
+  <button class="br-chip" onclick="brSetBet(200,this)">200P</button>
 </div>
 <div class="br-scene">
   <div class="br-rows" id="brRows"></div>
@@ -3114,8 +3116,10 @@ function initBalloon(wrap){
 
   <div class="balloon-chip-row" id="blChips">
     <button class="balloon-chip sel" onclick="blSetBet(10,this)">10P</button>
-    <button class="balloon-chip" onclick="blSetBet(15,this)">15P</button>
     <button class="balloon-chip" onclick="blSetBet(20,this)">20P</button>
+    <button class="balloon-chip" onclick="blSetBet(50,this)">50P</button>
+    <button class="balloon-chip" onclick="blSetBet(100,this)">100P</button>
+    <button class="balloon-chip" onclick="blSetBet(200,this)">200P</button>
   </div>
 
   <button class="pump-btn idle" id="blPumpBtn"
@@ -3333,10 +3337,26 @@ let msState = null;
 // ── 지뢰찾기 (서버사이드 — 지뢰 위치·배율 모두 서버에서 계산)
 let msSession = null; // { sessionId, total, mineCount, revealed:Set, alive, cashed }
 
+let msBet = 1;
+function msSetBetAmt(n,el){
+  msBet=n;
+  document.querySelectorAll('.ms-bet-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('msBetDisp').textContent=n;
+}
+
 function initMs(wrap) {
-  msSession = null;
+  msSession = null; msBet = 1;
   wrap.innerHTML = `
-    <div style="text-align:center;padding:8px 0 4px;font-size:.8rem;color:var(--text-muted)">지뢰 개수 선택 (1P 차감)</div>
+    <div style="text-align:center;padding:8px 0 2px;font-size:.8rem;color:var(--text-muted)">배팅 금액 (<span id="msBetDisp">1</span>P)</div>
+    <div class="ms-bet-row" style="margin-bottom:8px">
+      <button class="s-chip ms-bet-chip active" onclick="msSetBetAmt(1,this)">1P</button>
+      <button class="s-chip ms-bet-chip" onclick="msSetBetAmt(10,this)">10P</button>
+      <button class="s-chip ms-bet-chip" onclick="msSetBetAmt(50,this)">50P</button>
+      <button class="s-chip ms-bet-chip" onclick="msSetBetAmt(100,this)">100P</button>
+      <button class="s-chip ms-bet-chip" onclick="msSetBetAmt(200,this)">200P</button>
+    </div>
+    <div style="text-align:center;padding:4px 0 4px;font-size:.8rem;color:var(--text-muted)">지뢰 개수 선택</div>
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px">
       ${[3,4,5,6,7].map(n=>`<button class="s-chip" id="msBtn${n}" onclick="msStart(${n})">${n}개</button>`).join('')}
     </div>
@@ -3371,7 +3391,7 @@ async function msStart(mines) {
   if (!myName) { toast('로그인이 필요합니다','err'); return; }
   if (msSession?.alive && !msSession?.cashed) { toast('진행 중인 게임이 있습니다','err'); return; }
   msSetBtns(true, '시작 중...');
-  const r = await fetch('/api/game/ms/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mineCount: mines }) })
+  const r = await fetch('/api/game/ms/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mineCount: mines, bet: msBet }) })
     .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
   if (!r.ok) { toast(r.error||'시작 실패','err'); msSetBtns(false); return; }
   if (r.points != null) savePts(r.points);
@@ -3759,12 +3779,13 @@ function initCrash(wrap) {
     <!-- 컨트롤 -->
     <div style="display:flex;gap:16px;align-items:flex-start;margin-top:16px">
       <div class="crash-bet-box" id="crashBetBox" style="flex:1">
-        <div class="crash-bet-label">베팅 금액 (10~30P)</div>
+        <div class="crash-bet-label">베팅 금액 (10~200P)</div>
         <div class="crash-chip-row">
           <div class="crash-chip sel" data-v="10" onclick="crashSetBet(10)">10p</div>
-          <div class="crash-chip" data-v="15" onclick="crashSetBet(15)">15p</div>
           <div class="crash-chip" data-v="20" onclick="crashSetBet(20)">20p</div>
-          <div class="crash-chip" data-v="30" onclick="crashSetBet(30)">30p</div>
+          <div class="crash-chip" data-v="50" onclick="crashSetBet(50)">50p</div>
+          <div class="crash-chip" data-v="100" onclick="crashSetBet(100)">100p</div>
+          <div class="crash-chip" data-v="200" onclick="crashSetBet(200)">200p</div>
         </div>
         <div class="crash-bet-display">베팅: <span id="crashBetAmt">${crashBet}</span> P</div>
       </div>

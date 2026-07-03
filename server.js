@@ -1393,7 +1393,7 @@ function calcBalloonMult(createdAt) {
 app.post('/api/game/balloon/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  const bet = Math.max(10, Math.min(20, parseInt(req.body.bet) || 10)); // 10~20P
+  const bet = Math.max(10, Math.min(200, parseInt(req.body.bet) || 10)); // 10~200P
 
   const fg = checkFatigue(name, BALLOON_FATIGUE);
   if (!fg.ok) return res.json({ ok: false, error: fg.error });
@@ -1469,24 +1469,25 @@ app.post('/api/game/ms/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
   const mineCount = Math.max(3, Math.min(7, parseInt(req.body.mineCount) || 5));
+  const bet = Math.max(1, Math.min(200, parseInt(req.body.bet) || 1)); // 1~200P
   const TOTAL = 25;
   if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
   try {
     // 포인트 차감 먼저 (포인트 없으면 레이트리밋 소모 없음)
     const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
-      { nickname: name, amount: 1, reason: '💣 지뢰찾기 시작 (-1P)' },
+      { nickname: name, amount: bet, reason: `💣 지뢰찾기 시작 (-${bet}P)` },
       { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
     if (!dr.ok) return res.json({ ok: false, error: dr.error || '포인트 부족' });
     // 포인트 차감 성공 후 레이트리밋 (포인트 없으면 카운트 소모 안 됨)
     if (!rl(`ms-min:${name}`, 20, 60)) {
-      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: 1 }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
+      postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`, { nickname: name, amount: bet }, { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' }).catch(()=>{});
       return res.status(429).json({ ok: false, error: '너무 빠릅니다. 잠시 후 다시 시도하세요.' });
     }
     // 지뢰 위치 서버에서 생성 — 클라이언트에 절대 안 보냄
     const mineSet = new Set();
     while (mineSet.size < mineCount) mineSet.add(Math.floor(Math.random() * TOTAL));
     const sessionId = crypto.randomBytes(16).toString('hex');
-    msSessions.set(sessionId, { name, mineSet, revealed: new Set(), bet: 1, mineCount, total: TOTAL, alive: true, cashed: false });
+    msSessions.set(sessionId, { name, mineSet, revealed: new Set(), bet, mineCount, total: TOTAL, alive: true, cashed: false });
     setTimeout(() => msSessions.delete(sessionId), 30 * 60 * 1000);
     res.json({ ok: true, sessionId, total: TOTAL, mineCount, points: dr.points });
   } catch(e) {
@@ -1607,7 +1608,7 @@ app.delete('/api/comments/:postId/:commentId/:replyId', (req, res) => {
 // 배당 폭발 (CRASH) 게임 — 서버 루프
 // ══════════════════════════════════════════════════════════
 const CRASH_BET_MIN     = 10;
-const CRASH_BET_MAX     = 30;
+const CRASH_BET_MAX     = 200;
 const CRASH_BETTING_SEC = 7;
 
 let crash = {
