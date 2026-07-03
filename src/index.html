@@ -975,10 +975,18 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   <div class="store-grid" style="margin-bottom:32px">
     <div class="card">
       <span class="rarity-badge rarity-common">일반</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">🔄</div>
+      <div class="card-title">승률 초기화권</div>
+      <div class="card-desc">내전 승률 통계를 초기화합니다.</div>
+      <div class="product-price">250 P</div>
+      <button class="btn-buy" onclick="buyItem('wr_reset',this)">구매하기</button>
+    </div>
+    <div class="card">
+      <span class="rarity-badge rarity-common">일반</span>
       <div style="font-size:2.4rem;margin-bottom:8px">⭐</div>
       <div class="card-title">선참권</div>
       <div class="card-desc">다음 내전 팀 배치 선택 우선권이 주어집니다.</div>
-      <div class="product-price">120 P</div>
+      <div class="product-price">1,000 P</div>
       <button class="btn-buy" onclick="buyItem('priority',this)">구매하기</button>
     </div>
     <div class="card">
@@ -986,24 +994,24 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div style="font-size:2.4rem;margin-bottom:8px">🛡️</div>
       <div class="card-title">노밴권</div>
       <div class="card-desc">다음 내전의 밴 페이즈가 면제됩니다.</div>
-      <div class="product-price">240 P</div>
+      <div class="product-price">2,500 P</div>
       <button class="btn-buy" onclick="buyItem('no_ban',this)">구매하기</button>
-    </div>
-    <div class="card" style="border-color:rgba(168,85,247,.3)">
-      <span class="rarity-badge rarity-rare">희귀</span>
-      <div style="font-size:2.4rem;margin-bottom:8px">🌙</div>
-      <div class="card-title">종일권</div>
-      <div class="card-desc">당일 진행되는 모든 내전에 제한 없이 참가할 수 있습니다.</div>
-      <div class="product-price">460 P</div>
-      <button class="btn-buy" onclick="buyItem('all_day',this)">구매하기</button>
     </div>
     <div class="card card-gradient-purple" style="border:none">
       <span class="rarity-badge" style="background:rgba(255,200,68,.2);color:#fbbf24">영웅</span>
       <div style="font-size:2.4rem;margin-bottom:8px">⚡</div>
       <div class="card-title">내전 1판 연장권</div>
       <div class="card-desc" style="color:rgba(255,255,255,.8)">내전을 1판 추가 연장할 수 있습니다.</div>
-      <div class="product-price" style="color:#fbbf24">600 P</div>
+      <div class="product-price" style="color:#fbbf24">7,500 P</div>
       <button class="btn-buy" style="background:rgba(255,200,68,.9);color:#000" onclick="buyItem('extend',this)">구매하기</button>
+    </div>
+    <div class="card" style="border-color:rgba(168,85,247,.3)">
+      <span class="rarity-badge rarity-rare">희귀</span>
+      <div style="font-size:2.4rem;margin-bottom:8px">🌙</div>
+      <div class="card-title">종일권</div>
+      <div class="card-desc">당일 진행되는 모든 내전에 제한 없이 참가할 수 있습니다.</div>
+      <div class="product-price">9,000 P</div>
+      <button class="btn-buy" onclick="buyItem('all_day',this)">구매하기</button>
     </div>
   </div>
 
@@ -1041,7 +1049,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   <!-- 전당포 패널 -->
   <div id="storePanelPawn" style="display:none">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div style="font-size:.78rem;color:var(--text-muted)">보관함의 아이템을 포인트로 환전할 수 있습니다 · 판매가 = 상점가 − 50P · <b style="color:#fbbf24">하루 10회 제한</b></div>
+      <div style="font-size:.78rem;color:var(--text-muted)">보관함의 아이템을 포인트로 환전할 수 있습니다 · 판매가 = 상점가의 50% · <b style="color:#fbbf24">하루 10회 제한</b></div>
       <span id="pawnLimitBadge" style="margin-left:auto;font-size:.72rem;padding:3px 10px;border-radius:8px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:#fbbf24;white-space:nowrap">오늘 0/10회</span>
     </div>
     <div id="pawnItemList" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
@@ -2120,8 +2128,8 @@ async function loadMyPage() {
 /* ══════════════════════════════════════
    전당포
 ══════════════════════════════════════ */
-const PAWN_PRICES = { '선참권':70, '노밴권':190, '종일권':410, '내전 1판 연장권':550 };
-const PAWN_ICONS  = { '선참권':'⭐','노밴권':'🛡️','종일권':'🌙','내전 1판 연장권':'⚡' };
+const PAWN_PRICES = { '선참권':500, '내전 1판 연장권':3750, '종일권':4500 };
+const PAWN_ICONS  = { '선참권':'⭐','내전 1판 연장권':'⚡','종일권':'🌙' };
 let pawnUsedToday = 0;
 
 function switchStoreTab(tab) {
@@ -2137,10 +2145,9 @@ function switchStoreTab(tab) {
 
 // 전당포 전체 항목 정의 (항상 표시)
 const PAWN_ALL = [
-  {name:'선참권',      icon:'⭐', price:70,  shopPrice:120},
-  {name:'노밴권',      icon:'🛡️', price:190, shopPrice:240},
-  {name:'종일권',      icon:'🌙', price:410, shopPrice:460},
-  {name:'내전 1판 연장권', icon:'⚡', price:550, shopPrice:600},
+  {name:'선참권',          icon:'⭐', price:500,  shopPrice:1000},
+  {name:'내전 1판 연장권', icon:'⚡', price:3750, shopPrice:7500},
+  {name:'종일권',          icon:'🌙', price:4500, shopPrice:9000},
 ];
 
 async function loadPawnItems() {
@@ -2327,13 +2334,14 @@ function toast(msg,type='info'){
 
 /* ══════════ SHOP ══════════ */
 const ITEMS={
-  priority:    {icon:'⭐', name:'선참권',          desc:'다음 내전 팀 배치 선택 우선권',    price:120, fatigue:0},
-  no_ban:      {icon:'🛡️',name:'노밴권',          desc:'다음 내전 밴 페이즈 면제',          price:240, fatigue:0},
-  all_day:     {icon:'🌙', name:'종일권',          desc:'당일 모든 내전 제한 없이 참가',      price:460, fatigue:0},
-  extend:      {icon:'⚡', name:'연장권',          desc:'내전 1판 추가 연장',                price:600, fatigue:0},
-  fatigue_sm:  {icon:'🧪', name:'피로도 회복제 (소)', desc:'피로도를 30 회복합니다',         price:60,  fatigue:30},
-  fatigue_lg:  {icon:'💊', name:'피로도 회복제 (대)', desc:'피로도를 70 회복합니다',         price:130, fatigue:70},
-  fatigue_full:{icon:'✨', name:'피로도 완전 회복',   desc:'피로도를 100으로 완전 회복합니다',price:180, fatigue:100},
+  wr_reset:    {icon:'🔄', name:'승률 초기화권',    desc:'내전 승률 통계 초기화',             price:250,  fatigue:0},
+  priority:    {icon:'⭐', name:'선참권',           desc:'다음 내전 팀 배치 선택 우선권',     price:1000, fatigue:0},
+  no_ban:      {icon:'🛡️',name:'노밴권',           desc:'다음 내전 밴 페이즈 면제',          price:2500, fatigue:0},
+  extend:      {icon:'⚡', name:'내전 1판 연장권',  desc:'내전 1판 추가 연장',               price:7500, fatigue:0},
+  all_day:     {icon:'🌙', name:'종일권',           desc:'당일 모든 내전 제한 없이 참가',     price:9000, fatigue:0},
+  fatigue_sm:  {icon:'🧪', name:'피로도 회복제 (소)', desc:'피로도를 30 회복합니다',         price:60,   fatigue:30},
+  fatigue_lg:  {icon:'💊', name:'피로도 회복제 (대)', desc:'피로도를 70 회복합니다',         price:130,  fatigue:70},
+  fatigue_full:{icon:'✨', name:'피로도 완전 회복',   desc:'피로도를 100으로 완전 회복합니다',price:180,  fatigue:100},
 };
 // 일반 상점 아이템 즉시 구매
 async function buyItem(itemId, btn){
