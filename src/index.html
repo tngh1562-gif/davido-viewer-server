@@ -1010,7 +1010,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
         <div class="card-dashes"><div class="dash long active"></div><div class="dash short"></div></div>
         <div class="card-label">DAILY JACKPOT</div>
         <div class="card-title">타이밍 복권</div>
-        <div class="card-desc" style="color:rgba(255,255,255,.8)">⏱ 오늘의 시간을 정확히 맞춰라<br>선착순 1명 <b>100P</b> · 도전 1P</div>
+        <div class="card-desc" style="color:rgba(255,255,255,.8)">⏱ 오늘의 시간을 정확히 맞춰라<br>선착순 1명 <b>1000P</b> · 도전 1P</div>
         <div class="card-footer-link" style="color:#c4b5fd">도전하기 +</div>
       </div>
       <div class="card game-card" style="background:linear-gradient(135deg,#0f0a1e,#2d1060);color:#fff;border:1px solid rgba(168,85,247,.25)" onclick="openGame('crash')">
@@ -2692,7 +2692,7 @@ async function tgStop() {
     if (r.points != null) savePts(r.points); else savePts((pts||0) + 100);
     resultEl.innerHTML = `<div style="background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(168,85,247,.3));border:1px solid #a855f7;border-radius:12px;padding:20px">
       <div style="font-size:32px">🏆</div>
-      <div style="font-size:20px;font-weight:900;color:#c4b5fd">당첨! +100P</div>
+      <div style="font-size:20px;font-weight:900;color:#c4b5fd">당첨! +1000P</div>
       <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차: ${r.diff}ms (목표: ${fmtTG(r.targetMs)}초)</div>
     </div>`;
     document.getElementById('tgPhase').innerHTML = '<div style="color:var(--text-muted);font-size:14px">오늘의 당첨자가 나왔습니다 🎉</div>';

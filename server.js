@@ -1060,21 +1060,21 @@ app.post('/api/game/timing/press', async (req, res) => {
     let newPoints = null;
     try {
       const r = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
-        { nickname: name, amount: 100, reason: '⏱ 타이밍 복권 당첨! (+100P)' },
+        { nickname: name, amount: 1000, reason: '⏱ 타이밍 복권 당첨! (+1000P)' },
         { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
       if (r.ok) newPoints = r.points;
-      else console.error('[TIMING] 100P 지급 실패:', name, r.error);
-    } catch(e) { console.error('[TIMING] 100P 지급 오류:', name, e.message); }
+      else console.error('[TIMING] 1000P 지급 실패:', name, r.error);
+    } catch(e) { console.error('[TIMING] 1000P 지급 오류:', name, e.message); }
     const winner = { name, hitMs: elapsed, diff, at: Date.now() };
     await saveTimingWinner(getTodayKST(), winner);
     timingWinnerSaving = false;
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
-    addFeed('jackpot', name, { prize: 100, reason: `🏆 타이밍 복권 당첨! (+100P)` });
+    addFeed('jackpot', name, { prize: 1000, reason: `🏆 타이밍 복권 당첨! (+1000P)` });
     // 통계 기록
     const { viewers: tvs, viewer: tv } = getViewer(name);
     tv.stats.timingHit = (tv.stats.timingHit||0) + 1;
     saveViewer(tvs);
-    return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 100, points: newPoints });
+    return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 1000, points: newPoints });
   }
   return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
 });
