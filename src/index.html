@@ -661,6 +661,105 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   .tg-target { font-size:36px; }
   .crash-chip-row { flex-wrap:wrap; }
 }
+
+/* ══ MONSTER GAME ══ */
+#mg-wrap { max-width:560px; margin:0 auto; padding:20px 16px; }
+.mg-screen { width:100%; }
+#mg-canvas, #mg-battle-canvas {
+  display:block; width:100%; image-rendering:pixelated;
+  border:2px solid rgba(255,255,255,.15); border-radius:8px;
+  background:#0a1a0a; cursor:none;
+}
+#mg-hud {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top:10px; gap:8px; flex-wrap:wrap;
+}
+#mg-party-hud { display:flex; gap:8px; flex-wrap:wrap; }
+.mg-party-card {
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; padding:6px 10px; font-size:.78rem; min-width:90px;
+}
+.mg-party-card .mg-pc-name { font-weight:700; font-size:.82rem; }
+.mg-party-card .mg-pc-hp { color:#4ade80; font-size:.72rem; margin-top:2px; }
+.mg-party-card .mg-pc-hpbar { height:4px; background:rgba(255,255,255,.15); border-radius:2px; margin-top:3px; }
+.mg-party-card .mg-pc-hpfill { height:100%; border-radius:2px; transition:width .3s; background:#4ade80; }
+.mg-party-card.fainted .mg-pc-hp { color:#ef4444; }
+.mg-party-card.fainted .mg-pc-hpfill { background:#ef4444; }
+#mg-area-label {
+  font-size:.8rem; color:var(--text-muted); margin-bottom:6px;
+  letter-spacing:.05em; text-transform:uppercase;
+}
+#mg-msg-box {
+  background:rgba(0,0,0,.85); border:1px solid rgba(255,255,255,.2);
+  border-radius:6px; padding:10px 14px; margin-top:8px;
+  font-size:.88rem; color:#fff; line-height:1.5;
+}
+.mg-btn {
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+  border-radius:8px; color:#fff; font-family:inherit; font-size:.8rem;
+  font-weight:600; padding:6px 14px; cursor:pointer; transition:background .15s;
+}
+.mg-btn:hover { background:rgba(255,255,255,.15); }
+/* Battle UI */
+#mg-battle-ui {
+  background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.12);
+  border-radius:0 0 8px 8px; padding:12px 14px;
+}
+#mg-battle-msg {
+  font-size:.88rem; color:#fff; min-height:2.4em; margin-bottom:10px;
+  line-height:1.5;
+}
+#mg-battle-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.mg-act-btn {
+  flex:1; min-width:90px; padding:8px 4px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08);
+  color:#fff; font-family:inherit; font-size:.82rem; font-weight:700;
+  cursor:pointer; transition:background .15s;
+}
+.mg-act-btn:hover:not(:disabled) { background:rgba(255,255,255,.18); }
+.mg-act-btn:disabled { opacity:.35; cursor:default; }
+#mg-skill-list { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.mg-skill-btn {
+  flex:1; min-width:110px; padding:7px 8px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06);
+  color:#fff; font-family:inherit; font-size:.78rem; font-weight:600;
+  cursor:pointer; text-align:left; transition:background .15s;
+}
+.mg-skill-btn:hover:not(:disabled) { background:rgba(255,255,255,.15); }
+.mg-skill-btn:disabled { opacity:.4; cursor:default; }
+.mg-skill-pp { font-size:.7rem; color:var(--text-muted); display:block; margin-top:2px; }
+/* Type colors */
+.type-fire     { color:#FF7A30; }
+.type-water    { color:#4DB8FF; }
+.type-grass    { color:#5ACC5A; }
+.type-electric { color:#FFD700; }
+.type-dark     { color:#CC88FF; }
+.type-ice      { color:#88DDFF; }
+.type-normal   { color:#CCCCCC; }
+/* Box screen */
+#mg-party-list, #mg-box-list {
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+.mg-mon-card {
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  border-radius:10px; padding:10px 14px; cursor:pointer; transition:background .15s;
+  min-width:130px; position:relative;
+}
+.mg-mon-card:hover { background:rgba(255,255,255,.12); }
+.mg-mon-card canvas { display:block; image-rendering:pixelated; margin-bottom:4px; }
+.mg-mon-card .mg-mc-name { font-weight:700; font-size:.82rem; }
+.mg-mon-card .mg-mc-lv { font-size:.75rem; color:var(--gold); }
+.mg-mon-card .mg-mc-hp { font-size:.72rem; color:#4ade80; }
+/* Starter */
+.mg-starter-card {
+  background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.15);
+  border-radius:14px; padding:16px; cursor:pointer; transition:all .2s;
+  text-align:center; min-width:120px;
+}
+.mg-starter-card:hover { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.35); transform:translateY(-2px); }
+.mg-starter-card canvas { display:block; image-rendering:pixelated; margin:0 auto 8px; }
+.mg-starter-card .mg-sc-name { font-weight:700; font-size:.88rem; }
+.mg-starter-card .mg-sc-type { font-size:.75rem; margin-top:3px; }
 </style>
 </head>
 <body>
@@ -754,6 +853,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
       <div class="nav-item" onclick="switchTab('page-mypage',this);loadMyPage()">마이페이지</div>
+      <div class="nav-item" onclick="switchTab('page-monster',this);initMonsterGame()">몬스터</div>
       <div class="nav-item" id="adminNavTab" style="display:none;color:#ef4444" onclick="switchTab('page-admin',this);loadAdminUsers();loadBanAttempts()">🛡 관리자</div>
     </div>
     <div class="user-profile">
@@ -1093,6 +1193,57 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   </div>
   <div id="adminBanAttempts" style="display:flex;flex-direction:column;gap:6px">
     <div style="color:var(--text-muted);font-size:.82rem">없음</div>
+  </div>
+</div>
+
+<!-- ═══ MONSTER GAME ═══ -->
+<div id="page-monster" class="page">
+  <div id="mg-wrap">
+    <!-- 탐험 화면 -->
+    <div id="mg-explore" class="mg-screen">
+      <div id="mg-area-label"></div>
+      <canvas id="mg-canvas" width="480" height="320"></canvas>
+      <div id="mg-hud">
+        <div id="mg-party-hud"></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="mg-btn" onclick="mgOpenBox()">파티/박스</button>
+          <button class="mg-btn" onclick="mgSave()">저장</button>
+        </div>
+      </div>
+      <div id="mg-msg-box" style="display:none"></div>
+    </div>
+    <!-- 전투 화면 -->
+    <div id="mg-battle" class="mg-screen" style="display:none">
+      <canvas id="mg-battle-canvas" width="480" height="280"></canvas>
+      <div id="mg-battle-ui">
+        <div id="mg-battle-msg"></div>
+        <div id="mg-battle-actions">
+          <button class="mg-act-btn" id="mg-btn-attack" onclick="mgBattleAction('attack')">공격</button>
+          <button class="mg-act-btn" id="mg-btn-skill"  onclick="mgShowSkills()">스킬</button>
+          <button class="mg-act-btn" id="mg-btn-catch"  onclick="mgBattleAction('catch')">잡기</button>
+          <button class="mg-act-btn" id="mg-btn-run"    onclick="mgBattleAction('run')">도망</button>
+        </div>
+        <div id="mg-skill-list" style="display:none"></div>
+      </div>
+    </div>
+    <!-- 파티/박스 화면 -->
+    <div id="mg-box-screen" class="mg-screen" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="h-section" style="margin:0">파티 & 박스</div>
+        <button class="mg-btn" onclick="mgCloseBox()">닫기</button>
+      </div>
+      <div id="mg-party-list"></div>
+      <div style="margin-top:16px;font-size:.8rem;color:var(--text-muted)">박스 (최대 30마리)</div>
+      <div id="mg-box-list" style="margin-top:8px"></div>
+    </div>
+    <!-- 스타터 선택 화면 -->
+    <div id="mg-starter" class="mg-screen" style="display:none">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:1.3rem;font-weight:700;margin-bottom:8px">첫 번째 몬스터를 선택하세요!</div>
+        <div style="color:var(--text-muted);font-size:.88rem">선택한 몬스터와 함께 모험을 시작합니다</div>
+      </div>
+      <div id="mg-starter-list" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap"></div>
+    </div>
   </div>
 </div>
 </main>
@@ -3902,6 +4053,1099 @@ async function crashAction(){
     if(r.ok){crashMyBet.cashedOut=true;savePts(r.viewer.points);toast(`💰 ${r.mult.toFixed(2)}x 현금화! +${r.gain}P`,'ok');}
   }
 }
+
+/* ══════════════════════════════════════════════
+   MONSTER GAME ENGINE
+══════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+/* ─── Pixel Art Sprite Renderer ─── */
+function drawSprite(ctx, rows, palette, x, y, scale){
+  for(let r=0;r<rows.length;r++){
+    const row=rows[r];
+    for(let c=0;c<row.length;c++){
+      const idx=parseInt(row[c],16);
+      if(idx===0||!palette[idx])continue;
+      ctx.fillStyle=palette[idx];
+      ctx.fillRect(x+c*scale,y+r*scale,scale,scale);
+    }
+  }
+}
+
+/* ─── Sprite Data (16×16) ─── */
+const SPR={};
+
+/* 플레임울프 (불 타입) — 주황-붉은 늑대 */
+SPR.flamewolf={
+pal:[null,'#C84B00','#7B2D00','#FF9520','#FF4500','#FFCC00','#FFFFFF','#000000','#FF6A00'],
+rows:[
+'0000444400000000',
+'0004554450000000',
+'0000444400000000',
+'0002222220000000',
+'0022111122000000',
+'0021161122000000',
+'0022111122000000',
+'0002222220000000',
+'0002333220000000',
+'0023333320000000',
+'0023333320000000',
+'0002332200000000',
+'0002002200000000',
+'0002002200000000',
+'0002002200000000',
+'0000000000000000',
+]};
+
+/* 아쿠아핀 (물 타입) — 파란 상어 */
+SPR.aquafin={
+pal:[null,'#1565C0','#0D47A1','#42A5F5','#80D8FF','#FFFFFF','#000000','#263238','#4FC3F7'],
+rows:[
+'0000000000000000',
+'0000001110000000',
+'0000011111000000',
+'0001113311100000',
+'0013333331130000',
+'0133335533130000',
+'0133333331130000',
+'0013333311100000',
+'0001133311000000',
+'0001133300000000',
+'0001133311110000',
+'0001133300011000',
+'0001133310000000',
+'0000011100000000',
+'0000001100000000',
+'0000000000000000',
+]};
+
+/* 쏜버드 (풀 타입) — 초록 가시 새 */
+SPR.thornbud={
+pal:[null,'#2E7D32','#1B5E20','#66BB6A','#A5D6A7','#F9A825','#FFFFFF','#000000','#558B2F'],
+rows:[
+'0000011100000000',
+'0000111110000000',
+'0001111111000000',
+'0011133111100000',
+'0113334411100000',
+'0113335511100000',
+'0113334411100000',
+'0011133111100000',
+'0000011100000000',
+'0000111110000000',
+'0001111111000000',
+'0001100111000000',
+'0000100010000000',
+'0001100011000000',
+'0000000000000000',
+'0000000000000000',
+]};
+
+/* 볼테일 (전기 타입) — 노란 도마뱀 */
+SPR.voltail={
+pal:[null,'#F9A825','#E65100','#FFF176','#FFEE58','#FFFFFF','#000000','#F57F17','#FF8F00'],
+rows:[
+'0000000000000000',
+'0000022220000000',
+'0000211120000000',
+'0002131120000000',
+'0021313112000000',
+'0021351112000000',
+'0021313112000000',
+'0002131120000000',
+'0000211120000000',
+'0000022220000000',
+'0000002200000000',
+'0000002200770000',
+'0000002207700000',
+'0000002270000000',
+'0000002700000000',
+'0000000000000000',
+]};
+
+/* 플러폭스 (노말 타입) — 흰 여우 */
+SPR.fluffox={
+pal:[null,'#F5F5F5','#9E9E9E','#FFFFFF','#E0E0E0','#EF5350','#000000','#FFCCBC','#BDBDBD'],
+rows:[
+'0000000000000000',
+'0001100011000000',
+'0011200021100000',
+'0112222221100000',
+'0122522521200000',
+'0122555521200000',
+'0122522521200000',
+'0112222221100000',
+'0011122211000000',
+'0001122110000000',
+'0001133110000000',
+'0001133110000000',
+'0000110011000000',
+'0000100001000000',
+'0001100001100000',
+'0000000000000000',
+]};
+
+/* 섀도우몰 (어둠 타입) — 보라 두더지 */
+SPR.shadowmole={
+pal:[null,'#4A148C','#1A0038','#7B1FA2','#CE93D8','#FFFFFF','#000000','#6A1B9A','#9C27B0'],
+rows:[
+'0000000000000000',
+'0000022220000000',
+'0000211120000000',
+'0002111112000000',
+'0021124112000000',
+'0021155112000000',
+'0021124112000000',
+'0002111112000000',
+'0002111112000000',
+'0002222222000000',
+'0000022200000000',
+'0000071170000000',
+'0000711170000000',
+'0007111107000000',
+'0000000000000000',
+'0000000000000000',
+]};
+
+/* 프로스트클로 (얼음 타입) — 하늘색 발톱 */
+SPR.frostclaw={
+pal:[null,'#B3E5FC','#0288D1','#E1F5FE','#81D4FA','#FFFFFF','#000000','#01579B','#4FC3F7'],
+rows:[
+'0000000000000000',
+'0000012100000000',
+'0000121210000000',
+'0001212121000000',
+'0012121211000000',
+'0121553212100000',
+'0121555212100000',
+'0012121211000000',
+'0001212120000000',
+'0000121200000000',
+'0000012100000000',
+'0000012100000000',
+'0000712270000000',
+'0007122270000000',
+'0000000000000000',
+'0000000000000000',
+]};
+
+/* 플레이어 스프라이트 (8×8) — 탐험 맵용 */
+SPR.player={
+pal:[null,'#5C8DFF','#2244AA','#FFFFFF','#FFD700','#3A5FC8','#000000'],
+rows:[
+'00011000',
+'00111100',
+'01111110',
+'01131110',
+'01111110',
+'00111100',
+'01111110',
+'00110000',
+]};
+
+/* ─── Skill Data ─── */
+const SKILLS={
+  tackle:      {name:'몸통박치기',type:'normal',  power:40, pp:35,acc:100},
+  growl:       {name:'울음소리',  type:'normal',  power:0,  pp:40,acc:100,eff:'atkdown'},
+  scratch:     {name:'할퀴기',    type:'normal',  power:40, pp:35,acc:100},
+  quickatk:    {name:'기습',      type:'normal',  power:40, pp:30,acc:100},
+  bodyslam:    {name:'몸통박기',  type:'normal',  power:85, pp:15,acc:100,eff:'par25'},
+  hyperbeam:   {name:'하이퍼빔',  type:'normal',  power:150,pp:5, acc:90},
+  ember:       {name:'불꽃세례',  type:'fire',    power:40, pp:25,acc:100,eff:'brn10'},
+  howl:        {name:'포효',      type:'fire',    power:0,  pp:40,acc:100,eff:'selfatk'},
+  flamethrower:{name:'화염방사',  type:'fire',    power:90, pp:15,acc:100,eff:'brn10'},
+  firefang:    {name:'화염송곳니',type:'fire',    power:65, pp:15,acc:95, eff:'brn10'},
+  watergun:    {name:'물총',      type:'water',   power:40, pp:25,acc:100},
+  bubblebeam:  {name:'버블빔',    type:'water',   power:65, pp:20,acc:100,eff:'spddn'},
+  surf:        {name:'파도타기',  type:'water',   power:90, pp:15,acc:100},
+  hydropump:   {name:'하이드로펌프',type:'water', power:110,pp:5, acc:80},
+  vinewhip:    {name:'덩굴채찍',  type:'grass',   power:45, pp:25,acc:100},
+  razorleaf:   {name:'면도잎',    type:'grass',   power:55, pp:25,acc:95},
+  leafstorm:   {name:'리프스톰',  type:'grass',   power:130,pp:5, acc:90,eff:'selfspddn'},
+  petaldance:  {name:'꽃잎춤',    type:'grass',   power:90, pp:15,acc:100},
+  thundershock:{name:'전기쇼크',  type:'electric',power:40, pp:30,acc:100,eff:'par10'},
+  thunderbolt: {name:'10만볼트',  type:'electric',power:90, pp:15,acc:100,eff:'par10'},
+  thunder:     {name:'천둥',      type:'electric',power:110,pp:10,acc:70, eff:'par30'},
+  shadowclaw:  {name:'섀도크로',  type:'dark',    power:70, pp:15,acc:100},
+  nightslash:  {name:'야습',      type:'dark',    power:70, pp:15,acc:100,eff:'crit'},
+  darkpulse:   {name:'악의파동',  type:'dark',    power:80, pp:15,acc:100},
+  powdersnow:  {name:'눈가루',    type:'ice',     power:40, pp:25,acc:100,eff:'frz10'},
+  icefang:     {name:'얼음송곳니',type:'ice',     power:65, pp:15,acc:95, eff:'frz10'},
+  icebeam:     {name:'얼음빔',    type:'ice',     power:90, pp:10,acc:100,eff:'frz10'},
+  blizzard:    {name:'눈보라',    type:'ice',     power:110,pp:5, acc:70, eff:'frz30'},
+};
+
+const TYPE_CLR={fire:'#FF7A30',water:'#4DB8FF',grass:'#5ACC5A',electric:'#FFD700',dark:'#CC88FF',ice:'#88DDFF',normal:'#CCCCCC'};
+
+/* 타입 상성 (공격 → 방어 배수) */
+const TYPE_EFF={
+  fire:    {fire:.5,water:.5,grass:2,ice:2,electric:1,dark:1,normal:1},
+  water:   {fire:2,water:.5,grass:.5,ice:1,electric:.5,dark:2,normal:1},
+  grass:   {fire:.5,water:2,grass:.5,ice:.5,electric:1,dark:.5,normal:2},
+  electric:{fire:1,water:2,grass:.5,ice:1,electric:.5,dark:.5,normal:2},
+  ice:     {fire:.5,water:.5,grass:2,ice:.5,electric:1,dark:1,normal:2},
+  dark:    {fire:1,water:.5,grass:2,ice:1,electric:2,dark:.5,normal:1},
+  normal:  {fire:1,water:1,grass:1,ice:1,electric:1,dark:1,normal:1},
+};
+
+/* ─── Monster Definitions ─── */
+const MONS={
+  flamewolf: {name:'플레임울프',type:'fire',  cr:45, base:{hp:45,atk:55,def:35,spd:50},
+    learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'ember'},{lv:10,sk:'howl'},{lv:15,sk:'flamethrower'},{lv:20,sk:'firefang'}],
+    areas:['grassland','cave']},
+  aquafin:   {name:'아쿠아핀', type:'water', cr:45, base:{hp:50,atk:45,def:50,spd:45},
+    learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'watergun'},{lv:10,sk:'bubblebeam'},{lv:15,sk:'surf'},{lv:20,sk:'hydropump'}],
+    areas:['grassland','cave']},
+  thornbud:  {name:'쏜버드',   type:'grass', cr:45, base:{hp:40,atk:40,def:50,spd:55},
+    learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'vinewhip'},{lv:10,sk:'razorleaf'},{lv:15,sk:'leafstorm'},{lv:20,sk:'petaldance'}],
+    areas:['grassland']},
+  voltail:   {name:'볼테일',   type:'electric',cr:45,base:{hp:35,atk:55,def:35,spd:65},
+    learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'thundershock'},{lv:10,sk:'quickatk'},{lv:15,sk:'thunderbolt'},{lv:20,sk:'thunder'}],
+    areas:['cave','grassland']},
+  fluffox:   {name:'플러폭스', type:'normal',cr:200,base:{hp:55,atk:40,def:40,spd:50},
+    learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'quickatk'},{lv:10,sk:'scratch'},{lv:15,sk:'bodyslam'},{lv:20,sk:'hyperbeam'}],
+    areas:['grassland','town']},
+  shadowmole:{name:'섀도우몰', type:'dark',  cr:30, base:{hp:65,atk:60,def:45,spd:40},
+    learn:[{lv:1,sk:'scratch'},{lv:1,sk:'growl'},{lv:5,sk:'shadowclaw'},{lv:10,sk:'nightslash'},{lv:15,sk:'darkpulse'}],
+    areas:['cave']},
+  frostclaw: {name:'프로스트클로',type:'ice', cr:25, base:{hp:60,atk:65,def:55,spd:35},
+    learn:[{lv:1,sk:'scratch'},{lv:1,sk:'growl'},{lv:5,sk:'powdersnow'},{lv:10,sk:'icefang'},{lv:15,sk:'icebeam'},{lv:20,sk:'blizzard'}],
+    areas:['cave']},
+};
+
+/* EXP table: EXP needed to reach each level */
+function expToLevel(lv){ return Math.floor(4*Math.pow(lv,3)/5); }
+function statCalc(base,iv,lv,isHp){
+  if(isHp) return Math.floor(((2*base+iv)*lv/100)+lv+10);
+  return Math.floor(((2*base+iv)*lv/100)+5);
+}
+
+/* Create a fresh monster instance */
+function createMonster(id,lv){
+  const def=MONS[id];
+  if(!def)return null;
+  const iv=Math.floor(Math.random()*16);
+  const maxHp=statCalc(def.base.hp,iv,lv,true);
+  const skills=[];
+  for(const e of def.learn){ if(e.lv<=lv && skills.length<4 && !skills.includes(e.sk)) skills.push(e.sk); }
+  const ppMap={};
+  for(const sk of skills) ppMap[sk]=SKILLS[sk].pp;
+  return{
+    id,lv,exp:expToLevel(lv),iv,
+    hp:maxHp,maxHp,
+    atk:statCalc(def.base.atk,iv,lv,false),
+    def:statCalc(def.base.def,iv,lv,false),
+    spd:statCalc(def.base.spd,iv,lv,false),
+    skills:[...skills],pp:{...ppMap},status:null,
+    nickname:'',
+  };
+}
+
+/* ─── Map Data ─── */
+/* Tile types: 0=open path, 1=wall/tree, 2=tall grass (encounter), 3=water, 4=building */
+const AREAS={
+  town:{
+    name:'마을',
+    w:20,h:15,
+    data:[
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,4,4,0,0,0,4,4,0,0,0,0,0,4,4,4,0,0,1],
+      [1,0,4,4,0,0,0,4,4,0,0,0,0,0,4,4,4,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,1,0,1,0,0,0,0,0,3,3,3,3,0,0,1],
+      [1,0,0,0,0,1,0,1,0,0,0,0,0,3,3,3,3,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+      [1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1],
+    ],
+    exits:[{x:9,y:14,to:'grassland',tx:9,ty:1},{x:10,y:14,to:'grassland',tx:10,ty:1}],
+    bgColor:'#1a2a1a',
+    encounters:[],
+  },
+  grassland:{
+    name:'풀숲',
+    w:20,h:15,
+    data:[
+      [1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1],
+      [1,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,2,1],
+      [1,2,2,2,2,2,0,0,0,0,0,0,0,2,2,2,2,2,2,1],
+      [1,2,2,0,0,0,0,1,1,0,0,1,1,0,0,2,2,2,2,1],
+      [1,2,2,0,0,0,0,1,1,0,0,1,1,0,0,2,2,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,1],
+      [1,2,2,2,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,1],
+      [1,2,2,2,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,1],
+      [1,2,2,2,2,0,0,0,0,0,0,0,0,2,2,2,2,2,2,1],
+      [1,2,2,2,2,0,0,0,0,0,0,0,0,2,2,2,2,2,2,1],
+      [1,2,2,2,2,0,0,1,1,0,0,1,1,0,2,2,2,2,2,1],
+      [1,2,2,2,2,0,0,0,0,0,0,0,0,0,2,2,2,2,2,1],
+      [1,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    exits:[{x:9,y:0,to:'town',tx:9,ty:13},{x:10,y:0,to:'town',tx:10,ty:13},{x:9,y:13,to:'cave',tx:9,ty:1},{x:10,y:13,to:'cave',tx:10,ty:1}],
+    bgColor:'#0a1a0a',
+    encounters:['flamewolf','aquafin','thornbud','voltail','fluffox'],
+    encounterRate:0.1,
+  },
+  cave:{
+    name:'동굴',
+    w:20,h:15,
+    data:[
+      [1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1],
+      [1,2,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,2,1],
+      [1,2,2,1,0,0,0,1,1,0,0,1,1,0,0,0,1,2,2,1],
+      [1,2,2,0,0,0,0,1,1,0,0,1,1,0,0,0,0,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1],
+      [1,2,2,0,0,0,1,1,0,0,0,0,1,1,0,0,0,2,2,1],
+      [1,2,2,0,0,0,1,1,0,0,0,0,1,1,0,0,0,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1],
+      [1,2,2,0,0,0,1,1,0,0,0,0,1,1,0,0,0,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1],
+      [1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1],
+      [1,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,1],
+      [1,2,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    exits:[{x:9,y:0,to:'grassland',tx:9,ty:13},{x:10,y:0,to:'grassland',tx:10,ty:13}],
+    bgColor:'#0d0d18',
+    encounters:['voltail','shadowmole','frostclaw','flamewolf','aquafin'],
+    encounterRate:0.12,
+  },
+};
+
+/* ─── Tile Renderer ─── */
+const TILE_SIZE=32;
+const TILE_CLR={
+  0:'#2d3a2d', // path
+  1:'#1a2a1a', // wall
+  2:'#1a3a1a', // tall grass (darker green)
+  3:'#1a2a3a', // water
+  4:'#3a3028', // building
+};
+const TILE_CLR_CAVE={
+  0:'#1a1a2a',
+  1:'#0d0d1a',
+  2:'#1a1a30',
+  3:'#0d1a2a',
+  4:'#2a2528',
+};
+
+function renderMap(ctx,area,camX,camY,playerX,playerY){
+  const isCave=(area.bgColor==='#0d0d18');
+  const clr=isCave?TILE_CLR_CAVE:TILE_CLR;
+  const vw=Math.ceil(480/TILE_SIZE)+2;
+  const vh=Math.ceil(320/TILE_SIZE)+2;
+  const startTx=Math.floor(camX/TILE_SIZE);
+  const startTy=Math.floor(camY/TILE_SIZE);
+
+  for(let ty=startTy-1;ty<startTy+vh;ty++){
+    for(let tx=startTx-1;tx<startTx+vw;tx++){
+      if(tx<0||ty<0||tx>=area.w||ty>=area.h)continue;
+      const tile=area.data[ty][tx];
+      const px=tx*TILE_SIZE-camX;
+      const py=ty*TILE_SIZE-camY;
+      ctx.fillStyle=clr[tile]||'#111';
+      ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);
+
+      /* grass detail */
+      if(tile===2){
+        ctx.fillStyle=isCave?'rgba(80,80,150,0.3)':'rgba(60,150,60,0.3)';
+        ctx.fillRect(px+2,py+4,3,TILE_SIZE-8);
+        ctx.fillRect(px+8,py+2,3,TILE_SIZE-8);
+        ctx.fillRect(px+14,py+6,3,TILE_SIZE-10);
+        ctx.fillRect(px+20,py+3,3,TILE_SIZE-8);
+        ctx.fillRect(px+26,py+5,3,TILE_SIZE-9);
+      }
+      /* water animation */
+      if(tile===3){
+        const wave=Math.sin(Date.now()/600+tx+ty)*2;
+        ctx.fillStyle='rgba(100,180,255,0.25)';
+        ctx.fillRect(px,py+8+wave,TILE_SIZE,4);
+        ctx.fillRect(px,py+18+wave,TILE_SIZE,4);
+      }
+      /* tile border for path */
+      if(tile===0){
+        ctx.fillStyle='rgba(255,255,255,0.03)';
+        ctx.fillRect(px,py,TILE_SIZE,1);
+        ctx.fillRect(px,py,1,TILE_SIZE);
+      }
+    }
+  }
+
+  /* Draw player */
+  const pDrawX=playerX*TILE_SIZE-camX+(TILE_SIZE-16)/2;
+  const pDrawY=playerY*TILE_SIZE-camY+(TILE_SIZE-16)/2;
+  drawSprite(ctx,SPR.player.rows,SPR.player.pal,pDrawX,pDrawY,2);
+}
+
+/* ─── Game State ─── */
+let MG={
+  initialized:false,
+  started:false,
+  gameData:null,
+  areaId:'town',
+  playerX:9,playerY:7,
+  camX:0,camY:0,
+  moving:false,
+  stepTimer:0,
+  lastStepTime:0,
+  keys:{},
+  encounteredMon:null,
+  battleState:null,
+  battleAnim:{},
+  animFrame:null,
+  saveTimer:null,
+  msgQueue:[],
+  msgActive:false,
+};
+
+/* ─── Save / Load ─── */
+async function mgLoadData(){
+  try{
+    const r=await fetch('/api/game/monster/load').then(r=>r.json());
+    if(r.ok && r.gameData) return r.gameData;
+  }catch(e){}
+  return null;
+}
+
+async function mgSaveData(data){
+  try{
+    await fetch('/api/game/monster/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gameData:data})});
+  }catch(e){}
+}
+
+function buildSaveData(){
+  return{
+    party:MG.gameData.party,
+    box:MG.gameData.box,
+    areaId:MG.areaId,
+    px:MG.playerX,py:MG.playerY,
+    steps:MG.gameData.steps||0,
+    savedAt:Date.now(),
+  };
+}
+
+/* ─── Entry Point ─── */
+let mgInited=false;
+window.initMonsterGame=async function(){
+  if(mgInited)return;
+  mgInited=true;
+  const saved=await mgLoadData();
+  if(saved&&saved.party&&saved.party.length>0){
+    MG.gameData=saved;
+    MG.areaId=saved.areaId||'town';
+    MG.playerX=saved.px??9;
+    MG.playerY=saved.py??7;
+    mgStartExplore();
+  }else{
+    MG.gameData={party:[],box:[],steps:0};
+    mgShowStarter();
+  }
+};
+
+window.mgSave=async function(){
+  if(!MG.gameData)return;
+  await mgSaveData(buildSaveData());
+  toast('게임 저장 완료!','ok');
+};
+
+/* ─── Starter Selection ─── */
+function mgShowStarter(){
+  document.getElementById('mg-explore').style.display='none';
+  document.getElementById('mg-battle').style.display='none';
+  document.getElementById('mg-box-screen').style.display='none';
+  document.getElementById('mg-starter').style.display='';
+
+  const starters=['flamewolf','aquafin','thornbud'];
+  const list=document.getElementById('mg-starter-list');
+  list.innerHTML='';
+  for(const id of starters){
+    const def=MONS[id];
+    const card=document.createElement('div');
+    card.className='mg-starter-card';
+    card.innerHTML=`<div class="mg-sc-name">${def.name}</div><div class="mg-sc-type" style="color:${TYPE_CLR[def.type]}">${mgTypeName(def.type)} 타입</div>`;
+    /* Draw sprite preview */
+    const cv=document.createElement('canvas');
+    cv.width=64;cv.height=64;
+    card.insertBefore(cv,card.firstChild);
+    const ctx2=cv.getContext('2d');
+    ctx2.imageSmoothingEnabled=false;
+    const s=SPR[id];
+    if(s) drawSprite(ctx2,s.rows,s.pal,0,0,4);
+    card.onclick=()=>mgChooseStarter(id);
+    list.appendChild(card);
+  }
+}
+
+function mgChooseStarter(id){
+  const mon=createMonster(id,5);
+  MG.gameData.party=[mon];
+  MG.areaId='town';
+  MG.playerX=9;MG.playerY=7;
+  document.getElementById('mg-starter').style.display='none';
+  mgStartExplore();
+  toast(`${MONS[id].name}와 함께 모험을 시작합니다!`,'ok');
+  mgSaveData(buildSaveData());
+}
+
+/* ─── Exploration ─── */
+function mgStartExplore(){
+  document.getElementById('mg-explore').style.display='';
+  document.getElementById('mg-battle').style.display='none';
+  document.getElementById('mg-box-screen').style.display='none';
+  document.getElementById('mg-starter').style.display='none';
+
+  mgUpdateHUD();
+  mgStartLoop();
+  if(!MG._keysSetup){
+    MG._keysSetup=true;
+    document.addEventListener('keydown',e=>{MG.keys[e.key]=true;e.preventDefault&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)&&e.preventDefault();});
+    document.addEventListener('keyup',e=>{MG.keys[e.key]=false;});
+    /* Touch / swipe */
+    let tx0=0,ty0=0;
+    const cv=$c('mg-canvas');
+    if(cv){
+      cv.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;},{passive:true});
+      cv.addEventListener('touchend',e=>{
+        const dx=e.changedTouches[0].clientX-tx0;
+        const dy=e.changedTouches[0].clientY-ty0;
+        if(Math.max(Math.abs(dx),Math.abs(dy))<10)return;
+        if(Math.abs(dx)>Math.abs(dy)) MG.keys[dx>0?'ArrowRight':'ArrowLeft']=true;
+        else MG.keys[dy>0?'ArrowDown':'ArrowUp']=true;
+        setTimeout(()=>{MG.keys={};},100);
+      },{passive:true});
+    }
+  }
+}
+
+function mgStartLoop(){
+  if(MG.animFrame) cancelAnimationFrame(MG.animFrame);
+  function loop(){
+    mgUpdate();
+    mgDraw();
+    MG.animFrame=requestAnimationFrame(loop);
+  }
+  MG.animFrame=requestAnimationFrame(loop);
+}
+
+const MOVE_DELAY=150; // ms between steps
+
+function mgUpdate(){
+  if(MG.battleState||MG.msgActive) return;
+  const now=Date.now();
+  if(now-MG.lastStepTime<MOVE_DELAY) return;
+
+  let dx=0,dy=0;
+  if(MG.keys['ArrowLeft']||MG.keys['a']) dx=-1;
+  else if(MG.keys['ArrowRight']||MG.keys['d']) dx=1;
+  else if(MG.keys['ArrowUp']||MG.keys['w']) dy=-1;
+  else if(MG.keys['ArrowDown']||MG.keys['s']) dy=1;
+  if(dx===0&&dy===0) return;
+
+  MG.lastStepTime=now;
+  const area=AREAS[MG.areaId];
+  const nx=MG.playerX+dx,ny=MG.playerY+dy;
+  if(nx<0||ny<0||nx>=area.w||ny>=area.h) return;
+  const tile=area.data[ny][nx];
+  if(tile===1||tile===4) return; // wall/building
+  if(tile===3) return; // water
+
+  /* Check exits */
+  const exit=area.exits&&area.exits.find(e=>e.x===nx&&e.y===ny);
+  if(exit){
+    MG.areaId=exit.to;
+    MG.playerX=exit.tx;
+    MG.playerY=exit.ty;
+    document.getElementById('mg-area-label').textContent=AREAS[MG.areaId].name;
+    return;
+  }
+
+  MG.playerX=nx;MG.playerY=ny;
+  MG.gameData.steps=(MG.gameData.steps||0)+1;
+  document.getElementById('mg-area-label').textContent=area.name;
+
+  /* Random encounter in tall grass */
+  if(tile===2 && area.encounterRate && Math.random()<area.encounterRate){
+    const pool=area.encounters.filter(id=>MG.gameData.party.some(p=>p.hp>0)||true);
+    if(pool.length>0){
+      const eid=pool[Math.floor(Math.random()*pool.length)];
+      const lv=Math.max(2,Math.floor(Math.random()*6)+(MG.gameData.steps>500?8:3));
+      const wild=createMonster(eid,lv);
+      MG.encounteredMon=wild;
+      setTimeout(()=>mgStartBattle(wild),200);
+    }
+  }
+}
+
+function mgDraw(){
+  const cv=$c('mg-canvas');if(!cv)return;
+  const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=false;
+  const area=AREAS[MG.areaId];
+
+  /* Camera center on player */
+  MG.camX=MG.playerX*TILE_SIZE-240+TILE_SIZE/2;
+  MG.camY=MG.playerY*TILE_SIZE-160+TILE_SIZE/2;
+  MG.camX=Math.max(0,Math.min(MG.camX,(area.w*TILE_SIZE)-480));
+  MG.camY=Math.max(0,Math.min(MG.camY,(area.h*TILE_SIZE)-320));
+
+  ctx.fillStyle=area.bgColor;
+  ctx.fillRect(0,0,480,320);
+  renderMap(ctx,area,MG.camX,MG.camY,MG.playerX,MG.playerY);
+}
+
+/* ─── HUD ─── */
+function mgUpdateHUD(){
+  const hud=$c('mg-party-hud');if(!hud)return;
+  hud.innerHTML='';
+  for(const mon of MG.gameData.party){
+    const pct=Math.max(0,Math.round(100*mon.hp/mon.maxHp));
+    const fainted=mon.hp<=0;
+    const card=document.createElement('div');
+    card.className='mg-party-card'+(fainted?' fainted':'');
+    card.innerHTML=`<div class="mg-pc-name">${mon.nickname||MONS[mon.id].name}</div><div class="mg-pc-hp">${mon.hp}/${mon.maxHp}HP  Lv.${mon.lv}</div><div class="mg-pc-hpbar"><div class="mg-pc-hpfill" style="width:${pct}%;background:${pct>50?'#4ade80':pct>20?'#facc15':'#ef4444'}"></div></div>`;
+    hud.appendChild(card);
+  }
+}
+
+/* ─── Battle ─── */
+function mgStartBattle(wild){
+  if(cancelAnimationFrame) cancelAnimationFrame(MG.animFrame);
+  document.getElementById('mg-explore').style.display='none';
+  document.getElementById('mg-battle').style.display='';
+
+  /* Find first alive party member */
+  const myMon=MG.gameData.party.find(m=>m.hp>0);
+  if(!myMon){
+    mgMsg('모든 몬스터가 쓰러졌습니다. 마을로 돌아갑니다...');
+    setTimeout(()=>{
+      MG.areaId='town';MG.playerX=9;MG.playerY=7;
+      mgStartExplore();
+    },2000);
+    return;
+  }
+
+  MG.battleState={
+    myMon,
+    wild,
+    phase:'start',
+    turn:'player',
+    recharging:false,
+  };
+
+  mgBattleDraw();
+  mgSetMsg(`야생 ${MONS[wild.id].name}(Lv.${wild.lv})이 나타났다!`);
+  setTimeout(()=>{mgSetMsg('어떻게 할까?');mgEnableActions();},1200);
+}
+
+function mgBattleDraw(){
+  const cv=$c('mg-battle-canvas');if(!cv)return;
+  const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=false;
+  const bs=MG.battleState;if(!bs)return;
+  const area=AREAS[MG.areaId];
+
+  /* Background */
+  const bg=area.bgColor==='#0d0d18'?'#0d0d18':'#0a1a0a';
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,480,280);
+
+  /* Battle ground */
+  ctx.fillStyle=area.bgColor==='#0d0d18'?'#1a1a30':'#1a3020';
+  ctx.fillRect(0,200,480,80);
+  ctx.fillStyle=area.bgColor==='#0d0d18'?'#2a2a50':'#2a5040';
+  ctx.fillRect(0,200,480,6);
+
+  /* Wild monster (top-right) — scale=5 → 80px */
+  const wSpr=SPR[bs.wild.id];
+  if(wSpr){
+    const wx=300,wy=40;
+    if(bs.battleAnim&&bs.battleAnim.wild==='shake'){
+      drawSprite(ctx,wSpr.rows,wSpr.pal,wx+(Math.random()*6-3|0),wy,5);
+    }else{
+      drawSprite(ctx,wSpr.rows,wSpr.pal,wx,wy,5);
+    }
+  }
+
+  /* My monster (bottom-left) — scale=5 → 80px */
+  const mSpr=SPR[bs.myMon.id];
+  if(mSpr){
+    const mx=60,my=120;
+    if(bs.battleAnim&&bs.battleAnim.my==='shake'){
+      drawSprite(ctx,mSpr.rows,mSpr.pal,mx+(Math.random()*6-3|0),my,5);
+    }else{
+      drawSprite(ctx,mSpr.rows,mSpr.pal,mx,my,5);
+    }
+  }
+
+  /* Wild HP bar (top-left) */
+  drawHpBar(ctx,bs.wild,10,20,200,bs.wild.maxHp);
+
+  /* My HP bar (bottom-right) */
+  drawHpBar(ctx,bs.myMon,270,190,200,bs.myMon.maxHp);
+}
+
+function drawHpBar(ctx,mon,x,y,w,maxHp){
+  const def=MONS[mon.id];
+  const lbl=`${mon.nickname||def.name} Lv.${mon.lv}`;
+  ctx.fillStyle='rgba(0,0,0,.6)';
+  ctx.fillRect(x,y,w+10,52);
+  ctx.fillStyle='#fff';
+  ctx.font='bold 12px monospace';
+  ctx.fillText(lbl,x+6,y+16);
+  const typeClr=TYPE_CLR[def.type]||'#ccc';
+  ctx.fillStyle=typeClr;
+  ctx.font='10px monospace';
+  ctx.fillText(mgTypeName(def.type),x+6,y+28);
+  /* HP bar bg */
+  ctx.fillStyle='#333';
+  ctx.fillRect(x+6,y+34,w-2,10);
+  /* HP bar fill */
+  const pct=Math.max(0,mon.hp/mon.maxHp);
+  ctx.fillStyle=pct>0.5?'#4ade80':pct>0.2?'#facc15':'#ef4444';
+  ctx.fillRect(x+6,y+34,Math.round((w-2)*pct),10);
+  /* HP text */
+  ctx.fillStyle='#ccc';
+  ctx.font='10px monospace';
+  ctx.fillText(`${mon.hp}/${mon.maxHp}`,x+6,y+52);
+}
+
+function mgSetMsg(txt){
+  const el=$c('mg-battle-msg');if(el) el.textContent=txt;
+}
+
+function mgEnableActions(enable=true){
+  ['mg-btn-attack','mg-btn-skill','mg-btn-catch','mg-btn-run'].forEach(id=>{
+    const el=$c(id);if(el) el.disabled=!enable;
+  });
+}
+
+window.mgShowSkills=function(){
+  const bs=MG.battleState;if(!bs)return;
+  const act=$c('mg-battle-actions');
+  const sl=$c('mg-skill-list');
+  act.style.display='none';
+  sl.style.display='';
+  sl.innerHTML='';
+  const mon=bs.myMon;
+  for(const sk of mon.skills){
+    const def=SKILLS[sk];
+    const pp=mon.pp[sk]??def.pp;
+    const btn=document.createElement('button');
+    btn.className='mg-skill-btn';
+    btn.disabled=pp<=0;
+    btn.innerHTML=`<span style="color:${TYPE_CLR[def.type]||'#ccc'}">${def.name}</span><span class="mg-skill-pp">${def.type} | PP ${pp}/${def.pp} | 위력 ${def.power||'—'}</span>`;
+    btn.onclick=()=>{
+      sl.style.display='none';
+      act.style.display='';
+      mgBattleAction('skill',sk);
+    };
+    sl.appendChild(btn);
+  }
+  const back=document.createElement('button');
+  back.className='mg-skill-btn';
+  back.innerHTML='← 뒤로';
+  back.onclick=()=>{sl.style.display='none';act.style.display='';};
+  sl.appendChild(back);
+};
+
+window.mgBattleAction=async function(action,skillId){
+  const bs=MG.battleState;if(!bs||bs.turn!=='player')return;
+  mgEnableActions(false);
+  bs.turn='processing';
+
+  if(action==='run'){
+    const escRate=bs.myMon.spd/(bs.wild.spd*2)*100;
+    if(Math.random()*100<escRate+30){
+      mgSetMsg('도망쳤다!');
+      setTimeout(()=>mgEndBattle(false),1000);
+    }else{
+      mgSetMsg('도망칠 수 없었다!');
+      setTimeout(()=>mgEnemyTurn(),1000);
+    }
+    return;
+  }
+
+  if(action==='catch'){
+    const rate=MONS[bs.wild.id].cr;
+    const hpFactor=3*bs.wild.maxHp-2*bs.wild.hp;
+    const ballMod=1; // pokeball
+    const catchScore=(rate*hpFactor*ballMod)/(3*bs.wild.maxHp);
+    if(Math.random()*255<catchScore){
+      mgSetMsg(`${MONS[bs.wild.id].name}을(를) 잡았다!`);
+      setTimeout(()=>mgCatchSuccess(bs.wild),1500);
+    }else{
+      mgSetMsg('잡기에 실패했다!');
+      setTimeout(()=>mgEnemyTurn(),1000);
+    }
+    return;
+  }
+
+  /* Attack or Skill */
+  let sk=skillId;
+  if(action==='attack') sk=bs.myMon.skills[0]; // basic attack = first skill
+  if(!sk){mgEnemyTurn();return;}
+  await mgUseSkill(bs.myMon,bs.wild,sk,false);
+  mgBattleDraw();
+
+  if(bs.wild.hp<=0){
+    mgSetMsg(`${MONS[bs.wild.id].name}을(를) 쓰러뜨렸다!`);
+    setTimeout(()=>mgGainExp(),1200);
+  }else{
+    setTimeout(()=>mgEnemyTurn(),1000);
+  }
+};
+
+async function mgUseSkill(attacker,defender,skId,isEnemy){
+  const sk=SKILLS[skId];if(!sk)return;
+  /* PP deduction */
+  if(!isEnemy){
+    attacker.pp[skId]=Math.max(0,(attacker.pp[skId]??sk.pp)-1);
+  }
+  const aName=(isEnemy?MONS[attacker.id].name:attacker.nickname||MONS[attacker.id].name);
+
+  if(sk.power>0){
+    /* Accuracy check */
+    if(Math.random()*100>sk.acc){
+      mgSetMsg(`${aName}의 ${sk.name}! 빗나갔다!`);
+      return;
+    }
+    /* Damage calc */
+    const eff=TYPE_EFF[sk.type]?.[MONS[defender.id].type]??1;
+    const crit=(!isEnemy&&sk.eff==='crit')?1.5:1;
+    const rand=0.85+Math.random()*0.15;
+    const atk=attacker.atk*(attacker.atkMod??1);
+    const def=defender.def*(defender.defMod??1);
+    let dmg=Math.max(1,Math.floor(((2*attacker.lv/5+2)*sk.power*atk/def/50+2)*eff*crit*rand));
+    defender.hp=Math.max(0,defender.hp-dmg);
+
+    let effTxt='';
+    if(eff>1) effTxt=' 효과가 뛰어나다!';
+    else if(eff<1) effTxt=' 효과가 별로인 것 같다...';
+    mgSetMsg(`${aName}의 ${sk.name}! ${dmg}의 데미지!${effTxt}`);
+    /* Animation */
+    MG.battleState.battleAnim={[isEnemy?'my':'wild']:'shake'};
+    mgBattleDraw();
+    MG.battleState.battleAnim={};
+  }else{
+    /* Status moves */
+    mgSetMsg(`${aName}의 ${sk.name}!`);
+    if(sk.eff==='atkdown') defender.atkMod=(defender.atkMod??1)*0.67;
+    if(sk.eff==='selfatk') attacker.atkMod=(attacker.atkMod??1)*1.5;
+    if(sk.eff==='spddn')   defender.spdMod=(defender.spdMod??1)*0.75;
+    if(sk.eff==='selfspddn') attacker.spdMod=(attacker.spdMod??1)*0.5;
+  }
+  /* Status effects on hit */
+  if(sk.eff&&sk.power>0){
+    const chance={brn10:10,par10:10,frz10:10,par25:25,frz30:30,par30:30}[sk.eff]??0;
+    if(chance>0&&Math.random()*100<chance&&!defender.status){
+      const st={brn10:'burn',par10:'paralyze',frz10:'freeze',par25:'paralyze',frz30:'freeze',par30:'paralyze'}[sk.eff];
+      if(st){
+        defender.status=st;
+        const stName={burn:'화상',paralyze:'마비',freeze:'빙결'}[st];
+        mgSetMsg(prev=>prev+` ${MONS[defender.id].name}에게 ${stName}!`);
+      }
+    }
+  }
+}
+
+function mgEnemyTurn(){
+  const bs=MG.battleState;if(!bs)return;
+  bs.turn='enemy';
+  const wild=bs.wild;
+
+  /* Status check */
+  if(wild.status==='freeze'&&Math.random()<0.2){
+    mgSetMsg(`${MONS[wild.id].name}은(는) 풀렸다!`);wild.status=null;
+  }
+  if(wild.status==='paralyze'&&Math.random()<0.25){
+    mgSetMsg(`${MONS[wild.id].name}은(는) 마비로 움직일 수 없다!`);
+    setTimeout(()=>mgPlayerTurn(),1000);return;
+  }
+
+  /* Pick random skill */
+  const sk=wild.skills[Math.floor(Math.random()*wild.skills.length)];
+  mgUseSkill(wild,bs.myMon,sk,true).then(()=>{
+    mgBattleDraw();
+    if(bs.myMon.hp<=0){
+      mgSetMsg(`${bs.myMon.nickname||MONS[bs.myMon.id].name}이(가) 쓰러졌다!`);
+      mgUpdateHUD();
+      setTimeout(()=>mgHandleFaint(),1200);
+    }else{
+      setTimeout(()=>mgPlayerTurn(),1000);
+    }
+  });
+}
+
+function mgPlayerTurn(){
+  const bs=MG.battleState;if(!bs)return;
+  bs.turn='player';
+  mgSetMsg('어떻게 할까?');
+  mgEnableActions(true);
+  const sl=$c('mg-skill-list');
+  if(sl) sl.style.display='none';
+  const act=$c('mg-battle-actions');
+  if(act) act.style.display='';
+}
+
+function mgHandleFaint(){
+  const alive=MG.gameData.party.find(m=>m.hp>0&&m!==MG.battleState.myMon);
+  if(alive){
+    MG.battleState.myMon=alive;
+    mgSetMsg(`${alive.nickname||MONS[alive.id].name}으로 교체!`);
+    mgBattleDraw();
+    setTimeout(()=>mgPlayerTurn(),1000);
+  }else{
+    mgSetMsg('모든 몬스터가 쓰러졌습니다...');
+    setTimeout(()=>{
+      /* Revive all to 1HP */
+      for(const m of MG.gameData.party) if(m.hp<=0) m.hp=1;
+      mgUpdateHUD();
+      MG.areaId='town';MG.playerX=9;MG.playerY=7;
+      mgEndBattle(false);
+    },2000);
+  }
+}
+
+function mgGainExp(){
+  const bs=MG.battleState;if(!bs)return;
+  const wild=bs.wild;
+  const mon=bs.myMon;
+  const expGain=Math.floor((MONS[wild.id].base.hp+MONS[wild.id].base.atk)*wild.lv/7);
+
+  mon.exp+=expGain;
+  mgSetMsg(`경험치 ${expGain} 획득!`);
+
+  /* Level up check */
+  let leveled=false;
+  while(mon.lv<100 && mon.exp>=expToLevel(mon.lv+1)){
+    mon.lv++;
+    leveled=true;
+    const def=MONS[mon.id];
+    const newMaxHp=statCalc(def.base.hp,mon.iv,mon.lv,true);
+    const hpDiff=newMaxHp-mon.maxHp;
+    mon.maxHp=newMaxHp;
+    mon.hp=Math.min(mon.hp+hpDiff,mon.maxHp);
+    mon.atk=statCalc(def.base.atk,mon.iv,mon.lv,false);
+    mon.def=statCalc(def.base.def,mon.iv,mon.lv,false);
+    mon.spd=statCalc(def.base.spd,mon.iv,mon.lv,false);
+    /* Learn new skills */
+    for(const e of def.learn){
+      if(e.lv===mon.lv && !mon.skills.includes(e.sk)){
+        if(mon.skills.length<4){
+          mon.skills.push(e.sk);
+          mon.pp[e.sk]=SKILLS[e.sk].pp;
+          mgSetMsg(`${mon.nickname||def.name}이(가) Lv.${mon.lv}으로 레벨업! ${SKILLS[e.sk].name}을(를) 배웠다!`);
+        }
+      }
+    }
+  }
+  if(leveled && !mgSetMsg._leveled){
+    mgSetMsg(`${mon.nickname||MONS[mon.id].name}이(가) Lv.${mon.lv}으로 레벨업!`);
+  }
+  mgUpdateHUD();
+  setTimeout(()=>mgEndBattle(false),1500);
+}
+
+function mgCatchSuccess(wild){
+  /* Add to party or box */
+  if(MG.gameData.party.length<6){
+    MG.gameData.party.push(wild);
+    mgSetMsg(`${MONS[wild.id].name}이(가) 파티에 합류!`);
+  }else if(MG.gameData.box.length<30){
+    MG.gameData.box.push(wild);
+    mgSetMsg(`${MONS[wild.id].name}이(가) 박스에 보관됨`);
+  }else{
+    mgSetMsg('박스가 가득 찼습니다!');
+  }
+  mgUpdateHUD();
+  setTimeout(()=>mgEndBattle(false),1500);
+}
+
+function mgEndBattle(fled){
+  MG.battleState=null;
+  MG.encounteredMon=null;
+  document.getElementById('mg-battle').style.display='none';
+  const sl=$c('mg-skill-list');
+  if(sl)sl.style.display='none';
+  const act=$c('mg-battle-actions');
+  if(act)act.style.display='';
+  mgStartExplore();
+  mgSaveData(buildSaveData());
+}
+
+/* ─── Box Screen ─── */
+window.mgOpenBox=function(){
+  if(MG.animFrame) cancelAnimationFrame(MG.animFrame);
+  document.getElementById('mg-explore').style.display='none';
+  document.getElementById('mg-box-screen').style.display='';
+  mgRenderBox();
+};
+
+window.mgCloseBox=function(){
+  document.getElementById('mg-box-screen').style.display='none';
+  mgStartExplore();
+};
+
+function mgRenderBox(){
+  ['mg-party-list','mg-box-list'].forEach(id=>{
+    const el=$c(id);if(!el)return;
+    el.innerHTML='';
+    const arr=id==='mg-party-list'?MG.gameData.party:MG.gameData.box;
+    const label=id==='mg-party-list'?'파티':'박스';
+    if(arr.length===0){
+      el.innerHTML=`<div style="color:var(--text-muted);font-size:.8rem">${label} 없음</div>`;
+      return;
+    }
+    for(let i=0;i<arr.length;i++){
+      const mon=arr[i];
+      const def=MONS[mon.id];
+      const card=document.createElement('div');
+      card.className='mg-mon-card';
+      const cv=document.createElement('canvas');
+      cv.width=48;cv.height=48;
+      const ctx2=cv.getContext('2d');
+      ctx2.imageSmoothingEnabled=false;
+      const s=SPR[mon.id];
+      if(s) drawSprite(ctx2,s.rows,s.pal,0,0,3);
+      card.appendChild(cv);
+      const pct=Math.max(0,Math.round(100*mon.hp/mon.maxHp));
+      card.innerHTML+=`<div class="mg-mc-name">${mon.nickname||def.name}</div><div class="mg-mc-lv">Lv.${mon.lv} <span style="color:${TYPE_CLR[def.type]}">${mgTypeName(def.type)}</span></div><div class="mg-mc-hp">${mon.hp}/${mon.maxHp} HP</div>`;
+      if(id==='mg-box-list'&&MG.gameData.party.length<6){
+        card.onclick=()=>{
+          MG.gameData.party.push(mon);
+          MG.gameData.box.splice(i,1);
+          mgRenderBox();mgUpdateHUD();
+        };
+        card.title='클릭: 파티에 추가';
+      }else if(id==='mg-party-list'&&MG.gameData.party.length>1){
+        card.onclick=()=>{
+          if(mon.hp>0&&MG.gameData.party.filter(m=>m.hp>0).length===1) return;
+          MG.gameData.box.push(mon);
+          MG.gameData.party.splice(i,1);
+          mgRenderBox();mgUpdateHUD();
+        };
+        card.title='클릭: 박스로 이동';
+      }
+      el.appendChild(card);
+    }
+  });
+}
+
+/* ─── Helpers ─── */
+function mgTypeName(t){
+  return{fire:'불',water:'물',grass:'풀',electric:'전기',dark:'어둠',ice:'얼음',normal:'노말'}[t]||t;
+}
+
+})(); // end IIFE
 
 </script>
 </body>

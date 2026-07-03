@@ -1745,6 +1745,25 @@ app.post('/api/fatigue/recover', async (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
+// ── Monster Game Save/Load ──
+app.get('/api/game/monster/load', (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { viewer } = getViewer(name);
+  res.json({ ok: true, gameData: viewer.monsterGame || null });
+});
+
+app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok: false, error: '로그인 필요' });
+  const { viewers, viewer } = getViewer(name);
+  const { gameData } = req.body || {};
+  if (!gameData || typeof gameData !== 'object') return res.json({ ok: false, error: '데이터 오류' });
+  viewer.monsterGame = gameData;
+  saveViewer(viewers);
+  res.json({ ok: true });
+});
+
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   const betting = readJSON(BETTING_FILE, {});
