@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -663,103 +663,113 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 }
 
 /* ══ MONSTER GAME ══ */
-#mg-wrap { max-width:560px; margin:0 auto; padding:20px 16px; }
+#mg-wrap { max-width:540px; margin:0 auto; padding:16px 14px 32px; }
 .mg-screen { width:100%; }
 #mg-canvas, #mg-battle-canvas {
-  display:block; width:100%; image-rendering:pixelated;
-  border:2px solid rgba(255,255,255,.15); border-radius:8px;
-  background:#0a1a0a; cursor:none;
+  display:block; width:100%; image-rendering:pixelated; image-rendering:crisp-edges;
+  border-radius:10px; background:#000; cursor:default;
+  box-shadow:0 0 0 2px rgba(255,255,255,.1), 0 8px 32px rgba(0,0,0,.6);
 }
-#mg-hud {
+.mg-area-bar {
   display:flex; justify-content:space-between; align-items:center;
-  margin-top:10px; gap:8px; flex-wrap:wrap;
+  margin-bottom:8px;
 }
-#mg-party-hud { display:flex; gap:8px; flex-wrap:wrap; }
-.mg-party-card {
-  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
-  border-radius:8px; padding:6px 10px; font-size:.78rem; min-width:90px;
-}
-.mg-party-card .mg-pc-name { font-weight:700; font-size:.82rem; }
-.mg-party-card .mg-pc-hp { color:#4ade80; font-size:.72rem; margin-top:2px; }
-.mg-party-card .mg-pc-hpbar { height:4px; background:rgba(255,255,255,.15); border-radius:2px; margin-top:3px; }
-.mg-party-card .mg-pc-hpfill { height:100%; border-radius:2px; transition:width .3s; background:#4ade80; }
-.mg-party-card.fainted .mg-pc-hp { color:#ef4444; }
-.mg-party-card.fainted .mg-pc-hpfill { background:#ef4444; }
 #mg-area-label {
-  font-size:.8rem; color:var(--text-muted); margin-bottom:6px;
-  letter-spacing:.05em; text-transform:uppercase;
+  font-size:.8rem; font-weight:700; color:var(--text-muted);
+  letter-spacing:.08em; text-transform:uppercase;
 }
-#mg-msg-box {
-  background:rgba(0,0,0,.85); border:1px solid rgba(255,255,255,.2);
-  border-radius:6px; padding:10px 14px; margin-top:8px;
-  font-size:.88rem; color:#fff; line-height:1.5;
+#mg-party-hud {
+  display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;
 }
-.mg-btn {
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
-  border-radius:8px; color:#fff; font-family:inherit; font-size:.8rem;
-  font-weight:600; padding:6px 14px; cursor:pointer; transition:background .15s;
+.mg-party-card {
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+  border-radius:8px; padding:6px 10px; font-size:.75rem; min-width:100px;
+  flex:1;
 }
-.mg-btn:hover { background:rgba(255,255,255,.15); }
+.mg-party-card .mg-pc-name { font-weight:700; font-size:.8rem; margin-bottom:2px; }
+.mg-party-card .mg-pc-hp  { color:#4ade80; font-size:.7rem; }
+.mg-party-card.fainted .mg-pc-hp { color:#ef4444; }
+.mg-pc-hpbar { height:3px; background:rgba(255,255,255,.12); border-radius:2px; margin-top:3px; }
+.mg-pc-hpfill { height:100%; border-radius:2px; transition:width .4s; }
+
+/* D-Pad */
+#mg-dpad { display:none; flex-direction:column; align-items:center; gap:2px; margin-top:12px; }
+.mg-dpad-row { display:flex; gap:2px; }
+.mg-dpad-btn {
+  width:52px; height:52px; border-radius:10px;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+  color:#fff; font-size:18px; cursor:pointer; user-select:none;
+  transition:background .1s; touch-action:none; -webkit-tap-highlight-color:transparent;
+}
+.mg-dpad-btn:active, .mg-dpad-btn.pressed { background:rgba(255,255,255,.25); }
+.mg-dpad-center { background:rgba(255,255,255,.04); cursor:default; }
+
+/* Shared btn */
+.mg-btn-sm {
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+  border-radius:8px; color:#fff; font-family:inherit; font-size:.76rem;
+  font-weight:700; padding:5px 12px; cursor:pointer; transition:background .15s;
+}
+.mg-btn-sm:hover { background:rgba(255,255,255,.16); }
+
 /* Battle UI */
 #mg-battle-ui {
-  background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.12);
-  border-radius:0 0 8px 8px; padding:12px 14px;
+  background:rgba(8,8,16,.95); border:1px solid rgba(255,255,255,.1);
+  border-top:none; border-radius:0 0 10px 10px; padding:12px 14px;
 }
 #mg-battle-msg {
-  font-size:.88rem; color:#fff; min-height:2.4em; margin-bottom:10px;
-  line-height:1.5;
+  font-size:.88rem; color:#f0f0ff; min-height:2.4em; margin-bottom:10px;
+  line-height:1.6; letter-spacing:.01em;
 }
-#mg-battle-actions { display:flex; gap:8px; flex-wrap:wrap; }
+#mg-battle-actions { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
 .mg-act-btn {
-  flex:1; min-width:90px; padding:8px 4px; border-radius:8px;
-  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08);
-  color:#fff; font-family:inherit; font-size:.82rem; font-weight:700;
-  cursor:pointer; transition:background .15s;
+  padding:9px 4px; border-radius:9px;
+  border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.07);
+  color:#fff; font-family:inherit; font-size:.78rem; font-weight:700;
+  cursor:pointer; transition:all .15s; letter-spacing:.02em;
 }
-.mg-act-btn:hover:not(:disabled) { background:rgba(255,255,255,.18); }
-.mg-act-btn:disabled { opacity:.35; cursor:default; }
-#mg-skill-list { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.mg-act-btn:hover:not(:disabled) { background:rgba(255,255,255,.18); transform:translateY(-1px); }
+.mg-act-btn:disabled { opacity:.3; cursor:default; transform:none; }
+#mg-skill-list { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .mg-skill-btn {
-  flex:1; min-width:110px; padding:7px 8px; border-radius:8px;
-  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06);
+  padding:8px 10px; border-radius:9px;
+  border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06);
   color:#fff; font-family:inherit; font-size:.78rem; font-weight:600;
-  cursor:pointer; text-align:left; transition:background .15s;
+  cursor:pointer; text-align:left; transition:all .15s;
 }
 .mg-skill-btn:hover:not(:disabled) { background:rgba(255,255,255,.15); }
-.mg-skill-btn:disabled { opacity:.4; cursor:default; }
-.mg-skill-pp { font-size:.7rem; color:var(--text-muted); display:block; margin-top:2px; }
+.mg-skill-btn:disabled { opacity:.35; cursor:default; }
+.mg-skill-pp { font-size:.68rem; color:var(--text-muted); display:block; margin-top:2px; }
+.mg-skill-back { grid-column:1/-1; text-align:center; }
+
 /* Type colors */
-.type-fire     { color:#FF7A30; }
-.type-water    { color:#4DB8FF; }
-.type-grass    { color:#5ACC5A; }
-.type-electric { color:#FFD700; }
-.type-dark     { color:#CC88FF; }
-.type-ice      { color:#88DDFF; }
-.type-normal   { color:#CCCCCC; }
-/* Box screen */
-#mg-party-list, #mg-box-list {
-  display:flex; gap:8px; flex-wrap:wrap;
-}
+.tc-fire     { color:#FF7A30; } .tc-water   { color:#4DB8FF; }
+.tc-grass    { color:#5ACC5A; } .tc-electric{ color:#FFD700; }
+.tc-dark     { color:#CC88FF; } .tc-ice     { color:#88DDFF; }
+.tc-normal   { color:#CCCCCC; }
+
+/* Box/party cards */
 .mg-mon-card {
-  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-  border-radius:10px; padding:10px 14px; cursor:pointer; transition:background .15s;
-  min-width:130px; position:relative;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  border-radius:10px; padding:10px; cursor:pointer; transition:all .15s;
+  min-width:110px; text-align:center;
 }
-.mg-mon-card:hover { background:rgba(255,255,255,.12); }
-.mg-mon-card canvas { display:block; image-rendering:pixelated; margin-bottom:4px; }
-.mg-mon-card .mg-mc-name { font-weight:700; font-size:.82rem; }
-.mg-mon-card .mg-mc-lv { font-size:.75rem; color:var(--gold); }
-.mg-mon-card .mg-mc-hp { font-size:.72rem; color:#4ade80; }
+.mg-mon-card:hover { background:rgba(255,255,255,.12); transform:translateY(-2px); }
+.mg-mon-card canvas { display:block; image-rendering:pixelated; margin:0 auto 5px; }
+.mg-mc-name { font-weight:700; font-size:.78rem; }
+.mg-mc-sub  { font-size:.7rem; color:var(--text-muted); margin-top:1px; }
+
 /* Starter */
 .mg-starter-card {
-  background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.15);
-  border-radius:14px; padding:16px; cursor:pointer; transition:all .2s;
-  text-align:center; min-width:120px;
+  background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.12);
+  border-radius:16px; padding:18px 16px; cursor:pointer; transition:all .2s;
+  text-align:center; min-width:130px;
 }
-.mg-starter-card:hover { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.35); transform:translateY(-2px); }
-.mg-starter-card canvas { display:block; image-rendering:pixelated; margin:0 auto 8px; }
-.mg-starter-card .mg-sc-name { font-weight:700; font-size:.88rem; }
-.mg-starter-card .mg-sc-type { font-size:.75rem; margin-top:3px; }
+.mg-starter-card:hover { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.35); transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.mg-starter-card canvas { display:block; image-rendering:pixelated; margin:0 auto 10px; }
+.mg-sc-name { font-weight:800; font-size:.9rem; letter-spacing:-.01em; }
+.mg-sc-type { font-size:.75rem; margin-top:4px; font-weight:600; }
+.mg-sc-stats { font-size:.68rem; color:var(--text-muted); margin-top:6px; line-height:1.6; }
 </style>
 </head>
 <body>
@@ -1201,27 +1211,41 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   <div id="mg-wrap">
     <!-- 탐험 화면 -->
     <div id="mg-explore" class="mg-screen">
-      <div id="mg-area-label"></div>
-      <canvas id="mg-canvas" width="480" height="320"></canvas>
-      <div id="mg-hud">
-        <div id="mg-party-hud"></div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="mg-btn" onclick="mgOpenBox()">파티/박스</button>
-          <button class="mg-btn" onclick="mgSave()">저장</button>
+      <div class="mg-area-bar">
+        <span id="mg-area-label">마을</span>
+        <div style="display:flex;gap:6px">
+          <button class="mg-btn-sm" onclick="mgOpenBox()">파티/박스</button>
+          <button class="mg-btn-sm" onclick="mgSave()">저장</button>
         </div>
       </div>
-      <div id="mg-msg-box" style="display:none"></div>
+      <div style="position:relative">
+        <canvas id="mg-canvas" width="480" height="320"></canvas>
+        <div id="mg-flash" style="position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;border-radius:8px"></div>
+      </div>
+      <div id="mg-party-hud"></div>
+      <!-- 모바일 방향키 -->
+      <div id="mg-dpad">
+        <div class="mg-dpad-row"><button class="mg-dpad-btn" id="mg-d-up" onpointerdown="mgDKey('ArrowUp',1)" onpointerup="mgDKey('ArrowUp',0)" onpointerleave="mgDKey('ArrowUp',0)">▲</button></div>
+        <div class="mg-dpad-row">
+          <button class="mg-dpad-btn" id="mg-d-left" onpointerdown="mgDKey('ArrowLeft',1)" onpointerup="mgDKey('ArrowLeft',0)" onpointerleave="mgDKey('ArrowLeft',0)">◀</button>
+          <button class="mg-dpad-btn mg-dpad-center"></button>
+          <button class="mg-dpad-btn" id="mg-d-right" onpointerdown="mgDKey('ArrowRight',1)" onpointerup="mgDKey('ArrowRight',0)" onpointerleave="mgDKey('ArrowRight',0)">▶</button>
+        </div>
+        <div class="mg-dpad-row"><button class="mg-dpad-btn" id="mg-d-down" onpointerdown="mgDKey('ArrowDown',1)" onpointerup="mgDKey('ArrowDown',0)" onpointerleave="mgDKey('ArrowDown',0)">▼</button></div>
+      </div>
     </div>
     <!-- 전투 화면 -->
     <div id="mg-battle" class="mg-screen" style="display:none">
-      <canvas id="mg-battle-canvas" width="480" height="280"></canvas>
+      <div style="position:relative">
+        <canvas id="mg-battle-canvas" width="480" height="300"></canvas>
+      </div>
       <div id="mg-battle-ui">
-        <div id="mg-battle-msg"></div>
+        <div id="mg-battle-msg">...</div>
         <div id="mg-battle-actions">
-          <button class="mg-act-btn" id="mg-btn-attack" onclick="mgBattleAction('attack')">공격</button>
-          <button class="mg-act-btn" id="mg-btn-skill"  onclick="mgShowSkills()">스킬</button>
-          <button class="mg-act-btn" id="mg-btn-catch"  onclick="mgBattleAction('catch')">잡기</button>
-          <button class="mg-act-btn" id="mg-btn-run"    onclick="mgBattleAction('run')">도망</button>
+          <button class="mg-act-btn" id="mg-btn-attack" onclick="mgBattleAction('attack')">⚔ 공격</button>
+          <button class="mg-act-btn" id="mg-btn-skill"  onclick="mgShowSkills()">✨ 스킬</button>
+          <button class="mg-act-btn" id="mg-btn-catch"  onclick="mgBattleAction('catch')">● 잡기</button>
+          <button class="mg-act-btn" id="mg-btn-run"    onclick="mgBattleAction('run')">↩ 도망</button>
         </div>
         <div id="mg-skill-list" style="display:none"></div>
       </div>
@@ -1230,17 +1254,18 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     <div id="mg-box-screen" class="mg-screen" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div class="h-section" style="margin:0">파티 & 박스</div>
-        <button class="mg-btn" onclick="mgCloseBox()">닫기</button>
+        <button class="mg-btn-sm" onclick="mgCloseBox()">← 뒤로</button>
       </div>
-      <div id="mg-party-list"></div>
-      <div style="margin-top:16px;font-size:.8rem;color:var(--text-muted)">박스 (최대 30마리)</div>
-      <div id="mg-box-list" style="margin-top:8px"></div>
+      <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px;letter-spacing:.03em">PARTY (최대 6마리 · 클릭: 박스로 이동)</div>
+      <div id="mg-party-list" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px"></div>
+      <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px;letter-spacing:.03em">BOX (최대 30마리 · 클릭: 파티에 추가)</div>
+      <div id="mg-box-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
     <!-- 스타터 선택 화면 -->
     <div id="mg-starter" class="mg-screen" style="display:none">
-      <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:1.3rem;font-weight:700;margin-bottom:8px">첫 번째 몬스터를 선택하세요!</div>
-        <div style="color:var(--text-muted);font-size:.88rem">선택한 몬스터와 함께 모험을 시작합니다</div>
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:1.4rem;font-weight:800;margin-bottom:6px;letter-spacing:-.02em">첫 번째 몬스터 선택</div>
+        <div style="color:var(--text-muted);font-size:.88rem">세 마리 중 하나를 골라 모험을 시작하세요</div>
       </div>
       <div id="mg-starter-list" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap"></div>
     </div>
@@ -4055,230 +4080,563 @@ async function crashAction(){
 }
 
 /* ══════════════════════════════════════════════
-   MONSTER GAME ENGINE
+   MONSTER GAME ENGINE v2 — 픽셀아트 퀄리티
 ══════════════════════════════════════════════ */
 (function(){
 'use strict';
 
-/* ─── Pixel Art Sprite Renderer ─── */
-function drawSprite(ctx, rows, palette, x, y, scale){
-  for(let r=0;r<rows.length;r++){
-    const row=rows[r];
-    for(let c=0;c<row.length;c++){
-      const idx=parseInt(row[c],16);
-      if(idx===0||!palette[idx])continue;
-      ctx.fillStyle=palette[idx];
-      ctx.fillRect(x+c*scale,y+r*scale,scale,scale);
-    }
+/* ═══════════════════════════════════
+   MONSTER ART — 파라메트릭 드로잉
+   모든 몬스터: 18×24 unit 기준, px=scale
+═══════════════════════════════════ */
+const ART={};
+
+ART.flamewolf=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2)*px*0.4);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+(ry)*px+b,rw*px,rh*px);
+
+  // FLAMES (behind head, layered yellow→orange→red)
+  ctx.fillStyle='#FFF7A0';r(6,-8,2,3);r(9,-9,2,4);r(12,-7,2,3);
+  ctx.fillStyle='#FFD700';r(5,-6,3,4);r(8,-7,4,5);r(12,-5,3,4);
+  ctx.fillStyle='#FF8800';r(4,-4,4,5);r(7,-5,5,6);r(11,-3,4,5);
+  ctx.fillStyle='#FF3300';r(3,-2,5,4);r(6,-3,6,5);r(11,-1,5,4);
+  ctx.fillStyle='#AA1100';r(3,1,12,3); // flame base/shadow
+
+  // EARS (outline then fill)
+  ctx.fillStyle='#3A1500';r(2,-1,4,5);r(12,-1,4,5);
+  ctx.fillStyle='#8B2C00';r(3,0,2,3);r(13,0,2,3);
+  ctx.fillStyle='#E0502A';r(3,0,1,2);r(14,0,1,2);
+  ctx.fillStyle='#FF8080';r(3,0,1,1);r(14,0,1,1);
+
+  // HEAD outline
+  ctx.fillStyle='#3A1500';r(2,3,14,12);
+  // HEAD dark layer
+  ctx.fillStyle='#8B2C00';r(3,4,12,10);
+  // HEAD body
+  ctx.fillStyle='#C84B00';r(4,5,10,8);
+  // HEAD light face
+  ctx.fillStyle='#E06010';r(5,6,8,6);
+  ctx.fillStyle='#FF9840';r(6,7,6,4);
+
+  // CHEEK PUFFS
+  ctx.fillStyle='#C84B00';r(3,8,2,3);r(13,8,2,3);
+
+  // EYES
+  ctx.fillStyle='#FFF5DC';r(4,6,4,3);r(10,6,4,3);
+  ctx.fillStyle='#FF7A00';r(5,6,3,3);r(11,6,3,3); // amber iris
+  ctx.fillStyle='#1A0800';r(6,6,2,3);r(12,6,2,3); // pupil
+  ctx.fillStyle='#FFF5DC';r(5,6,1,1);r(11,6,1,1); // shine
+
+  // NOSE + MOUTH
+  ctx.fillStyle='#4A0000';r(7,9,4,2);
+  ctx.fillStyle='#AA3040';r(8,9,2,1);
+  ctx.fillStyle='#3A1500';r(7,11,1,1);r(10,11,1,1);
+
+  // NECK
+  ctx.fillStyle='#3A1500';r(5,15,8,2);
+  ctx.fillStyle='#8B2C00';r(6,15,6,2);
+
+  // BODY outline
+  ctx.fillStyle='#3A1500';r(2,16,14,10);
+  ctx.fillStyle='#8B2C00';r(3,17,12,8);
+  ctx.fillStyle='#C84B00';r(4,18,10,6);
+  ctx.fillStyle='#E06010';r(5,19,8,4);
+  ctx.fillStyle='#FF9840';r(6,20,6,2);
+
+  // LEGS outline→fill
+  ctx.fillStyle='#3A1500';r(3,25,4,5);r(11,25,4,5);
+  ctx.fillStyle='#C84B00';r(4,26,3,4);r(11,26,3,4);
+  ctx.fillStyle='#E06010';r(4,28,3,2);r(11,28,3,2);
+
+  // TAIL (right side, flame tip)
+  ctx.fillStyle='#3A1500';r(16,16,3,8);
+  ctx.fillStyle='#8B2C00';r(17,16,2,8);
+  ctx.fillStyle='#C84B00';r(17,17,2,6);
+  ctx.fillStyle='#FF4400';r(17,14,2,4);
+  ctx.fillStyle='#FFAA00';r(17,12,2,3);
+  ctx.fillStyle='#FFF060';r(17,11,2,2);
+};
+
+ART.aquafin=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2+1)*px*0.3);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
+
+  // WATER AURA
+  ctx.globalAlpha=0.15;ctx.fillStyle='#29B6F6';
+  ctx.fillRect(x-px,y-px+b,20*px,28*px);ctx.globalAlpha=1;
+
+  // DORSAL FIN
+  ctx.fillStyle='#01579B';r(8,-5,2,2);r(7,-4,3,2);r(6,-3,4,2);r(5,-2,5,2);r(4,-1,7,2);r(3,0,9,2);
+  ctx.fillStyle='#0288D1';r(8,-4,2,1);r(7,-3,3,1);r(6,-2,4,1);r(5,-1,5,1);
+
+  // SIDE FINS
+  ctx.fillStyle='#01579B';r(0,9,3,5);r(15,9,3,5);
+  ctx.fillStyle='#0277BD';r(1,9,2,4);r(15,9,2,4);
+  ctx.fillStyle='#29B6F6';r(1,9,1,3);r(16,9,1,3);
+
+  // BODY outline (torpedo shape)
+  ctx.fillStyle='#01579B';r(3,1,12,16);r(4,0,10,2);r(4,16,10,4);r(5,19,8,2);
+  // BODY dark
+  ctx.fillStyle='#0277BD';r(4,2,10,14);r(5,1,8,2);r(5,15,8,3);
+  // BODY main
+  ctx.fillStyle='#0288D1';r(5,3,8,12);r(6,2,6,2);r(6,14,6,3);
+  // BODY light
+  ctx.fillStyle='#039BE5';r(6,4,6,10);
+  // BELLY stripe (white)
+  ctx.fillStyle='#E3F2FD';r(6,6,6,7);
+  ctx.fillStyle='#FFFFFF';r(7,7,4,5);
+
+  // SIDE SHADING
+  ctx.fillStyle='#0D47A1';r(3,3,2,12);r(13,3,2,12);
+  ctx.fillStyle='#01579B';r(4,2,2,12);r(12,2,2,12);
+
+  // EYES (large, expressive)
+  ctx.fillStyle='#FFFFFF';r(4,4,5,4);r(9,4,5,4);
+  ctx.fillStyle='#29B6F6';r(5,4,4,4);r(10,4,4,4); // iris
+  ctx.fillStyle='#0D47A1';r(6,5,2,2);r(11,5,2,2); // pupil
+  ctx.fillStyle='#FFFFFF';r(5,4,1,1);r(10,4,1,1); // shine
+  ctx.fillStyle='#80D8FF';r(7,4,1,1);r(12,4,1,1); // secondary shine
+
+  // SMILE + TEETH
+  ctx.fillStyle='#0D47A1';r(5,8,8,2);
+  ctx.fillStyle='#FFFFFF';r(6,8,2,2);r(9,8,2,2);r(12,8,1,1);
+  ctx.fillStyle='#B0D4F1';r(8,8,1,1);r(11,8,1,1);
+
+  // TAIL (bifurcated)
+  ctx.fillStyle='#01579B';r(3,20,5,4);r(10,20,5,4);
+  ctx.fillStyle='#0277BD';r(4,20,3,3);r(11,20,3,3);
+  ctx.fillStyle='#29B6F6';r(4,20,2,2);r(12,20,2,2);
+  // tail tip glow
+  ctx.fillStyle='#80D8FF';r(4,20,1,1);r(13,20,1,1);
+};
+
+ART.thornbud=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2+2)*px*0.4);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
+
+  // THORN CROWN (sharp spikes)
+  ctx.fillStyle='#1B5E20';r(6,-7,2,5);r(9,-8,2,6);r(12,-7,2,5);r(5,-5,2,3);r(13,-5,2,3);r(7,-5,2,3);r(11,-5,2,3);
+  ctx.fillStyle='#2E7D32';r(7,-6,1,4);r(9,-7,2,5);r(12,-6,1,4);r(6,-4,1,2);r(13,-4,1,2);
+  ctx.fillStyle='#43A047';r(7,-5,1,3);r(10,-6,1,4);r(12,-5,1,3);
+  ctx.fillStyle='#66BB6A';r(10,-5,1,2);r(12,-4,1,2);
+  // Thorn tips (bright)
+  ctx.fillStyle='#A5D6A7';r(7,-6,1,1);r(10,-7,1,1);r(12,-6,1,1);
+
+  // THORN ACCESSORIES on body
+  ctx.fillStyle='#1B5E20';
+  r(2,5,2,4);r(14,5,2,4);r(1,10,2,3);r(15,10,2,3);
+  ctx.fillStyle='#388E3C';
+  r(2,5,1,3);r(15,5,1,3);r(1,10,1,2);r(16,10,1,2);
+
+  // WINGS (stub wings with thorns)
+  ctx.fillStyle='#1B5E20';r(0,9,4,7);r(14,9,4,7);
+  ctx.fillStyle='#2E7D32';r(1,9,3,6);r(14,9,3,6);
+  ctx.fillStyle='#43A047';r(1,10,2,4);r(15,10,2,4);
+  // Wing thorn tips
+  ctx.fillStyle='#1B5E20';r(-1,9,1,1);r(-1,12,1,1);r(18,9,1,1);r(18,12,1,1);
+
+  // BODY outline
+  ctx.fillStyle='#1B5E20';r(3,1,12,16);r(2,3,14,12);
+  // BODY dark
+  ctx.fillStyle='#2E7D32';r(4,2,10,14);r(3,4,12,10);
+  // BODY main
+  ctx.fillStyle='#388E3C';r(5,3,8,12);r(4,5,10,8);
+  // BODY light
+  ctx.fillStyle='#43A047';r(6,4,6,10);
+  // BELLY (bright)
+  ctx.fillStyle='#66BB6A';r(6,7,6,5);
+  ctx.fillStyle='#81C784';r(7,8,4,3);
+  ctx.fillStyle='#A5D6A7';r(7,8,4,2);
+
+  // EYES
+  ctx.fillStyle='#FFFFFF';r(4,4,5,4);r(9,4,5,4);
+  ctx.fillStyle='#43A047';r(5,4,4,4);r(10,4,4,4);
+  ctx.fillStyle='#1B5E20';r(6,5,2,2);r(11,5,2,2);
+  ctx.fillStyle='#FFFFFF';r(5,4,1,1);r(10,4,1,1);
+  ctx.fillStyle='#C8E6C9';r(7,6,1,1);r(12,6,1,1);
+
+  // BEAK
+  ctx.fillStyle='#F57F17';r(7,8,4,3);
+  ctx.fillStyle='#FF8F00';r(8,8,2,2);
+  ctx.fillStyle='#FFA000';r(8,8,2,1);
+  ctx.fillStyle='#F57F17';r(7,11,4,1); // beak line
+
+  // LOWER BODY + LEGS
+  ctx.fillStyle='#2E7D32';r(4,16,10,6);
+  ctx.fillStyle='#388E3C';r(5,17,8,5);
+  ctx.fillStyle='#43A047';r(6,18,6,3);
+  // Actual legs
+  ctx.fillStyle='#1B5E20';r(5,21,3,5);r(10,21,3,5);
+  ctx.fillStyle='#33691E';r(6,22,2,4);r(10,22,2,4);
+  // Feet with talons
+  ctx.fillStyle='#1B5E20';r(4,25,2,1);r(6,25,2,2);r(8,25,2,1);r(9,25,2,2);r(11,25,2,2);r(13,25,2,1);
+};
+
+ART.voltail=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2+3)*px*0.4);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
+  const spark=Math.sin(t*6)>0;
+
+  // ELECTRIC AURA
+  ctx.globalAlpha=0.18;ctx.fillStyle='#FFD700';
+  ctx.fillRect(x-px,y+b,20*px,26*px);ctx.globalAlpha=1;
+
+  // LIGHTNING BOLT TAIL (extends right)
+  const ty=15;
+  ctx.fillStyle='#E65100';r(14,ty,6,2);r(17,ty+2,5,2);r(15,ty+4,5,2);r(18,ty+6,4,2);r(20,ty+8,3,2);
+  ctx.fillStyle='#FF6D00';r(14,ty,5,2);r(17,ty+2,4,2);r(15,ty+4,4,2);r(18,ty+6,3,2);
+  ctx.fillStyle='#FFD700';r(14,ty,3,1);r(18,ty+2,2,1);r(16,ty+4,2,1);r(19,ty+6,2,1);
+  // Tail spark
+  if(spark){
+    ctx.fillStyle='#FFFFFF';
+    r(17,ty-1,1,1);r(20,ty+3,1,1);r(22,ty+7,1,1);
   }
-}
+  ctx.globalAlpha=0.5;ctx.fillStyle='#FFD700';
+  r(13,ty-1,2,1);r(22,ty+5,1,2);ctx.globalAlpha=1;
 
-/* ─── Sprite Data (16×16) ─── */
-const SPR={};
+  // SCALE MARKS on body (darker diamond pattern)
+  // drawn after body fill
 
-/* 플레임울프 (불 타입) — 주황-붉은 늑대 */
-SPR.flamewolf={
-pal:[null,'#C84B00','#7B2D00','#FF9520','#FF4500','#FFCC00','#FFFFFF','#000000','#FF6A00'],
-rows:[
-'0000444400000000',
-'0004554450000000',
-'0000444400000000',
-'0002222220000000',
-'0022111122000000',
-'0021161122000000',
-'0022111122000000',
-'0002222220000000',
-'0002333220000000',
-'0023333320000000',
-'0023333320000000',
-'0002332200000000',
-'0002002200000000',
-'0002002200000000',
-'0002002200000000',
-'0000000000000000',
-]};
+  // BODY outline
+  ctx.fillStyle='#E65100';r(2,2,14,14);r(1,4,16,10);r(3,15,10,8);r(3,22,4,5);r(9,22,4,5);
+  // BODY dark
+  ctx.fillStyle='#F57F17';r(3,3,12,12);r(2,5,14,8);r(4,16,8,7);
+  // BODY main
+  ctx.fillStyle='#FFA000';r(4,4,10,10);r(3,6,12,6);r(5,17,6,5);
+  // BODY light
+  ctx.fillStyle='#FFB300';r(5,5,8,8);r(4,7,10,4);
+  // BELLY (cream/yellow)
+  ctx.fillStyle='#FFE082';r(5,7,8,5);r(5,18,6,3);
+  ctx.fillStyle='#FFF9C4';r(6,8,6,3);r(6,18,4,2);
 
-/* 아쿠아핀 (물 타입) — 파란 상어 */
-SPR.aquafin={
-pal:[null,'#1565C0','#0D47A1','#42A5F5','#80D8FF','#FFFFFF','#000000','#263238','#4FC3F7'],
-rows:[
-'0000000000000000',
-'0000001110000000',
-'0000011111000000',
-'0001113311100000',
-'0013333331130000',
-'0133335533130000',
-'0133333331130000',
-'0013333311100000',
-'0001133311000000',
-'0001133300000000',
-'0001133311110000',
-'0001133300011000',
-'0001133310000000',
-'0000011100000000',
-'0000001100000000',
-'0000000000000000',
-]};
+  // SCALE TEXTURE
+  ctx.fillStyle='#E65100';
+  [[3,6],[6,6],[9,6],[12,6],[3,9],[6,9],[9,9],[12,9],[3,12],[6,12],[9,12],[4,15],[7,15],[10,15]].forEach(([rx,ry])=>r(rx,ry,1,1));
 
-/* 쏜버드 (풀 타입) — 초록 가시 새 */
-SPR.thornbud={
-pal:[null,'#2E7D32','#1B5E20','#66BB6A','#A5D6A7','#F9A825','#FFFFFF','#000000','#558B2F'],
-rows:[
-'0000011100000000',
-'0000111110000000',
-'0001111111000000',
-'0011133111100000',
-'0113334411100000',
-'0113335511100000',
-'0113334411100000',
-'0011133111100000',
-'0000011100000000',
-'0000111110000000',
-'0001111111000000',
-'0001100111000000',
-'0000100010000000',
-'0001100011000000',
-'0000000000000000',
-'0000000000000000',
-]};
+  // EYES (lightning bolt pupils!)
+  ctx.fillStyle='#FFF9C4';r(3,4,5,4);r(10,4,5,4);
+  ctx.fillStyle='#FFD700';r(4,4,4,4);r(11,4,4,4); // iris
+  // Lightning bolt pupil shape
+  ctx.fillStyle='#1A0A00';
+  r(5,4,1,1);r(6,4,2,1);r(5,5,1,1);r(6,5,1,1);r(7,5,1,1);r(6,6,2,1);
+  r(12,4,1,1);r(13,4,2,1);r(12,5,1,1);r(13,5,1,1);r(14,5,1,1);r(13,6,2,1);
+  ctx.fillStyle='#FFFFFF';r(4,4,1,1);r(11,4,1,1);
 
-/* 볼테일 (전기 타입) — 노란 도마뱀 */
-SPR.voltail={
-pal:[null,'#F9A825','#E65100','#FFF176','#FFEE58','#FFFFFF','#000000','#F57F17','#FF8F00'],
-rows:[
-'0000000000000000',
-'0000022220000000',
-'0000211120000000',
-'0002131120000000',
-'0021313112000000',
-'0021351112000000',
-'0021313112000000',
-'0002131120000000',
-'0000211120000000',
-'0000022220000000',
-'0000002200000000',
-'0000002200770000',
-'0000002207700000',
-'0000002270000000',
-'0000002700000000',
-'0000000000000000',
-]};
+  // CHEEK SPARKS
+  ctx.fillStyle='#FFD700';
+  r(2,7,2,2);r(14,7,2,2);
+  ctx.fillStyle='#FFFFFF';
+  r(2,7,1,1);r(15,7,1,1);
 
-/* 플러폭스 (노말 타입) — 흰 여우 */
-SPR.fluffox={
-pal:[null,'#F5F5F5','#9E9E9E','#FFFFFF','#E0E0E0','#EF5350','#000000','#FFCCBC','#BDBDBD'],
-rows:[
-'0000000000000000',
-'0001100011000000',
-'0011200021100000',
-'0112222221100000',
-'0122522521200000',
-'0122555521200000',
-'0122522521200000',
-'0112222221100000',
-'0011122211000000',
-'0001122110000000',
-'0001133110000000',
-'0001133110000000',
-'0000110011000000',
-'0000100001000000',
-'0001100001100000',
-'0000000000000000',
-]};
+  // LEGS + FEET
+  ctx.fillStyle='#F57F17';r(4,23,3,4);r(9,23,3,4);
+  ctx.fillStyle='#FFA000';r(4,24,3,3);r(9,24,3,3);
+  // Claws
+  ctx.fillStyle='#E65100';r(3,26,1,1);r(4,26,1,2);r(6,26,1,1);r(9,26,1,1);r(11,26,1,2);r(12,26,1,1);
+};
 
-/* 섀도우몰 (어둠 타입) — 보라 두더지 */
-SPR.shadowmole={
-pal:[null,'#4A148C','#1A0038','#7B1FA2','#CE93D8','#FFFFFF','#000000','#6A1B9A','#9C27B0'],
-rows:[
-'0000000000000000',
-'0000022220000000',
-'0000211120000000',
-'0002111112000000',
-'0021124112000000',
-'0021155112000000',
-'0021124112000000',
-'0002111112000000',
-'0002111112000000',
-'0002222222000000',
-'0000022200000000',
-'0000071170000000',
-'0000711170000000',
-'0007111107000000',
-'0000000000000000',
-'0000000000000000',
-]};
+ART.fluffox=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2+4)*px*0.35);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
 
-/* 프로스트클로 (얼음 타입) — 하늘색 발톱 */
-SPR.frostclaw={
-pal:[null,'#B3E5FC','#0288D1','#E1F5FE','#81D4FA','#FFFFFF','#000000','#01579B','#4FC3F7'],
-rows:[
-'0000000000000000',
-'0000012100000000',
-'0000121210000000',
-'0001212121000000',
-'0012121211000000',
-'0121553212100000',
-'0121555212100000',
-'0012121211000000',
-'0001212120000000',
-'0000121200000000',
-'0000012100000000',
-'0000012100000000',
-'0000712270000000',
-'0007122270000000',
-'0000000000000000',
-'0000000000000000',
-]};
+  // BIG FLUFFY TAIL (drawn first, wraps around right side)
+  ctx.fillStyle='#9E9E9E';r(14,8,6,14);r(15,7,5,2);r(16,5,4,4);r(17,3,3,4);
+  ctx.fillStyle='#BDBDBD';r(15,9,5,12);r(16,7,4,4);r(17,5,3,4);
+  ctx.fillStyle='#E0E0E0';r(15,10,4,10);r(17,6,3,5);
+  ctx.fillStyle='#F5F5F5';r(16,10,3,9);r(18,7,2,5);
+  ctx.fillStyle='#FFFFFF';r(16,11,2,8);r(18,7,1,4);
+  // Tail tip (extra fluffy)
+  ctx.fillStyle='#F5F5F5';r(14,20,6,4);
+  ctx.fillStyle='#FFFFFF';r(14,21,5,3);
+  ctx.fillStyle='#FAFAFA';r(13,22,4,2);r(17,21,3,2);
 
-/* 플레이어 스프라이트 (8×8) — 탐험 맵용 */
-SPR.player={
-pal:[null,'#5C8DFF','#2244AA','#FFFFFF','#FFD700','#3A5FC8','#000000'],
-rows:[
-'00011000',
-'00111100',
-'01111110',
-'01131110',
-'01111110',
-'00111100',
-'01111110',
-'00110000',
-]};
+  // EARS
+  ctx.fillStyle='#9E9E9E';r(3,-3,4,5);r(11,-3,4,5);
+  ctx.fillStyle='#F5F5F5';r(4,-2,2,4);r(12,-2,2,4);
+  ctx.fillStyle='#FFFFFF';r(4,-1,2,3);r(12,-1,2,3);
+  ctx.fillStyle='#FFAAAA';r(4,-1,1,2);r(12,-1,1,2); // pink inner ear
 
-/* ─── Skill Data ─── */
+  // FLUFFY BODY - many layers for fluffiness
+  ctx.fillStyle='#9E9E9E';r(2,2,14,16);
+  ctx.fillStyle='#BDBDBD';r(3,3,12,14);
+  ctx.fillStyle='#E0E0E0';r(4,3,10,14);
+  ctx.fillStyle='#F5F5F5';r(4,4,10,12);
+  ctx.fillStyle='#FAFAFA';r(5,4,8,12);
+  ctx.fillStyle='#FFFFFF';r(5,5,8,10);
+
+  // FLUFFY CHEEKS (extra poofy)
+  ctx.fillStyle='#FFFFFF';r(2,7,3,5);r(13,7,3,5);
+  ctx.fillStyle='#F5F5F5';r(2,7,2,4);r(14,7,2,4);
+
+  // BELLY (softest white)
+  ctx.fillStyle='#FFFFFF';r(5,12,8,6);
+  ctx.fillStyle='#FAFAFA';r(6,13,6,4);
+
+  // LOWER BODY + LEGS
+  ctx.fillStyle='#E0E0E0';r(4,17,10,6);
+  ctx.fillStyle='#EEEEEE';r(5,18,8,5);
+  ctx.fillStyle='#F5F5F5';r(6,19,6,3);
+  ctx.fillStyle='#BDBDBD';r(4,22,4,5);r(10,22,4,5);
+  ctx.fillStyle='#E0E0E0';r(5,23,3,4);r(10,23,3,4);
+  ctx.fillStyle='#FFFFFF';r(5,25,3,2);r(10,25,3,2); // paw fluff
+
+  // EYES (big bright blue eyes)
+  ctx.fillStyle='#FFFFFF';r(4,5,5,5);r(9,5,5,5);
+  ctx.fillStyle='#1565C0';r(5,5,4,5);r(10,5,4,5); // blue iris
+  ctx.fillStyle='#0D47A1';r(6,6,2,3);r(11,6,2,3); // dark pupil
+  ctx.fillStyle='#FFFFFF';r(5,5,1,1);r(10,5,1,1); // main shine
+  ctx.fillStyle='#90CAF9';r(7,8,1,1);r(12,8,1,1); // lower shine
+  ctx.fillStyle='#BBDEFB';r(6,5,1,1);r(11,5,1,1); // corner shine
+  // EYE LASHES (top)
+  ctx.fillStyle='#9E9E9E';r(4,5,2,1);r(12,5,2,1);r(13,5,1,1);
+
+  // NOSE (cute pink)
+  ctx.fillStyle='#FF8A80';r(7,10,4,3);
+  ctx.fillStyle='#FF5252';r(8,10,2,2);
+  ctx.fillStyle='#FF8A80';r(8,10,2,1);
+
+  // WHISKER dots
+  ctx.fillStyle='#BDBDBD';r(3,10,1,1);r(5,11,1,1);r(3,12,1,1);r(14,10,1,1);r(12,11,1,1);r(14,12,1,1);
+};
+
+ART.shadowmole=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2+5)*px*0.35);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
+
+  // SHADOW AURA (multi-layered)
+  ctx.globalAlpha=0.35;ctx.fillStyle='#4A148C';ctx.fillRect(x-2*px,y-2*px+b,22*px,32*px);
+  ctx.globalAlpha=0.25;ctx.fillStyle='#7B1FA2';ctx.fillRect(x-px,y-px+b,20*px,30*px);
+  ctx.globalAlpha=1;
+
+  // SHADOW WISPS (animated)
+  ctx.globalAlpha=0.6;
+  ctx.fillStyle='#CE93D8';
+  r(0,3,2,1);r(16,5,2,1);r(1,14,2,1);r(15,13,2,1);r(2,0,1,1);r(15,1,1,1);
+  ctx.globalAlpha=0.4;
+  ctx.fillStyle='#E1BEE7';
+  r(-1,5,1,1);r(18,8,1,1);r(-1,12,1,1);r(17,3,1,1);
+  ctx.globalAlpha=1;
+
+  // MASSIVE DIGGING CLAWS (left)
+  ctx.fillStyle='#1A0038';r(-3,9,8,12);
+  ctx.fillStyle='#311B92';r(-2,10,6,10);
+  ctx.fillStyle='#4527A0';r(-1,10,5,9);
+  ctx.fillStyle='#512DA8';r(0,11,3,7);
+  ctx.fillStyle='#673AB7';r(0,11,2,5);
+  // Left claw tips (3 spikes)
+  ctx.fillStyle='#1A0038';r(-3,20,2,5);r(-1,21,2,6);r(1,20,2,5);r(3,19,2,4);
+  ctx.fillStyle='#673AB7';r(-3,20,1,3);r(-1,21,1,4);r(1,20,1,3);r(3,19,1,2);
+  ctx.fillStyle='#CE93D8';r(-3,20,1,1);r(-1,21,1,1);r(1,20,1,1);r(3,19,1,1);
+
+  // MASSIVE DIGGING CLAWS (right)
+  ctx.fillStyle='#1A0038';r(13,9,8,12);
+  ctx.fillStyle='#311B92';r(14,10,6,10);
+  ctx.fillStyle='#4527A0';r(14,10,5,9);
+  ctx.fillStyle='#512DA8';r(15,11,3,7);
+  ctx.fillStyle='#673AB7';r(16,11,2,5);
+  // Right claw tips
+  ctx.fillStyle='#1A0038';r(15,20,2,5);r(17,21,2,6);r(19,20,2,5);r(13,19,2,4);
+  ctx.fillStyle='#673AB7';r(16,20,1,3);r(17,21,1,4);r(19,20,1,3);r(14,19,1,2);
+  ctx.fillStyle='#CE93D8';r(16,20,1,1);r(17,21,1,1);r(19,20,1,1);r(14,19,1,1);
+
+  // BODY outline
+  ctx.fillStyle='#1A0038';r(3,0,12,18);r(2,2,14,14);
+  // BODY fill layers
+  ctx.fillStyle='#4A148C';r(4,1,10,16);r(3,3,12,12);
+  ctx.fillStyle='#6A1B9A';r(5,2,8,14);r(4,4,10,10);
+  ctx.fillStyle='#7B1FA2';r(6,3,6,12);r(5,5,8,8);
+  ctx.fillStyle='#8E24AA';r(7,4,4,10);r(6,6,6,6);
+  ctx.fillStyle='#9C27B0';r(7,6,4,6);
+  // BELLY (slightly lighter purple)
+  ctx.fillStyle='#AB47BC';r(7,9,4,4);
+  ctx.fillStyle='#BA68C8';r(8,10,2,2);
+
+  // LOWER BODY
+  ctx.fillStyle='#4A148C';r(4,17,10,8);
+  ctx.fillStyle='#6A1B9A';r(5,18,8,7);
+  ctx.fillStyle='#7B1FA2';r(6,19,6,5);
+  ctx.fillStyle='#9C27B0';r(7,20,4,3);
+  // Stubby legs
+  ctx.fillStyle='#4A148C';r(5,24,3,4);r(10,24,3,4);
+  ctx.fillStyle='#6A1B9A';r(6,25,2,3);r(10,25,2,3);
+
+  // EYES (glowing amber — nearly blind but powerful)
+  ctx.fillStyle='#FFF9C4';r(5,5,4,3);r(9,5,4,3);
+  ctx.fillStyle='#FFD54F';r(6,5,3,3);r(10,5,3,3);
+  ctx.fillStyle='#FF8F00';r(7,5,2,3);r(11,5,2,3);
+  ctx.fillStyle='#1A0038';r(7,6,1,1);r(11,6,1,1); // slit pupil
+  ctx.fillStyle='#FFFFFF';r(6,5,1,1);r(10,5,1,1); // shine
+  // Eye glow effect
+  ctx.globalAlpha=0.4;ctx.fillStyle='#FFD700';
+  r(5,4,4,5);r(9,4,4,5);ctx.globalAlpha=1;
+
+  // SNOUT (short, mole-like)
+  ctx.fillStyle='#AD1457';r(7,8,4,3);
+  ctx.fillStyle='#E91E63';r(8,8,2,2);
+  ctx.fillStyle='#F48FB1';r(8,8,2,1);
+};
+
+ART.frostclaw=function(ctx,ox,oy,px,t=0){
+  const b=Math.round(Math.sin(t*2+6)*px*0.35);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
+  const sh=Math.sin(t*4)>0.3; // shimmer pulse
+
+  // ICE CRYSTAL CROWN (back formation)
+  ctx.fillStyle='#01579B';
+  r(0,-5,2,6);r(3,-8,2,8);r(6,-10,2,10);r(8,-11,2,11);r(10,-10,2,10);r(13,-8,2,8);r(16,-5,2,6);
+  ctx.fillStyle='#0277BD';
+  r(1,-4,1,5);r(4,-7,1,7);r(7,-9,1,9);r(9,-10,1,10);r(11,-9,1,9);r(14,-7,1,7);r(17,-4,1,5);
+  ctx.fillStyle='#0288D1';
+  r(2,-3,1,4);r(5,-6,1,6);r(7,-8,2,8);r(9,-9,2,9);r(11,-8,2,8);r(14,-6,1,6);r(16,-3,1,4);
+  ctx.fillStyle='#29B6F6';
+  r(7,-7,2,7);r(9,-8,2,8);r(11,-7,2,7);
+  // Crystal tips (bright)
+  ctx.fillStyle='#B3E5FC';r(0,-5,1,1);r(3,-8,1,1);r(7,-9,1,1);r(9,-11,1,1);r(11,-9,1,1);r(13,-8,1,1);r(17,-5,1,1);
+  ctx.fillStyle='#FFFFFF';r(9,-11,1,1);r(8,-9,1,1);r(10,-9,1,1);
+
+  // SHIMMER effect on crystals
+  if(sh){
+    ctx.globalAlpha=0.5;ctx.fillStyle='#FFFFFF';
+    r(0,-5,1,3);r(6,-9,1,5);r(9,-10,1,6);r(13,-7,1,4);ctx.globalAlpha=1;
+  }
+
+  // ICE CLAWS (left — huge and prominent)
+  ctx.fillStyle='#01579B';r(-3,10,7,12);
+  ctx.fillStyle='#0277BD';r(-2,10,6,11);
+  ctx.fillStyle='#0288D1';r(-1,10,5,10);
+  ctx.fillStyle='#29B6F6';r(0,10,3,8);
+  ctx.fillStyle='#B3E5FC';r(0,11,2,6);
+  // Left claw spikes (4 tips)
+  ctx.fillStyle='#01579B';r(-3,21,2,5);r(-1,22,2,6);r(1,21,2,5);r(3,20,2,4);
+  ctx.fillStyle='#0288D1';r(-2,22,1,3);r(-1,23,1,4);r(1,22,1,3);r(3,21,1,2);
+  ctx.fillStyle='#B3E5FC';r(-3,21,1,1);r(-1,22,1,1);r(1,21,1,1);r(3,20,1,1);
+  ctx.fillStyle='#FFFFFF';r(-3,21,1,1);r(-1,22,1,1); // frost glint
+
+  // ICE CLAWS (right)
+  ctx.fillStyle='#01579B';r(14,10,7,12);
+  ctx.fillStyle='#0277BD';r(14,10,6,11);
+  ctx.fillStyle='#0288D1';r(14,10,5,10);
+  ctx.fillStyle='#29B6F6';r(15,10,3,8);
+  ctx.fillStyle='#B3E5FC';r(16,11,2,6);
+  // Right claw tips
+  ctx.fillStyle='#01579B';r(14,20,2,4);r(16,21,2,5);r(18,22,2,6);r(20,21,2,5);
+  ctx.fillStyle='#0288D1';r(14,21,1,2);r(17,22,1,3);r(18,23,1,4);r(20,22,1,3);
+  ctx.fillStyle='#B3E5FC';r(14,20,1,1);r(17,21,1,1);r(18,22,1,1);r(21,21,1,1);
+  ctx.fillStyle='#FFFFFF';r(18,22,1,1);r(21,21,1,1);
+
+  // BODY (crystalline angular shape)
+  ctx.fillStyle='#0277BD';r(3,2,12,18);r(2,4,14,14);
+  ctx.fillStyle='#0288D1';r(4,3,10,16);r(3,5,12,12);
+  ctx.fillStyle='#039BE5';r(5,4,8,14);r(4,6,10,10);
+  ctx.fillStyle='#29B6F6';r(6,5,6,12);r(5,7,8,8);
+  ctx.fillStyle='#4FC3F7';r(7,6,4,10);r(6,8,6,6);
+
+  // ICE FACETS (crystalline pattern)
+  ctx.fillStyle='#B3E5FC';
+  for(let i=0;i<6;i++) r(4+i,4+i,1,1); // diagonal highlight
+
+  // BELLY + CHEST (lighter)
+  ctx.fillStyle='#E1F5FE';r(6,8,6,8);
+  ctx.fillStyle='#F0F9FF';r(7,9,4,6);
+  ctx.fillStyle='#FFFFFF';r(7,10,4,3);
+
+  // EYES (piercing cold blue)
+  ctx.fillStyle='#E1F5FE';r(4,5,5,4);r(9,5,5,4);
+  ctx.fillStyle='#29B6F6';r(5,5,4,4);r(10,5,4,4);
+  ctx.fillStyle='#0288D1';r(6,5,3,4);r(11,5,3,4);
+  ctx.fillStyle='#01579B';r(7,6,1,2);r(12,6,1,2); // pupil
+  ctx.fillStyle='#FFFFFF';r(5,5,1,1);r(10,5,1,1);
+  ctx.fillStyle='#B3E5FC';r(8,7,1,1);r(13,7,1,1);
+  // Frost around eyes
+  ctx.globalAlpha=0.4;ctx.fillStyle='#B3E5FC';r(3,4,3,6);r(12,4,3,6);ctx.globalAlpha=1;
+
+  // LOWER BODY + LEGS
+  ctx.fillStyle='#0277BD';r(4,19,10,8);
+  ctx.fillStyle='#0288D1';r(5,20,8,7);
+  ctx.fillStyle='#29B6F6';r(6,21,6,5);
+  ctx.fillStyle='#B3E5FC';r(7,22,4,3);
+  // Legs
+  ctx.fillStyle='#0277BD';r(4,26,4,4);r(10,26,4,4);
+  ctx.fillStyle='#0288D1';r(5,27,3,3);r(10,27,3,3);
+  ctx.fillStyle='#B3E5FC';r(5,28,3,1);r(10,28,3,1); // ice on feet
+
+  // FROST BREATH
+  ctx.globalAlpha=0.3;ctx.fillStyle='#E1F5FE';
+  r(6,10,3,1);r(7,11,4,1);r(5,12,3,1);r(8,12,2,1);ctx.globalAlpha=1;
+};
+
+// PLAYER sprite (8×8 units, side-view character)
+ART.player=function(ctx,ox,oy,px,t=0,dir='down'){
+  const b=Math.round(Math.sin(t*4)*px*0.2);
+  const x=Math.round(ox),y=Math.round(oy);
+  const r=(rx,ry,rw,rh)=>ctx.fillRect(x+rx*px,y+ry*px+b,rw*px,rh*px);
+  // Hat
+  ctx.fillStyle='#1A3A8A';r(2,0,5,2);r(1,2,6,1);
+  // Face
+  ctx.fillStyle='#FFDBA4';r(2,3,4,3);
+  // Hair
+  ctx.fillStyle='#3D2B1F';r(2,3,4,1);r(1,2,1,1);
+  // Eyes
+  ctx.fillStyle='#1A0800';r(3,4,1,1);r(5,4,1,1);
+  // Shirt
+  ctx.fillStyle='#4A90D9';r(2,6,4,3);
+  // Arms
+  ctx.fillStyle='#4A90D9';r(1,6,1,2);r(6,6,1,2);
+  ctx.fillStyle='#FFDBA4';r(1,8,1,1);r(6,8,1,1); // hands
+  // Legs
+  ctx.fillStyle='#2C3E50';r(2,9,2,3);r(4,9,2,3);
+  // Shoes
+  ctx.fillStyle='#1A0800';r(2,12,2,1);r(4,12,2,1);
+
+  // Walking bob on legs
+  const wa=Math.sin(t*6)*px*0.3|0;
+  ctx.fillStyle='#2C3E50';
+  ctx.fillRect(x+2*px,y+9*px+b+wa,2*px,3*px);
+  ctx.fillRect(x+4*px,y+9*px+b-wa,2*px,3*px);
+};
+
+/* ═══════════════════════════════════
+   SKILL / MONSTER DATA
+═══════════════════════════════════ */
 const SKILLS={
-  tackle:      {name:'몸통박치기',type:'normal',  power:40, pp:35,acc:100},
-  growl:       {name:'울음소리',  type:'normal',  power:0,  pp:40,acc:100,eff:'atkdown'},
-  scratch:     {name:'할퀴기',    type:'normal',  power:40, pp:35,acc:100},
-  quickatk:    {name:'기습',      type:'normal',  power:40, pp:30,acc:100},
-  bodyslam:    {name:'몸통박기',  type:'normal',  power:85, pp:15,acc:100,eff:'par25'},
-  hyperbeam:   {name:'하이퍼빔',  type:'normal',  power:150,pp:5, acc:90},
-  ember:       {name:'불꽃세례',  type:'fire',    power:40, pp:25,acc:100,eff:'brn10'},
-  howl:        {name:'포효',      type:'fire',    power:0,  pp:40,acc:100,eff:'selfatk'},
-  flamethrower:{name:'화염방사',  type:'fire',    power:90, pp:15,acc:100,eff:'brn10'},
-  firefang:    {name:'화염송곳니',type:'fire',    power:65, pp:15,acc:95, eff:'brn10'},
-  watergun:    {name:'물총',      type:'water',   power:40, pp:25,acc:100},
-  bubblebeam:  {name:'버블빔',    type:'water',   power:65, pp:20,acc:100,eff:'spddn'},
-  surf:        {name:'파도타기',  type:'water',   power:90, pp:15,acc:100},
-  hydropump:   {name:'하이드로펌프',type:'water', power:110,pp:5, acc:80},
-  vinewhip:    {name:'덩굴채찍',  type:'grass',   power:45, pp:25,acc:100},
-  razorleaf:   {name:'면도잎',    type:'grass',   power:55, pp:25,acc:95},
-  leafstorm:   {name:'리프스톰',  type:'grass',   power:130,pp:5, acc:90,eff:'selfspddn'},
-  petaldance:  {name:'꽃잎춤',    type:'grass',   power:90, pp:15,acc:100},
-  thundershock:{name:'전기쇼크',  type:'electric',power:40, pp:30,acc:100,eff:'par10'},
-  thunderbolt: {name:'10만볼트',  type:'electric',power:90, pp:15,acc:100,eff:'par10'},
-  thunder:     {name:'천둥',      type:'electric',power:110,pp:10,acc:70, eff:'par30'},
-  shadowclaw:  {name:'섀도크로',  type:'dark',    power:70, pp:15,acc:100},
-  nightslash:  {name:'야습',      type:'dark',    power:70, pp:15,acc:100,eff:'crit'},
-  darkpulse:   {name:'악의파동',  type:'dark',    power:80, pp:15,acc:100},
-  powdersnow:  {name:'눈가루',    type:'ice',     power:40, pp:25,acc:100,eff:'frz10'},
-  icefang:     {name:'얼음송곳니',type:'ice',     power:65, pp:15,acc:95, eff:'frz10'},
-  icebeam:     {name:'얼음빔',    type:'ice',     power:90, pp:10,acc:100,eff:'frz10'},
-  blizzard:    {name:'눈보라',    type:'ice',     power:110,pp:5, acc:70, eff:'frz30'},
+  tackle:      {name:'몸통박치기', type:'normal',  power:40, pp:35,acc:100},
+  growl:       {name:'울음소리',   type:'normal',  power:0,  pp:40,acc:100,eff:'atkdown'},
+  scratch:     {name:'할퀴기',     type:'normal',  power:40, pp:35,acc:100},
+  quickatk:    {name:'기습',       type:'normal',  power:40, pp:30,acc:100},
+  bodyslam:    {name:'몸통박기',   type:'normal',  power:85, pp:15,acc:100,eff:'par25'},
+  hyperbeam:   {name:'하이퍼빔',   type:'normal',  power:150,pp:5, acc:90},
+  ember:       {name:'불꽃세례',   type:'fire',    power:40, pp:25,acc:100,eff:'brn10'},
+  howl:        {name:'포효',       type:'fire',    power:0,  pp:40,acc:100,eff:'selfatk'},
+  flamethrower:{name:'화염방사',   type:'fire',    power:90, pp:15,acc:100,eff:'brn10'},
+  firefang:    {name:'화염송곳니', type:'fire',    power:65, pp:15,acc:95, eff:'brn10'},
+  watergun:    {name:'물총',       type:'water',   power:40, pp:25,acc:100},
+  bubblebeam:  {name:'버블빔',     type:'water',   power:65, pp:20,acc:100,eff:'spddn'},
+  surf:        {name:'파도타기',   type:'water',   power:90, pp:15,acc:100},
+  hydropump:   {name:'하이드로펌프',type:'water',  power:110,pp:5, acc:80},
+  vinewhip:    {name:'덩굴채찍',   type:'grass',   power:45, pp:25,acc:100},
+  razorleaf:   {name:'면도잎',     type:'grass',   power:55, pp:25,acc:95},
+  leafstorm:   {name:'리프스톰',   type:'grass',   power:130,pp:5, acc:90,eff:'selfspddn'},
+  petaldance:  {name:'꽃잎춤',     type:'grass',   power:90, pp:15,acc:100},
+  thundershock:{name:'전기쇼크',   type:'electric',power:40, pp:30,acc:100,eff:'par10'},
+  thunderbolt: {name:'10만볼트',   type:'electric',power:90, pp:15,acc:100,eff:'par10'},
+  thunder:     {name:'천둥',       type:'electric',power:110,pp:10,acc:70, eff:'par30'},
+  shadowclaw:  {name:'섀도크로',   type:'dark',    power:70, pp:15,acc:100},
+  nightslash:  {name:'야습',       type:'dark',    power:70, pp:15,acc:100,eff:'crit'},
+  darkpulse:   {name:'악의파동',   type:'dark',    power:80, pp:15,acc:100},
+  powdersnow:  {name:'눈가루',     type:'ice',     power:40, pp:25,acc:100,eff:'frz10'},
+  icefang:     {name:'얼음송곳니', type:'ice',     power:65, pp:15,acc:95, eff:'frz10'},
+  icebeam:     {name:'얼음빔',     type:'ice',     power:90, pp:10,acc:100,eff:'frz10'},
+  blizzard:    {name:'눈보라',     type:'ice',     power:110,pp:5, acc:70, eff:'frz30'},
 };
 
 const TYPE_CLR={fire:'#FF7A30',water:'#4DB8FF',grass:'#5ACC5A',electric:'#FFD700',dark:'#CC88FF',ice:'#88DDFF',normal:'#CCCCCC'};
-
-/* 타입 상성 (공격 → 방어 배수) */
 const TYPE_EFF={
   fire:    {fire:.5,water:.5,grass:2,ice:2,electric:1,dark:1,normal:1},
   water:   {fire:2,water:.5,grass:.5,ice:1,electric:.5,dark:2,normal:1},
@@ -4288,65 +4646,59 @@ const TYPE_EFF={
   dark:    {fire:1,water:.5,grass:2,ice:1,electric:2,dark:.5,normal:1},
   normal:  {fire:1,water:1,grass:1,ice:1,electric:1,dark:1,normal:1},
 };
+const TYPE_NAME={fire:'불',water:'물',grass:'풀',electric:'전기',dark:'어둠',ice:'얼음',normal:'노말'};
 
-/* ─── Monster Definitions ─── */
 const MONS={
   flamewolf: {name:'플레임울프',type:'fire',  cr:45, base:{hp:45,atk:55,def:35,spd:50},
     learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'ember'},{lv:10,sk:'howl'},{lv:15,sk:'flamethrower'},{lv:20,sk:'firefang'}],
-    areas:['grassland','cave']},
+    areas:['grassland','cave'],desc:'불꽃 갈기를 가진 늑대형 몬스터. 속도가 빠르다.'},
   aquafin:   {name:'아쿠아핀', type:'water', cr:45, base:{hp:50,atk:45,def:50,spd:45},
     learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'watergun'},{lv:10,sk:'bubblebeam'},{lv:15,sk:'surf'},{lv:20,sk:'hydropump'}],
-    areas:['grassland','cave']},
+    areas:['grassland','cave'],desc:'청색 상어형 몬스터. 방어력이 높다.'},
   thornbud:  {name:'쏜버드',   type:'grass', cr:45, base:{hp:40,atk:40,def:50,spd:55},
     learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'vinewhip'},{lv:10,sk:'razorleaf'},{lv:15,sk:'leafstorm'},{lv:20,sk:'petaldance'}],
-    areas:['grassland']},
+    areas:['grassland'],desc:'가시 왕관을 가진 새형 몬스터. 스피드가 매우 빠르다.'},
   voltail:   {name:'볼테일',   type:'electric',cr:45,base:{hp:35,atk:55,def:35,spd:65},
     learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'thundershock'},{lv:10,sk:'quickatk'},{lv:15,sk:'thunderbolt'},{lv:20,sk:'thunder'}],
-    areas:['cave','grassland']},
+    areas:['cave','grassland'],desc:'번개꼬리를 가진 도마뱀형 몬스터. 스피드 최고.'},
   fluffox:   {name:'플러폭스', type:'normal',cr:200,base:{hp:55,atk:40,def:40,spd:50},
     learn:[{lv:1,sk:'tackle'},{lv:1,sk:'growl'},{lv:5,sk:'quickatk'},{lv:10,sk:'scratch'},{lv:15,sk:'bodyslam'},{lv:20,sk:'hyperbeam'}],
-    areas:['grassland','town']},
+    areas:['grassland'],desc:'복슬복슬한 털을 가진 여우형 몬스터. 친화력이 높아 잡기 쉽다.'},
   shadowmole:{name:'섀도우몰', type:'dark',  cr:30, base:{hp:65,atk:60,def:45,spd:40},
     learn:[{lv:1,sk:'scratch'},{lv:1,sk:'growl'},{lv:5,sk:'shadowclaw'},{lv:10,sk:'nightslash'},{lv:15,sk:'darkpulse'}],
-    areas:['cave']},
+    areas:['cave'],desc:'거대한 발톱을 가진 두더지형 몬스터. 동굴에서만 출현.'},
   frostclaw: {name:'프로스트클로',type:'ice', cr:25, base:{hp:60,atk:65,def:55,spd:35},
     learn:[{lv:1,sk:'scratch'},{lv:1,sk:'growl'},{lv:5,sk:'powdersnow'},{lv:10,sk:'icefang'},{lv:15,sk:'icebeam'},{lv:20,sk:'blizzard'}],
-    areas:['cave']},
+    areas:['cave'],desc:'얼음 수정 갑옷을 가진 몬스터. 공격력과 방어력이 모두 높다.'},
 };
 
-/* EXP table: EXP needed to reach each level */
-function expToLevel(lv){ return Math.floor(4*Math.pow(lv,3)/5); }
+function expToLevel(lv){return Math.floor(4*Math.pow(lv,3)/5);}
 function statCalc(base,iv,lv,isHp){
-  if(isHp) return Math.floor(((2*base+iv)*lv/100)+lv+10);
+  if(isHp)return Math.floor(((2*base+iv)*lv/100)+lv+10);
   return Math.floor(((2*base+iv)*lv/100)+5);
 }
-
-/* Create a fresh monster instance */
 function createMonster(id,lv){
-  const def=MONS[id];
-  if(!def)return null;
+  const def=MONS[id];if(!def)return null;
   const iv=Math.floor(Math.random()*16);
   const maxHp=statCalc(def.base.hp,iv,lv,true);
   const skills=[];
-  for(const e of def.learn){ if(e.lv<=lv && skills.length<4 && !skills.includes(e.sk)) skills.push(e.sk); }
-  const ppMap={};
-  for(const sk of skills) ppMap[sk]=SKILLS[sk].pp;
-  return{
-    id,lv,exp:expToLevel(lv),iv,
-    hp:maxHp,maxHp,
+  for(const e of def.learn){if(e.lv<=lv&&skills.length<4&&!skills.includes(e.sk))skills.push(e.sk);}
+  const ppMap={};for(const sk of skills)ppMap[sk]=SKILLS[sk].pp;
+  return{id,lv,exp:expToLevel(lv),iv,hp:maxHp,maxHp,
     atk:statCalc(def.base.atk,iv,lv,false),
     def:statCalc(def.base.def,iv,lv,false),
     spd:statCalc(def.base.spd,iv,lv,false),
-    skills:[...skills],pp:{...ppMap},status:null,
-    nickname:'',
-  };
+    skills:[...skills],pp:{...ppMap},status:null,nickname:'',
+    atkMod:1,defMod:1,spdMod:1};
 }
 
-/* ─── Map Data ─── */
-/* Tile types: 0=open path, 1=wall/tree, 2=tall grass (encounter), 3=water, 4=building */
+/* ═══════════════════════════════════
+   MAP DATA
+═══════════════════════════════════ */
+const TS=32; // tile size in pixels
 const AREAS={
   town:{
-    name:'마을',
+    name:'마을',bgClr:'#0f1f0f',
     w:20,h:15,
     data:[
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -4355,22 +4707,21 @@ const AREAS={
       [1,0,4,4,0,0,0,4,4,0,0,0,0,0,4,4,4,0,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,0,0,0,1,0,1,0,0,0,0,0,3,3,3,3,0,0,1],
-      [1,0,0,0,0,1,0,1,0,0,0,0,0,3,3,3,3,0,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,0,0,1],
+      [1,0,0,0,0,1,0,1,0,0,0,0,3,3,3,3,0,0,0,1],
+      [1,0,0,0,0,1,0,1,0,0,0,0,3,3,3,3,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,0,0,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-      [1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+      [1,0,1,1,0,0,0,0,0,5,0,0,0,0,0,1,1,0,0,1],
       [1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1],
     ],
     exits:[{x:9,y:14,to:'grassland',tx:9,ty:1},{x:10,y:14,to:'grassland',tx:10,ty:1}],
-    bgColor:'#1a2a1a',
     encounters:[],
   },
   grassland:{
-    name:'풀숲',
+    name:'풀숲',bgClr:'#060f06',
     w:20,h:15,
     data:[
       [1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1],
@@ -4389,13 +4740,13 @@ const AREAS={
       [1,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,2,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ],
-    exits:[{x:9,y:0,to:'town',tx:9,ty:13},{x:10,y:0,to:'town',tx:10,ty:13},{x:9,y:13,to:'cave',tx:9,ty:1},{x:10,y:13,to:'cave',tx:10,ty:1}],
-    bgColor:'#0a1a0a',
+    exits:[{x:9,y:0,to:'town',tx:9,ty:13},{x:10,y:0,to:'town',tx:10,ty:13},
+           {x:9,y:13,to:'cave',tx:9,ty:1},{x:10,y:13,to:'cave',tx:10,ty:1}],
     encounters:['flamewolf','aquafin','thornbud','voltail','fluffox'],
     encounterRate:0.1,
   },
   cave:{
-    name:'동굴',
+    name:'동굴',bgClr:'#06060f',
     w:20,h:15,
     data:[
       [1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1],
@@ -4415,737 +4766,782 @@ const AREAS={
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ],
     exits:[{x:9,y:0,to:'grassland',tx:9,ty:13},{x:10,y:0,to:'grassland',tx:10,ty:13}],
-    bgColor:'#0d0d18',
     encounters:['voltail','shadowmole','frostclaw','flamewolf','aquafin'],
     encounterRate:0.12,
   },
 };
 
-/* ─── Tile Renderer ─── */
-const TILE_SIZE=32;
-const TILE_CLR={
-  0:'#2d3a2d', // path
-  1:'#1a2a1a', // wall
-  2:'#1a3a1a', // tall grass (darker green)
-  3:'#1a2a3a', // water
-  4:'#3a3028', // building
-};
-const TILE_CLR_CAVE={
-  0:'#1a1a2a',
-  1:'#0d0d1a',
-  2:'#1a1a30',
-  3:'#0d1a2a',
-  4:'#2a2528',
-};
+/* ═══════════════════════════════════
+   MAP RENDERER (Polished Tiles)
+═══════════════════════════════════ */
+const T_PATH_TOWN  ={base:'#232e1a',line:'rgba(255,255,255,.03)',dec:'#1a2412'};
+const T_PATH_CAVE  ={base:'#1a1a28',line:'rgba(100,100,200,.05)',dec:'#14141e'};
+const T_WALL_TOWN  ={base:'#0f1a0a',dec1:'#162310',dec2:'#0b1407'};
+const T_WALL_CAVE  ={base:'#0e0e1a',dec1:'#131322',dec2:'#0a0a10'};
+const T_GRASS_TOWN ={base:'#1a2e0a',blade1:'#2a4812',blade2:'#1e3a0e',blade3:'#38601a',tip:'#4a7a20'};
+const T_GRASS_CAVE ={base:'#12121f',blade1:'#1e1e38',blade2:'#161630',blade3:'#2a2a50',tip:'#3a3a68'};
+const T_WATER={base:'#0d2040',wave1:'#1a3a6a',wave2:'#0a1830'};
+const T_BLDG={base:'#2a2520',roof:'#3a3028',wall:'#4a4238',win:'#ffd060'};
+const T_SIGN={base:'#3a2a1a',text:'#ffd080',post:'#2a1a0a'};
 
-function renderMap(ctx,area,camX,camY,playerX,playerY){
-  const isCave=(area.bgColor==='#0d0d18');
-  const clr=isCave?TILE_CLR_CAVE:TILE_CLR;
-  const vw=Math.ceil(480/TILE_SIZE)+2;
-  const vh=Math.ceil(320/TILE_SIZE)+2;
-  const startTx=Math.floor(camX/TILE_SIZE);
-  const startTy=Math.floor(camY/TILE_SIZE);
+function renderMap(ctx,areaId,camX,camY,visX,visY,walkT){
+  const area=AREAS[areaId];
+  const isCave=areaId==='cave';
+  const vw=Math.ceil(480/TS)+2, vh=Math.ceil(320/TS)+2;
+  const stx=Math.floor(camX/TS)-1, sty=Math.floor(camY/TS)-1;
 
-  for(let ty=startTy-1;ty<startTy+vh;ty++){
-    for(let tx=startTx-1;tx<startTx+vw;tx++){
+  for(let ty=sty;ty<sty+vh;ty++){
+    for(let tx=stx;tx<stx+vw;tx++){
       if(tx<0||ty<0||tx>=area.w||ty>=area.h)continue;
       const tile=area.data[ty][tx];
-      const px=tx*TILE_SIZE-camX;
-      const py=ty*TILE_SIZE-camY;
-      ctx.fillStyle=clr[tile]||'#111';
-      ctx.fillRect(px,py,TILE_SIZE,TILE_SIZE);
-
-      /* grass detail */
-      if(tile===2){
-        ctx.fillStyle=isCave?'rgba(80,80,150,0.3)':'rgba(60,150,60,0.3)';
-        ctx.fillRect(px+2,py+4,3,TILE_SIZE-8);
-        ctx.fillRect(px+8,py+2,3,TILE_SIZE-8);
-        ctx.fillRect(px+14,py+6,3,TILE_SIZE-10);
-        ctx.fillRect(px+20,py+3,3,TILE_SIZE-8);
-        ctx.fillRect(px+26,py+5,3,TILE_SIZE-9);
-      }
-      /* water animation */
-      if(tile===3){
-        const wave=Math.sin(Date.now()/600+tx+ty)*2;
-        ctx.fillStyle='rgba(100,180,255,0.25)';
-        ctx.fillRect(px,py+8+wave,TILE_SIZE,4);
-        ctx.fillRect(px,py+18+wave,TILE_SIZE,4);
-      }
-      /* tile border for path */
-      if(tile===0){
-        ctx.fillStyle='rgba(255,255,255,0.03)';
-        ctx.fillRect(px,py,TILE_SIZE,1);
-        ctx.fillRect(px,py,1,TILE_SIZE);
-      }
+      const px=tx*TS-camX, py=ty*TS-camY;
+      drawTile(ctx,tile,px,py,isCave,walkT,tx,ty);
     }
   }
-
-  /* Draw player */
-  const pDrawX=playerX*TILE_SIZE-camX+(TILE_SIZE-16)/2;
-  const pDrawY=playerY*TILE_SIZE-camY+(TILE_SIZE-16)/2;
-  drawSprite(ctx,SPR.player.rows,SPR.player.pal,pDrawX,pDrawY,2);
+  // Draw player on top
+  const sprX=visX-camX+(TS-8*2)/2, sprY=visY-camY+(TS-13*2)/2;
+  ART.player(ctx,sprX,sprY,2,walkT);
 }
 
-/* ─── Game State ─── */
+function drawTile(ctx,tile,px,py,isCave,wt,tx,ty){
+  const seed=(tx*31+ty*17)%100;
+  if(tile===0){ // PATH
+    const T=isCave?T_PATH_CAVE:T_PATH_TOWN;
+    ctx.fillStyle=T.base; ctx.fillRect(px,py,TS,TS);
+    // subtle texture
+    ctx.fillStyle=T.dec;
+    if(seed<20) ctx.fillRect(px+seed%TS,py+seed%12,2,2);
+    ctx.fillStyle=T.line;
+    ctx.fillRect(px,py,TS,1); ctx.fillRect(px,py,1,TS);
+  } else if(tile===1){ // WALL
+    const T=isCave?T_WALL_CAVE:T_WALL_TOWN;
+    ctx.fillStyle=T.base; ctx.fillRect(px,py,TS,TS);
+    // rock texture
+    ctx.fillStyle=T.dec1;
+    ctx.fillRect(px+4,py+4,8,8); ctx.fillRect(px+18,py+2,10,6);
+    ctx.fillRect(px+2,py+18,6,10); ctx.fillRect(px+20,py+20,8,8);
+    ctx.fillStyle=T.dec2;
+    ctx.fillRect(px+4,py+4,4,4); ctx.fillRect(px+18,py+2,5,3);
+    // top edge highlight
+    ctx.fillStyle=isCave?'rgba(80,80,150,.15)':'rgba(100,150,80,.1)';
+    ctx.fillRect(px,py,TS,3);
+  } else if(tile===2){ // TALL GRASS
+    const T=isCave?T_GRASS_CAVE:T_GRASS_TOWN;
+    ctx.fillStyle=T.base; ctx.fillRect(px,py,TS,TS);
+    // Animated grass blades
+    const sway=Math.sin(wt*0.8+(tx+ty)*0.7)*1.5;
+    ctx.fillStyle=T.blade1;
+    [[2,8,2,12],[8,4,2,14],[15,6,2,11],[22,9,2,10]].forEach(([bx,by,bw,bh])=>{
+      ctx.fillRect(px+bx+sway,py+by,bw,bh);
+    });
+    ctx.fillStyle=T.blade2;
+    [[5,6,1,12],[11,3,1,14],[19,5,1,12],[26,7,1,10]].forEach(([bx,by,bw,bh])=>{
+      ctx.fillRect(px+bx-sway,py+by,bw,bh);
+    });
+    ctx.fillStyle=T.blade3;
+    [[3,5,2,10],[9,2,2,12],[17,4,2,10],[24,6,2,9]].forEach(([bx,by,bw,bh])=>{
+      ctx.fillRect(px+bx+sway*0.5,py+by,bw,bh);
+    });
+    ctx.fillStyle=T.tip;
+    [[2,8,2,2],[8,4,2,2],[15,6,2,2],[22,9,2,2],[5,6,1,2],[11,3,1,2]].forEach(([bx,by,bw,bh])=>{
+      ctx.fillRect(px+bx+sway,py+by,bw,bh);
+    });
+  } else if(tile===3){ // WATER
+    ctx.fillStyle=T_WATER.base; ctx.fillRect(px,py,TS,TS);
+    const wv=Math.sin(wt*1.5+tx*0.8)*2;
+    ctx.fillStyle=T_WATER.wave1;
+    ctx.fillRect(px,py+6+wv,TS,4);
+    ctx.fillRect(px,py+18+wv,TS,4);
+    ctx.fillRect(px,py+28+wv,TS,3);
+    ctx.fillStyle='rgba(255,255,255,.06)';
+    ctx.fillRect(px+2,py+6+wv,TS-4,1);
+    ctx.fillRect(px+4,py+18+wv,TS-8,1);
+  } else if(tile===4){ // BUILDING
+    ctx.fillStyle=T_BLDG.base; ctx.fillRect(px,py,TS,TS);
+    ctx.fillStyle=T_BLDG.roof; ctx.fillRect(px,py,TS,12);
+    ctx.fillStyle=T_BLDG.wall; ctx.fillRect(px+2,py+12,TS-4,TS-12);
+    ctx.fillStyle=T_BLDG.win;
+    ctx.fillRect(px+4,py+16,6,6); ctx.fillRect(px+20,py+16,6,6);
+    ctx.fillStyle='rgba(255,200,50,.5)'; // window glow
+    ctx.fillRect(px+4,py+16,6,6); ctx.fillRect(px+20,py+16,6,6);
+  } else if(tile===5){ // SIGN
+    ctx.fillStyle=T_BLDG.base; ctx.fillRect(px,py,TS,TS);
+    ctx.fillStyle=T_SIGN.post; ctx.fillRect(px+14,py+16,4,16);
+    ctx.fillStyle=T_SIGN.base; ctx.fillRect(px+8,py+8,16,12);
+    ctx.fillStyle=T_SIGN.text;
+    ctx.fillRect(px+10,py+11,12,2);ctx.fillRect(px+10,py+15,8,2);
+  }
+}
+
+/* ═══════════════════════════════════
+   GAME STATE
+═══════════════════════════════════ */
 let MG={
-  initialized:false,
-  started:false,
   gameData:null,
   areaId:'town',
-  playerX:9,playerY:7,
-  camX:0,camY:0,
+  px:9,py:7,          // tile position
+  visX:9*TS,visY:7*TS, // visual pixel position (smooth)
+  movDir:{x:0,y:0},   // current move direction
   moving:false,
-  stepTimer:0,
-  lastStepTime:0,
+  moveSpd:6,          // pixels per frame for movement
+  walkT:0,            // animation time
   keys:{},
-  encounteredMon:null,
   battleState:null,
-  battleAnim:{},
   animFrame:null,
-  saveTimer:null,
-  msgQueue:[],
-  msgActive:false,
+  dmgNumbers:[],      // floating damage numbers
+  flashEl:null,
 };
 
-/* ─── Save / Load ─── */
+/* ═══════════════════════════════════
+   SAVE / LOAD
+═══════════════════════════════════ */
 async function mgLoadData(){
-  try{
-    const r=await fetch('/api/game/monster/load').then(r=>r.json());
-    if(r.ok && r.gameData) return r.gameData;
-  }catch(e){}
+  try{const r=await fetch('/api/game/monster/load').then(r=>r.json());
+    if(r.ok&&r.gameData)return r.gameData;}catch(e){}
   return null;
 }
-
-async function mgSaveData(data){
-  try{
-    await fetch('/api/game/monster/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gameData:data})});
-  }catch(e){}
+async function mgSaveData(d){
+  try{await fetch('/api/game/monster/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gameData:d})});}catch(e){}
 }
-
 function buildSaveData(){
-  return{
-    party:MG.gameData.party,
-    box:MG.gameData.box,
-    areaId:MG.areaId,
-    px:MG.playerX,py:MG.playerY,
-    steps:MG.gameData.steps||0,
-    savedAt:Date.now(),
-  };
+  return{party:MG.gameData.party,box:MG.gameData.box,areaId:MG.areaId,px:MG.px,py:MG.py,steps:MG.gameData.steps||0,savedAt:Date.now()};
 }
 
-/* ─── Entry Point ─── */
-let mgInited=false;
+/* ═══════════════════════════════════
+   ENTRY POINT
+═══════════════════════════════════ */
+let _mgInited=false;
 window.initMonsterGame=async function(){
-  if(mgInited)return;
-  mgInited=true;
+  if(_mgInited)return;_mgInited=true;
+  // Show mobile dpad
+  const dp=$c('mg-dpad');if(dp)dp.style.display='flex';
   const saved=await mgLoadData();
   if(saved&&saved.party&&saved.party.length>0){
-    MG.gameData=saved;
-    MG.areaId=saved.areaId||'town';
-    MG.playerX=saved.px??9;
-    MG.playerY=saved.py??7;
+    MG.gameData=saved;MG.areaId=saved.areaId||'town';
+    MG.px=saved.px??9;MG.py=saved.py??7;
+    MG.visX=MG.px*TS;MG.visY=MG.py*TS;
     mgStartExplore();
   }else{
-    MG.gameData={party:[],box:[],steps:0};
-    mgShowStarter();
+    MG.gameData={party:[],box:[],steps:0};mgShowStarter();
   }
 };
-
 window.mgSave=async function(){
   if(!MG.gameData)return;
-  await mgSaveData(buildSaveData());
-  toast('게임 저장 완료!','ok');
+  await mgSaveData(buildSaveData());toast('저장 완료!','ok');
 };
+window.mgDKey=function(key,down){MG.keys[key]=!!down;};
 
-/* ─── Starter Selection ─── */
+/* ═══════════════════════════════════
+   STARTER
+═══════════════════════════════════ */
 function mgShowStarter(){
-  document.getElementById('mg-explore').style.display='none';
-  document.getElementById('mg-battle').style.display='none';
-  document.getElementById('mg-box-screen').style.display='none';
-  document.getElementById('mg-starter').style.display='';
-
-  const starters=['flamewolf','aquafin','thornbud'];
-  const list=document.getElementById('mg-starter-list');
+  show('mg-starter');hide('mg-explore');hide('mg-battle');hide('mg-box-screen');
+  const list=$c('mg-starter-list');if(!list)return;
   list.innerHTML='';
-  for(const id of starters){
+  ['flamewolf','aquafin','thornbud'].forEach(id=>{
     const def=MONS[id];
     const card=document.createElement('div');
     card.className='mg-starter-card';
-    card.innerHTML=`<div class="mg-sc-name">${def.name}</div><div class="mg-sc-type" style="color:${TYPE_CLR[def.type]}">${mgTypeName(def.type)} 타입</div>`;
-    /* Draw sprite preview */
-    const cv=document.createElement('canvas');
-    cv.width=64;cv.height=64;
-    card.insertBefore(cv,card.firstChild);
-    const ctx2=cv.getContext('2d');
-    ctx2.imageSmoothingEnabled=false;
-    const s=SPR[id];
-    if(s) drawSprite(ctx2,s.rows,s.pal,0,0,4);
-    card.onclick=()=>mgChooseStarter(id);
+    // Sprite canvas
+    const cv=document.createElement('canvas');cv.width=108;cv.height=120;
+    const ctx2=cv.getContext('2d');ctx2.imageSmoothingEnabled=false;
+    ART[id](ctx2,0,12,3,0);
+    card.appendChild(cv);
+    card.innerHTML+=`<div class="mg-sc-name">${def.name}</div><div class="mg-sc-type" style="color:${TYPE_CLR[def.type]}">${TYPE_NAME[def.type]} 타입</div><div class="mg-sc-stats">HP ${def.base.hp} · ATK ${def.base.atk} · SPD ${def.base.spd}</div>`;
+    card.onclick=()=>{
+      MG.gameData.party=[createMonster(id,5)];
+      MG.areaId='town';MG.px=9;MG.py=7;MG.visX=9*TS;MG.visY=7*TS;
+      hide('mg-starter');mgStartExplore();
+      toast(`${def.name}와(과) 함께 모험 시작!`,'ok');
+      mgSaveData(buildSaveData());
+    };
     list.appendChild(card);
-  }
+  });
 }
 
-function mgChooseStarter(id){
-  const mon=createMonster(id,5);
-  MG.gameData.party=[mon];
-  MG.areaId='town';
-  MG.playerX=9;MG.playerY=7;
-  document.getElementById('mg-starter').style.display='none';
-  mgStartExplore();
-  toast(`${MONS[id].name}와 함께 모험을 시작합니다!`,'ok');
-  mgSaveData(buildSaveData());
-}
-
-/* ─── Exploration ─── */
+/* ═══════════════════════════════════
+   EXPLORATION
+═══════════════════════════════════ */
 function mgStartExplore(){
-  document.getElementById('mg-explore').style.display='';
-  document.getElementById('mg-battle').style.display='none';
-  document.getElementById('mg-box-screen').style.display='none';
-  document.getElementById('mg-starter').style.display='none';
-
+  show('mg-explore');hide('mg-battle');hide('mg-box-screen');hide('mg-starter');
+  MG.flashEl=$c('mg-flash');
   mgUpdateHUD();
-  mgStartLoop();
-  if(!MG._keysSetup){
-    MG._keysSetup=true;
-    document.addEventListener('keydown',e=>{MG.keys[e.key]=true;e.preventDefault&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)&&e.preventDefault();});
+  if(!MG._keysSet){
+    MG._keysSet=true;
+    document.addEventListener('keydown',e=>{
+      MG.keys[e.key]=true;
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+    });
     document.addEventListener('keyup',e=>{MG.keys[e.key]=false;});
-    /* Touch / swipe */
-    let tx0=0,ty0=0;
-    const cv=$c('mg-canvas');
-    if(cv){
-      cv.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;},{passive:true});
-      cv.addEventListener('touchend',e=>{
-        const dx=e.changedTouches[0].clientX-tx0;
-        const dy=e.changedTouches[0].clientY-ty0;
-        if(Math.max(Math.abs(dx),Math.abs(dy))<10)return;
-        if(Math.abs(dx)>Math.abs(dy)) MG.keys[dx>0?'ArrowRight':'ArrowLeft']=true;
-        else MG.keys[dy>0?'ArrowDown':'ArrowUp']=true;
-        setTimeout(()=>{MG.keys={};},100);
-      },{passive:true});
-    }
   }
-}
-
-function mgStartLoop(){
-  if(MG.animFrame) cancelAnimationFrame(MG.animFrame);
-  function loop(){
-    mgUpdate();
-    mgDraw();
+  if(MG.animFrame)cancelAnimationFrame(MG.animFrame);
+  let last=0;
+  function loop(ts){
+    const dt=Math.min(ts-last,50)/16.67;last=ts;
+    mgUpdate(dt,ts/1000);
+    mgDraw(ts/1000);
     MG.animFrame=requestAnimationFrame(loop);
   }
   MG.animFrame=requestAnimationFrame(loop);
 }
 
-const MOVE_DELAY=150; // ms between steps
+const MOVE_DELAY=140;
+let _lastMoveT=0;
 
-function mgUpdate(){
-  if(MG.battleState||MG.msgActive) return;
-  const now=Date.now();
-  if(now-MG.lastStepTime<MOVE_DELAY) return;
+function mgUpdate(dt,t){
+  if(MG.battleState)return;
+  MG.walkT=t;
 
-  let dx=0,dy=0;
-  if(MG.keys['ArrowLeft']||MG.keys['a']) dx=-1;
-  else if(MG.keys['ArrowRight']||MG.keys['d']) dx=1;
-  else if(MG.keys['ArrowUp']||MG.keys['w']) dy=-1;
-  else if(MG.keys['ArrowDown']||MG.keys['s']) dy=1;
-  if(dx===0&&dy===0) return;
+  // Smooth position interpolation
+  const targetX=MG.px*TS, targetY=MG.py*TS;
+  const dx=targetX-MG.visX, dy=targetY-MG.visY;
+  const speed=MG.moveSpd*dt*2;
+  if(Math.abs(dx)<speed&&Math.abs(dy)<speed){
+    MG.visX=targetX;MG.visY=targetY;MG.moving=false;
+  }else{
+    MG.visX+=dx*(0.25*dt*2.5);
+    MG.visY+=dy*(0.25*dt*2.5);
+    MG.moving=true;
+  }
 
-  MG.lastStepTime=now;
+  if(MG.moving)return; // wait until arrived
+  const now=performance.now();
+  if(now-_lastMoveT<MOVE_DELAY)return;
+
+  let mx=0,my=0;
+  if(MG.keys['ArrowLeft']||MG.keys['a'])mx=-1;
+  else if(MG.keys['ArrowRight']||MG.keys['d'])mx=1;
+  else if(MG.keys['ArrowUp']||MG.keys['w'])my=-1;
+  else if(MG.keys['ArrowDown']||MG.keys['s'])my=1;
+  if(mx===0&&my===0)return;
+
+  _lastMoveT=now;
   const area=AREAS[MG.areaId];
-  const nx=MG.playerX+dx,ny=MG.playerY+dy;
-  if(nx<0||ny<0||nx>=area.w||ny>=area.h) return;
+  const nx=MG.px+mx,ny=MG.py+my;
+  if(nx<0||ny<0||nx>=area.w||ny>=area.h)return;
   const tile=area.data[ny][nx];
-  if(tile===1||tile===4) return; // wall/building
-  if(tile===3) return; // water
+  if(tile===1||tile===4)return;
+  if(tile===3)return; // water
 
-  /* Check exits */
+  // Check exit
   const exit=area.exits&&area.exits.find(e=>e.x===nx&&e.y===ny);
   if(exit){
-    MG.areaId=exit.to;
-    MG.playerX=exit.tx;
-    MG.playerY=exit.ty;
-    document.getElementById('mg-area-label').textContent=AREAS[MG.areaId].name;
+    MG.areaId=exit.to;MG.px=exit.tx;MG.py=exit.ty;
+    MG.visX=exit.tx*TS;MG.visY=exit.ty*TS;
+    $c('mg-area-label').textContent=AREAS[MG.areaId].name;
     return;
   }
 
-  MG.playerX=nx;MG.playerY=ny;
+  MG.px=nx;MG.py=ny;
   MG.gameData.steps=(MG.gameData.steps||0)+1;
-  document.getElementById('mg-area-label').textContent=area.name;
+  $c('mg-area-label').textContent=area.name;
 
-  /* Random encounter in tall grass */
-  if(tile===2 && area.encounterRate && Math.random()<area.encounterRate){
-    const pool=area.encounters.filter(id=>MG.gameData.party.some(p=>p.hp>0)||true);
+  // Encounter check
+  if(tile===2&&area.encounterRate&&Math.random()<area.encounterRate){
+    const pool=area.encounters||[];
     if(pool.length>0){
       const eid=pool[Math.floor(Math.random()*pool.length)];
-      const lv=Math.max(2,Math.floor(Math.random()*6)+(MG.gameData.steps>500?8:3));
+      const step=MG.gameData.steps||0;
+      const baseLv=step>500?8:step>200?5:3;
+      const lv=baseLv+Math.floor(Math.random()*5);
       const wild=createMonster(eid,lv);
-      MG.encounteredMon=wild;
-      setTimeout(()=>mgStartBattle(wild),200);
+      setTimeout(()=>mgTriggerBattle(wild),100);
     }
   }
 }
 
-function mgDraw(){
+function mgDraw(t){
   const cv=$c('mg-canvas');if(!cv)return;
   const ctx=cv.getContext('2d');
   ctx.imageSmoothingEnabled=false;
   const area=AREAS[MG.areaId];
 
-  /* Camera center on player */
-  MG.camX=MG.playerX*TILE_SIZE-240+TILE_SIZE/2;
-  MG.camY=MG.playerY*TILE_SIZE-160+TILE_SIZE/2;
-  MG.camX=Math.max(0,Math.min(MG.camX,(area.w*TILE_SIZE)-480));
-  MG.camY=Math.max(0,Math.min(MG.camY,(area.h*TILE_SIZE)-320));
+  // Camera
+  let camX=MG.visX-240+TS/2, camY=MG.visY-160+TS/2;
+  camX=Math.max(0,Math.min(camX,area.w*TS-480));
+  camY=Math.max(0,Math.min(camY,area.h*TS-320));
 
-  ctx.fillStyle=area.bgColor;
-  ctx.fillRect(0,0,480,320);
-  renderMap(ctx,area,MG.camX,MG.camY,MG.playerX,MG.playerY);
+  ctx.fillStyle=area.bgClr;ctx.fillRect(0,0,480,320);
+  renderMap(ctx,MG.areaId,camX,camY,MG.visX,MG.visY,t);
 }
 
-/* ─── HUD ─── */
+/* ═══════════════════════════════════
+   PARTY HUD
+═══════════════════════════════════ */
 function mgUpdateHUD(){
-  const hud=$c('mg-party-hud');if(!hud)return;
-  hud.innerHTML='';
+  const el=$c('mg-party-hud');if(!el||!MG.gameData)return;
+  el.innerHTML='';
   for(const mon of MG.gameData.party){
-    const pct=Math.max(0,Math.round(100*mon.hp/mon.maxHp));
+    const pct=Math.max(0,mon.hp/mon.maxHp);
     const fainted=mon.hp<=0;
-    const card=document.createElement('div');
-    card.className='mg-party-card'+(fainted?' fainted':'');
-    card.innerHTML=`<div class="mg-pc-name">${mon.nickname||MONS[mon.id].name}</div><div class="mg-pc-hp">${mon.hp}/${mon.maxHp}HP  Lv.${mon.lv}</div><div class="mg-pc-hpbar"><div class="mg-pc-hpfill" style="width:${pct}%;background:${pct>50?'#4ade80':pct>20?'#facc15':'#ef4444'}"></div></div>`;
-    hud.appendChild(card);
+    const hpClr=pct>0.5?'#4ade80':pct>0.2?'#facc15':'#ef4444';
+    const div=document.createElement('div');
+    div.className='mg-party-card'+(fainted?' fainted':'');
+    div.innerHTML=`<div class="mg-pc-name">${mon.nickname||MONS[mon.id].name} <small style="color:${TYPE_CLR[MONS[mon.id].type]};font-size:.65rem">${TYPE_NAME[MONS[mon.id].type]}</small></div><div class="mg-pc-hp">Lv.${mon.lv} · ${mon.hp}/${mon.maxHp} HP</div><div class="mg-pc-hpbar"><div class="mg-pc-hpfill" style="width:${Math.round(pct*100)}%;background:${hpClr}"></div></div>`;
+    el.appendChild(div);
   }
 }
 
-/* ─── Battle ─── */
-function mgStartBattle(wild){
-  if(cancelAnimationFrame) cancelAnimationFrame(MG.animFrame);
-  document.getElementById('mg-explore').style.display='none';
-  document.getElementById('mg-battle').style.display='';
+/* ═══════════════════════════════════
+   BATTLE — FLASH TRANSITION
+═══════════════════════════════════ */
+function mgTriggerBattle(wild){
+  const fl=MG.flashEl;if(!fl)return mgStartBattle(wild);
+  let alpha=0,dir=1;
+  const step=()=>{
+    alpha+=dir*0.12;
+    fl.style.opacity=Math.max(0,Math.min(1,alpha));
+    if(alpha>=1&&dir===1){dir=-1;
+      if(MG.animFrame)cancelAnimationFrame(MG.animFrame);
+      mgStartBattle(wild);setTimeout(()=>{requestAnimationFrame(step);},300);return;}
+    if(alpha<=0&&dir===-1){fl.style.opacity=0;return;}
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 
-  /* Find first alive party member */
+/* ═══════════════════════════════════
+   BATTLE SYSTEM
+═══════════════════════════════════ */
+function mgStartBattle(wild){
   const myMon=MG.gameData.party.find(m=>m.hp>0);
   if(!myMon){
-    mgMsg('모든 몬스터가 쓰러졌습니다. 마을로 돌아갑니다...');
-    setTimeout(()=>{
-      MG.areaId='town';MG.playerX=9;MG.playerY=7;
-      mgStartExplore();
-    },2000);
-    return;
+    // All fainted → revive to 1HP, go to town
+    for(const m of MG.gameData.party)if(m.hp<=0)m.hp=1;
+    MG.areaId='town';MG.px=9;MG.py=7;MG.visX=9*TS;MG.visY=7*TS;
+    mgStartExplore();return;
   }
-
-  MG.battleState={
-    myMon,
-    wild,
-    phase:'start',
-    turn:'player',
-    recharging:false,
+  show('mg-battle');hide('mg-explore');
+  MG.battleState={myMon,wild,turn:'player',phase:'start',
+    wildAnimX:0,myAnimX:0, // shake offsets
+    wildHpTarget:wild.hp,myHpTarget:myMon.hp,
+    wildSlideIn:180,mySlideIn:-100, // entrance animation
   };
-
-  mgBattleDraw();
-  mgSetMsg(`야생 ${MONS[wild.id].name}(Lv.${wild.lv})이 나타났다!`);
-  setTimeout(()=>{mgSetMsg('어떻게 할까?');mgEnableActions();},1200);
+  mgEnableActions(false);
+  mgSetMsg(`야생 ${MONS[wild.id].name} (Lv.${wild.lv}) 이(가) 나타났다!`);
+  // Slide-in animation
+  const slideStep=()=>{
+    const bs=MG.battleState;if(!bs)return;
+    bs.wildSlideIn=Math.max(0,bs.wildSlideIn-12);
+    bs.mySlideIn=Math.min(0,bs.mySlideIn+12);
+    mgBattleDraw();
+    if(bs.wildSlideIn>0||bs.mySlideIn<0){requestAnimationFrame(slideStep);}
+    else{setTimeout(()=>{mgSetMsg('어떻게 할까?');mgEnableActions(true);},600);}
+  };
+  requestAnimationFrame(slideStep);
+  // Start battle draw loop
+  let bLast=0;
+  const bLoop=(ts)=>{
+    if(!MG.battleState)return;
+    const dt=(ts-bLast)/16.67;bLast=ts;
+    MG.walkT=ts/1000;
+    mgBattleDraw();
+    MG.animFrame=requestAnimationFrame(bLoop);
+  };
+  MG.animFrame=requestAnimationFrame(bLoop);
 }
 
+/* ─── Battle Canvas ─── */
 function mgBattleDraw(){
   const cv=$c('mg-battle-canvas');if(!cv)return;
   const ctx=cv.getContext('2d');
   ctx.imageSmoothingEnabled=false;
   const bs=MG.battleState;if(!bs)return;
   const area=AREAS[MG.areaId];
+  const isCave=MG.areaId==='cave';
+  const t=MG.walkT;
 
-  /* Background */
-  const bg=area.bgColor==='#0d0d18'?'#0d0d18':'#0a1a0a';
-  ctx.fillStyle=bg;
-  ctx.fillRect(0,0,480,280);
+  // BG gradient
+  const grd=ctx.createLinearGradient(0,0,0,300);
+  grd.addColorStop(0,isCave?'#0a0a18':'#0a1a0a');
+  grd.addColorStop(1,isCave?'#050510':'#050f05');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,480,300);
 
-  /* Battle ground */
-  ctx.fillStyle=area.bgColor==='#0d0d18'?'#1a1a30':'#1a3020';
-  ctx.fillRect(0,200,480,80);
-  ctx.fillStyle=area.bgColor==='#0d0d18'?'#2a2a50':'#2a5040';
-  ctx.fillRect(0,200,480,6);
+  // BATTLE FIELD GROUND
+  ctx.fillStyle=isCave?'#1a1a30':'#162410';
+  ctx.fillRect(0,230,480,70);
+  ctx.fillStyle=isCave?'#2a2a50':'#2a3d18';
+  ctx.fillRect(0,228,480,6);
+  // Ground texture
+  ctx.fillStyle=isCave?'rgba(80,80,160,.15)':'rgba(60,100,30,.15)';
+  for(let i=0;i<480;i+=8) ctx.fillRect(i,232,4,30);
 
-  /* Wild monster (top-right) — scale=5 → 80px */
-  const wSpr=SPR[bs.wild.id];
-  if(wSpr){
-    const wx=300,wy=40;
-    if(bs.battleAnim&&bs.battleAnim.wild==='shake'){
-      drawSprite(ctx,wSpr.rows,wSpr.pal,wx+(Math.random()*6-3|0),wy,5);
-    }else{
-      drawSprite(ctx,wSpr.rows,wSpr.pal,wx,wy,5);
-    }
+  // SKY/CAVE texture
+  if(isCave){
+    ctx.fillStyle='rgba(50,50,100,.2)';
+    [[20,20,40,8],[100,40,30,6],[200,15,50,10],[320,35,25,7],[400,20,40,8]].forEach(([x,y,w,h])=>ctx.fillRect(x,y,w,h));
+  } else {
+    ctx.fillStyle='rgba(30,60,20,.15)';
+    [[10,60,30,6],[80,45,40,5],[180,70,25,5],[300,50,35,6],[420,65,30,5]].forEach(([x,y,w,h])=>ctx.fillRect(x,y,w,h));
   }
 
-  /* My monster (bottom-left) — scale=5 → 80px */
-  const mSpr=SPR[bs.myMon.id];
-  if(mSpr){
-    const mx=60,my=120;
-    if(bs.battleAnim&&bs.battleAnim.my==='shake'){
-      drawSprite(ctx,mSpr.rows,mSpr.pal,mx+(Math.random()*6-3|0),my,5);
-    }else{
-      drawSprite(ctx,mSpr.rows,mSpr.pal,mx,my,5);
-    }
-  }
+  // WILD MONSTER (top right, with slide-in from right)
+  const wBaseX=280+(bs.wildSlideIn||0);
+  const wBaseY=40;
+  const wShk=(bs.wildAnimX||0);
+  const wDef=MONS[bs.wild.id];
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.fillRect(wBaseX+wShk+15,wBaseY+90,80,8);
+  // Sprite (px=3 → 18*3=54px wide, 24*3=72px tall footprint)
+  ART[bs.wild.id](ctx,wBaseX+wShk,wBaseY,3,t);
 
-  /* Wild HP bar (top-left) */
-  drawHpBar(ctx,bs.wild,10,20,200,bs.wild.maxHp);
+  // MY MONSTER (bottom left, with slide-in from left)
+  const mBaseX=60+(bs.mySlideIn||0);
+  const mBaseY=140;
+  const mShk=(bs.myAnimX||0);
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.fillRect(mBaseX+mShk+15,mBaseY+90,80,8);
+  // Sprite
+  ART[bs.myMon.id](ctx,mBaseX+mShk,mBaseY,3,t);
 
-  /* My HP bar (bottom-right) */
-  drawHpBar(ctx,bs.myMon,270,190,200,bs.myMon.maxHp);
-}
+  // ENEMY HP BOX (top-left)
+  drawBattleHpBox(ctx,bs.wild,10,8,220,false);
 
-function drawHpBar(ctx,mon,x,y,w,maxHp){
-  const def=MONS[mon.id];
-  const lbl=`${mon.nickname||def.name} Lv.${mon.lv}`;
-  ctx.fillStyle='rgba(0,0,0,.6)';
-  ctx.fillRect(x,y,w+10,52);
-  ctx.fillStyle='#fff';
-  ctx.font='bold 12px monospace';
-  ctx.fillText(lbl,x+6,y+16);
-  const typeClr=TYPE_CLR[def.type]||'#ccc';
-  ctx.fillStyle=typeClr;
-  ctx.font='10px monospace';
-  ctx.fillText(mgTypeName(def.type),x+6,y+28);
-  /* HP bar bg */
-  ctx.fillStyle='#333';
-  ctx.fillRect(x+6,y+34,w-2,10);
-  /* HP bar fill */
-  const pct=Math.max(0,mon.hp/mon.maxHp);
-  ctx.fillStyle=pct>0.5?'#4ade80':pct>0.2?'#facc15':'#ef4444';
-  ctx.fillRect(x+6,y+34,Math.round((w-2)*pct),10);
-  /* HP text */
-  ctx.fillStyle='#ccc';
-  ctx.font='10px monospace';
-  ctx.fillText(`${mon.hp}/${mon.maxHp}`,x+6,y+52);
-}
+  // MY HP BOX (bottom-right)
+  drawBattleHpBox(ctx,bs.myMon,258,192,218,true);
 
-function mgSetMsg(txt){
-  const el=$c('mg-battle-msg');if(el) el.textContent=txt;
-}
-
-function mgEnableActions(enable=true){
-  ['mg-btn-attack','mg-btn-skill','mg-btn-catch','mg-btn-run'].forEach(id=>{
-    const el=$c(id);if(el) el.disabled=!enable;
+  // Floating damage numbers
+  ctx.font='bold 14px monospace';
+  MG.dmgNumbers=MG.dmgNumbers.filter(d=>{
+    d.life-=0.03;
+    if(d.life<=0)return false;
+    ctx.globalAlpha=d.life;
+    ctx.fillStyle=d.color;
+    ctx.fillText(d.txt,d.x,d.y);
+    d.y-=0.8;
+    ctx.globalAlpha=1;
+    return true;
   });
 }
 
+function drawBattleHpBox(ctx,mon,x,y,w,showExp){
+  const def=MONS[mon.id];
+  // Box background
+  ctx.fillStyle='rgba(0,0,0,.72)';
+  ctx.fillRect(x,y,w,showExp?68:52);
+  ctx.fillStyle='rgba(255,255,255,.08)';
+  ctx.fillRect(x,y,w,1);
+  ctx.fillRect(x,y,1,showExp?68:52);
+
+  // Name + level
+  ctx.fillStyle='#f0f0ff';
+  ctx.font='bold 12px monospace';
+  ctx.fillText(`${mon.nickname||def.name}`,x+8,y+16);
+  ctx.fillStyle='#a0a0c0';
+  ctx.font='11px monospace';
+  ctx.fillText(`Lv.${mon.lv}`,x+w-46,y+16);
+
+  // Type badge
+  ctx.fillStyle=TYPE_CLR[def.type]||'#aaa';
+  ctx.font='bold 9px monospace';
+  ctx.fillText(TYPE_NAME[def.type],x+8,y+28);
+
+  // Status badge
+  if(mon.status){
+    const stClr={burn:'#FF7043',paralyze:'#FFD740',freeze:'#80D8FF'}[mon.status]||'#aaa';
+    const stNm={burn:'화상',paralyze:'마비',freeze:'빙결'}[mon.status]||mon.status;
+    ctx.fillStyle=stClr;
+    ctx.fillText(`[${stNm}]`,x+50,y+28);
+  }
+
+  // HP bar
+  const hpW=w-16;
+  const pct=Math.max(0,mon.hp/mon.maxHp);
+  const hpClr=pct>0.5?'#4ade80':pct>0.2?'#facc15':'#ef4444';
+  ctx.fillStyle='rgba(255,255,255,.15)';
+  ctx.fillRect(x+8,y+34,hpW,8);
+  ctx.fillStyle=hpClr;
+  ctx.fillRect(x+8,y+34,Math.round(hpW*pct),8);
+  // HP bar sheen
+  ctx.fillStyle='rgba(255,255,255,.25)';
+  ctx.fillRect(x+8,y+34,Math.round(hpW*pct),3);
+
+  // HP number
+  ctx.fillStyle='#d0d0e0';
+  ctx.font='10px monospace';
+  ctx.fillText(`${mon.hp}/${mon.maxHp}`,x+8,y+52);
+
+  // EXP bar (my mon only)
+  if(showExp){
+    const thisLvExp=expToLevel(mon.lv), nextLvExp=expToLevel(mon.lv+1);
+    const expPct=(mon.exp-thisLvExp)/(nextLvExp-thisLvExp);
+    ctx.fillStyle='rgba(255,255,255,.1)';
+    ctx.fillRect(x+8,y+58,hpW,4);
+    ctx.fillStyle='#7c3aed';
+    ctx.fillRect(x+8,y+58,Math.round(hpW*Math.max(0,Math.min(1,expPct))),4);
+    ctx.fillStyle='#a78bfa';
+    ctx.fillRect(x+8,y+58,Math.round(hpW*Math.max(0,Math.min(1,expPct))),2);
+  }
+}
+
+/* ─── Battle UI helpers ─── */
+function mgSetMsg(txt){const el=$c('mg-battle-msg');if(el)el.textContent=txt;}
+function mgEnableActions(en){
+  ['mg-btn-attack','mg-btn-skill','mg-btn-catch','mg-btn-run'].forEach(id=>{
+    const el=$c(id);if(el)el.disabled=!en;
+  });
+}
+function spawnDmgNum(txt,side,color){
+  // side: 'wild' or 'my'
+  const x=side==='wild'?300+Math.random()*40:130+Math.random()*40;
+  const y=side==='wild'?90:195;
+  MG.dmgNumbers.push({txt,x,y,life:1.2,color:color||'#fff'});
+}
+
+/* ─── Actions ─── */
 window.mgShowSkills=function(){
   const bs=MG.battleState;if(!bs)return;
-  const act=$c('mg-battle-actions');
-  const sl=$c('mg-skill-list');
-  act.style.display='none';
-  sl.style.display='';
+  const act=$c('mg-battle-actions'),sl=$c('mg-skill-list');
+  act.style.display='none';sl.style.display='';
   sl.innerHTML='';
-  const mon=bs.myMon;
-  for(const sk of mon.skills){
+  for(const sk of bs.myMon.skills){
     const def=SKILLS[sk];
-    const pp=mon.pp[sk]??def.pp;
+    const pp=bs.myMon.pp[sk]??def.pp;
     const btn=document.createElement('button');
     btn.className='mg-skill-btn';
     btn.disabled=pp<=0;
-    btn.innerHTML=`<span style="color:${TYPE_CLR[def.type]||'#ccc'}">${def.name}</span><span class="mg-skill-pp">${def.type} | PP ${pp}/${def.pp} | 위력 ${def.power||'—'}</span>`;
-    btn.onclick=()=>{
-      sl.style.display='none';
-      act.style.display='';
-      mgBattleAction('skill',sk);
-    };
+    const typeClr=TYPE_CLR[def.type]||'#ccc';
+    btn.innerHTML=`<span style="color:${typeClr};font-weight:800">${def.name}</span><span class="mg-skill-pp">${TYPE_NAME[def.type]} · 위력 ${def.power||'—'} · PP ${pp}/${def.pp}</span>`;
+    btn.onclick=()=>{sl.style.display='none';act.style.display='';mgBattleAction('skill',sk);};
     sl.appendChild(btn);
   }
   const back=document.createElement('button');
-  back.className='mg-skill-btn';
-  back.innerHTML='← 뒤로';
+  back.className='mg-skill-btn mg-skill-back';back.textContent='← 뒤로';
   back.onclick=()=>{sl.style.display='none';act.style.display='';};
   sl.appendChild(back);
 };
 
 window.mgBattleAction=async function(action,skillId){
   const bs=MG.battleState;if(!bs||bs.turn!=='player')return;
-  mgEnableActions(false);
-  bs.turn='processing';
+  mgEnableActions(false);bs.turn='processing';
 
   if(action==='run'){
-    const escRate=bs.myMon.spd/(bs.wild.spd*2)*100;
-    if(Math.random()*100<escRate+30){
-      mgSetMsg('도망쳤다!');
-      setTimeout(()=>mgEndBattle(false),1000);
+    const esc=Math.min(98,(bs.myMon.spd/(bs.wild.spd||1))*50+30);
+    if(Math.random()*100<esc){
+      mgSetMsg('도망쳤다!');spawnDmgNum('도망!',bs.wild.hp>bs.myMon.hp?'wild':'my','#aaa');
+      setTimeout(()=>mgEndBattle(),1000);
     }else{
       mgSetMsg('도망칠 수 없었다!');
       setTimeout(()=>mgEnemyTurn(),1000);
-    }
-    return;
+    }return;
   }
-
   if(action==='catch'){
-    const rate=MONS[bs.wild.id].cr;
-    const hpFactor=3*bs.wild.maxHp-2*bs.wild.hp;
-    const ballMod=1; // pokeball
-    const catchScore=(rate*hpFactor*ballMod)/(3*bs.wild.maxHp);
+    const catchScore=(MONS[bs.wild.id].cr*(3*bs.wild.maxHp-2*bs.wild.hp))/(3*bs.wild.maxHp);
     if(Math.random()*255<catchScore){
       mgSetMsg(`${MONS[bs.wild.id].name}을(를) 잡았다!`);
+      spawnDmgNum('잡기 성공!','wild','#FFD700');
       setTimeout(()=>mgCatchSuccess(bs.wild),1500);
     }else{
-      mgSetMsg('잡기에 실패했다!');
+      mgSetMsg('잡기에 실패했다!');spawnDmgNum('실패...','wild','#f87171');
       setTimeout(()=>mgEnemyTurn(),1000);
-    }
-    return;
+    }return;
   }
 
-  /* Attack or Skill */
   let sk=skillId;
-  if(action==='attack') sk=bs.myMon.skills[0]; // basic attack = first skill
+  if(action==='attack')sk=bs.myMon.skills[0];
   if(!sk){mgEnemyTurn();return;}
   await mgUseSkill(bs.myMon,bs.wild,sk,false);
-  mgBattleDraw();
 
   if(bs.wild.hp<=0){
     mgSetMsg(`${MONS[bs.wild.id].name}을(를) 쓰러뜨렸다!`);
-    setTimeout(()=>mgGainExp(),1200);
+    setTimeout(()=>mgGainExp(),1300);
   }else{
-    setTimeout(()=>mgEnemyTurn(),1000);
+    setTimeout(()=>mgEnemyTurn(),1200);
   }
 };
 
-async function mgUseSkill(attacker,defender,skId,isEnemy){
-  const sk=SKILLS[skId];if(!sk)return;
-  /* PP deduction */
-  if(!isEnemy){
-    attacker.pp[skId]=Math.max(0,(attacker.pp[skId]??sk.pp)-1);
-  }
-  const aName=(isEnemy?MONS[attacker.id].name:attacker.nickname||MONS[attacker.id].name);
+function mgUseSkill(attacker,defender,skId,isEnemy){
+  return new Promise(resolve=>{
+    const sk=SKILLS[skId];if(!sk){resolve();return;}
+    if(!isEnemy)attacker.pp[skId]=Math.max(0,(attacker.pp[skId]??sk.pp)-1);
+    const aName=isEnemy?MONS[attacker.id].name:(attacker.nickname||MONS[attacker.id].name);
 
-  if(sk.power>0){
-    /* Accuracy check */
-    if(Math.random()*100>sk.acc){
-      mgSetMsg(`${aName}의 ${sk.name}! 빗나갔다!`);
-      return;
-    }
-    /* Damage calc */
-    const eff=TYPE_EFF[sk.type]?.[MONS[defender.id].type]??1;
-    const crit=(!isEnemy&&sk.eff==='crit')?1.5:1;
-    const rand=0.85+Math.random()*0.15;
-    const atk=attacker.atk*(attacker.atkMod??1);
-    const def=defender.def*(defender.defMod??1);
-    let dmg=Math.max(1,Math.floor(((2*attacker.lv/5+2)*sk.power*atk/def/50+2)*eff*crit*rand));
-    defender.hp=Math.max(0,defender.hp-dmg);
-
-    let effTxt='';
-    if(eff>1) effTxt=' 효과가 뛰어나다!';
-    else if(eff<1) effTxt=' 효과가 별로인 것 같다...';
-    mgSetMsg(`${aName}의 ${sk.name}! ${dmg}의 데미지!${effTxt}`);
-    /* Animation */
-    MG.battleState.battleAnim={[isEnemy?'my':'wild']:'shake'};
-    mgBattleDraw();
-    MG.battleState.battleAnim={};
-  }else{
-    /* Status moves */
-    mgSetMsg(`${aName}의 ${sk.name}!`);
-    if(sk.eff==='atkdown') defender.atkMod=(defender.atkMod??1)*0.67;
-    if(sk.eff==='selfatk') attacker.atkMod=(attacker.atkMod??1)*1.5;
-    if(sk.eff==='spddn')   defender.spdMod=(defender.spdMod??1)*0.75;
-    if(sk.eff==='selfspddn') attacker.spdMod=(attacker.spdMod??1)*0.5;
-  }
-  /* Status effects on hit */
-  if(sk.eff&&sk.power>0){
-    const chance={brn10:10,par10:10,frz10:10,par25:25,frz30:30,par30:30}[sk.eff]??0;
-    if(chance>0&&Math.random()*100<chance&&!defender.status){
-      const st={brn10:'burn',par10:'paralyze',frz10:'freeze',par25:'paralyze',frz30:'freeze',par30:'paralyze'}[sk.eff];
-      if(st){
-        defender.status=st;
-        const stName={burn:'화상',paralyze:'마비',freeze:'빙결'}[st];
-        mgSetMsg(prev=>prev+` ${MONS[defender.id].name}에게 ${stName}!`);
+    if(sk.power>0){
+      if(Math.random()*100>sk.acc){
+        mgSetMsg(`${aName}의 ${sk.name}! 빗나갔다!`);
+        setTimeout(resolve,900);return;
       }
+      const eff=TYPE_EFF[sk.type]?.[MONS[defender.id].type]??1;
+      const crit=sk.eff==='crit'&&Math.random()<0.3?1.5:1;
+      const rand=0.85+Math.random()*0.15;
+      const atk=attacker.atk*(attacker.atkMod??1);
+      const def=defender.def*(defender.defMod??1);
+      const dmg=Math.max(1,Math.floor(((2*attacker.lv/5+2)*sk.power*atk/def/50+2)*eff*crit*rand));
+      defender.hp=Math.max(0,defender.hp-dmg);
+
+      const effTxt=eff>1?' 효과가 뛰어나다!':eff<1?' 효과가 별로인 것 같다...':'';
+      const critTxt=crit>1?' 급소에 맞았다!':'';
+      mgSetMsg(`${aName}의 ${sk.name}! (${dmg} 데미지${effTxt}${critTxt})`);
+
+      // Floating dmg number
+      const numClr=eff>1?'#FFD700':eff<1?'#888':'#fff';
+      spawnDmgNum(`-${dmg}`,isEnemy?'my':'wild',numClr);
+
+      // Shake animation
+      const bs=MG.battleState;
+      if(bs){
+        const shakeKey=isEnemy?'myAnimX':'wildAnimX';
+        let shakeT=0;
+        const sh=()=>{bs[shakeKey]=Math.sin(shakeT*8)*(3-shakeT)*6;shakeT+=0.12;
+          if(shakeT<3)requestAnimationFrame(sh);else bs[shakeKey]=0;};
+        requestAnimationFrame(sh);
+      }
+
+      // Status effect on hit
+      if(sk.eff){
+        const effMap={brn10:{s:'burn',c:10},par10:{s:'paralyze',c:10},frz10:{s:'freeze',c:10},par25:{s:'paralyze',c:25},frz30:{s:'freeze',c:30},par30:{s:'paralyze',c:30}};
+        const ef=effMap[sk.eff];
+        if(ef&&!defender.status&&Math.random()*100<ef.c){
+          defender.status=ef.s;
+          const stN={burn:'화상',paralyze:'마비',freeze:'빙결'}[ef.s];
+          setTimeout(()=>mgSetMsg(`${MONS[defender.id].name}에게 ${stN}!`),600);
+        }
+      }
+      setTimeout(resolve,900);
+    }else{
+      // Status move
+      mgSetMsg(`${aName}의 ${sk.name}!`);
+      if(sk.eff==='atkdown'){defender.atkMod=(defender.atkMod??1)*0.67;spawnDmgNum('ATK↓',isEnemy?'my':'wild','#f87171');}
+      if(sk.eff==='selfatk'){attacker.atkMod=(attacker.atkMod??1)*1.5;spawnDmgNum('ATK↑',isEnemy?'wild':'my','#4ade80');}
+      if(sk.eff==='spddn'){defender.spdMod=(defender.spdMod??1)*0.75;spawnDmgNum('SPD↓',isEnemy?'my':'wild','#f87171');}
+      if(sk.eff==='selfspddn'){attacker.spdMod=(attacker.spdMod??1)*0.5;spawnDmgNum('SPD↓',isEnemy?'wild':'my','#facc15');}
+      setTimeout(resolve,800);
     }
-  }
+  });
 }
 
 function mgEnemyTurn(){
   const bs=MG.battleState;if(!bs)return;
   bs.turn='enemy';
   const wild=bs.wild;
-
-  /* Status check */
-  if(wild.status==='freeze'&&Math.random()<0.2){
-    mgSetMsg(`${MONS[wild.id].name}은(는) 풀렸다!`);wild.status=null;
-  }
-  if(wild.status==='paralyze'&&Math.random()<0.25){
-    mgSetMsg(`${MONS[wild.id].name}은(는) 마비로 움직일 수 없다!`);
-    setTimeout(()=>mgPlayerTurn(),1000);return;
-  }
-
-  /* Pick random skill */
+  if(wild.status==='freeze'&&Math.random()<0.25){wild.status=null;mgSetMsg(`${MONS[wild.id].name}은(는) 얼음이 녹았다!`);setTimeout(()=>mgPlayerTurn(),900);return;}
+  if(wild.status==='paralyze'&&Math.random()<0.3){mgSetMsg(`${MONS[wild.id].name}은(는) 마비로 움직일 수 없다!`);setTimeout(()=>mgPlayerTurn(),900);return;}
+  if(wild.status==='burn'){wild.hp=Math.max(1,wild.hp-Math.max(1,Math.floor(wild.maxHp/8)));spawnDmgNum('화상!','wild','#FF7043');}
   const sk=wild.skills[Math.floor(Math.random()*wild.skills.length)];
   mgUseSkill(wild,bs.myMon,sk,true).then(()=>{
-    mgBattleDraw();
     if(bs.myMon.hp<=0){
       mgSetMsg(`${bs.myMon.nickname||MONS[bs.myMon.id].name}이(가) 쓰러졌다!`);
       mgUpdateHUD();
-      setTimeout(()=>mgHandleFaint(),1200);
-    }else{
-      setTimeout(()=>mgPlayerTurn(),1000);
-    }
+      setTimeout(()=>{
+        const alive=MG.gameData.party.find(m=>m.hp>0&&m!==bs.myMon);
+        if(alive){bs.myMon=alive;mgSetMsg(`${alive.nickname||MONS[alive.id].name}으로 교체!`);setTimeout(()=>mgPlayerTurn(),1000);}
+        else{mgSetMsg('모두 쓰러졌습니다...');setTimeout(()=>{for(const m of MG.gameData.party)if(m.hp<=0)m.hp=1;MG.areaId='town';MG.px=9;MG.py=7;MG.visX=9*TS;MG.visY=7*TS;mgEndBattle();},2000);}
+      },1200);
+    }else{setTimeout(()=>mgPlayerTurn(),800);}
   });
 }
 
 function mgPlayerTurn(){
   const bs=MG.battleState;if(!bs)return;
+  // Burn on player's mon
+  if(bs.myMon.status==='burn'){bs.myMon.hp=Math.max(1,bs.myMon.hp-Math.max(1,Math.floor(bs.myMon.maxHp/8)));spawnDmgNum('화상!','my','#FF7043');}
   bs.turn='player';
   mgSetMsg('어떻게 할까?');
   mgEnableActions(true);
-  const sl=$c('mg-skill-list');
-  if(sl) sl.style.display='none';
-  const act=$c('mg-battle-actions');
-  if(act) act.style.display='';
-}
-
-function mgHandleFaint(){
-  const alive=MG.gameData.party.find(m=>m.hp>0&&m!==MG.battleState.myMon);
-  if(alive){
-    MG.battleState.myMon=alive;
-    mgSetMsg(`${alive.nickname||MONS[alive.id].name}으로 교체!`);
-    mgBattleDraw();
-    setTimeout(()=>mgPlayerTurn(),1000);
-  }else{
-    mgSetMsg('모든 몬스터가 쓰러졌습니다...');
-    setTimeout(()=>{
-      /* Revive all to 1HP */
-      for(const m of MG.gameData.party) if(m.hp<=0) m.hp=1;
-      mgUpdateHUD();
-      MG.areaId='town';MG.playerX=9;MG.playerY=7;
-      mgEndBattle(false);
-    },2000);
-  }
+  const sl=$c('mg-skill-list'),act=$c('mg-battle-actions');
+  if(sl)sl.style.display='none';if(act)act.style.display='';
 }
 
 function mgGainExp(){
   const bs=MG.battleState;if(!bs)return;
-  const wild=bs.wild;
   const mon=bs.myMon;
-  const expGain=Math.floor((MONS[wild.id].base.hp+MONS[wild.id].base.atk)*wild.lv/7);
-
-  mon.exp+=expGain;
-  mgSetMsg(`경험치 ${expGain} 획득!`);
-
-  /* Level up check */
-  let leveled=false;
-  while(mon.lv<100 && mon.exp>=expToLevel(mon.lv+1)){
+  const gain=Math.floor((MONS[bs.wild.id].base.hp+MONS[bs.wild.id].base.atk+MONS[bs.wild.id].base.def)*bs.wild.lv/7);
+  mon.exp+=gain;
+  spawnDmgNum(`EXP +${gain}`,'my','#a78bfa');
+  mgSetMsg(`경험치 ${gain} 획득!`);
+  let levMsg='';
+  while(mon.lv<100&&mon.exp>=expToLevel(mon.lv+1)){
     mon.lv++;
-    leveled=true;
     const def=MONS[mon.id];
-    const newMaxHp=statCalc(def.base.hp,mon.iv,mon.lv,true);
-    const hpDiff=newMaxHp-mon.maxHp;
-    mon.maxHp=newMaxHp;
-    mon.hp=Math.min(mon.hp+hpDiff,mon.maxHp);
+    const nhp=statCalc(def.base.hp,mon.iv,mon.lv,true);
+    mon.hp=Math.min(nhp,mon.hp+(nhp-mon.maxHp));mon.maxHp=nhp;
     mon.atk=statCalc(def.base.atk,mon.iv,mon.lv,false);
     mon.def=statCalc(def.base.def,mon.iv,mon.lv,false);
     mon.spd=statCalc(def.base.spd,mon.iv,mon.lv,false);
-    /* Learn new skills */
+    levMsg=`  Lv.${mon.lv}으로 레벨업!`;
+    spawnDmgNum(`Lv.UP!`,'my','#FFD700');
     for(const e of def.learn){
-      if(e.lv===mon.lv && !mon.skills.includes(e.sk)){
-        if(mon.skills.length<4){
-          mon.skills.push(e.sk);
-          mon.pp[e.sk]=SKILLS[e.sk].pp;
-          mgSetMsg(`${mon.nickname||def.name}이(가) Lv.${mon.lv}으로 레벨업! ${SKILLS[e.sk].name}을(를) 배웠다!`);
-        }
+      if(e.lv===mon.lv&&!mon.skills.includes(e.sk)&&mon.skills.length<4){
+        mon.skills.push(e.sk);mon.pp[e.sk]=SKILLS[e.sk].pp;
+        levMsg+=`  ${SKILLS[e.sk].name} 습득!`;
       }
     }
   }
-  if(leveled && !mgSetMsg._leveled){
-    mgSetMsg(`${mon.nickname||MONS[mon.id].name}이(가) Lv.${mon.lv}으로 레벨업!`);
-  }
+  if(levMsg)setTimeout(()=>mgSetMsg(levMsg),700);
   mgUpdateHUD();
-  setTimeout(()=>mgEndBattle(false),1500);
+  setTimeout(()=>mgEndBattle(),levMsg?2200:1400);
 }
 
 function mgCatchSuccess(wild){
-  /* Add to party or box */
-  if(MG.gameData.party.length<6){
-    MG.gameData.party.push(wild);
-    mgSetMsg(`${MONS[wild.id].name}이(가) 파티에 합류!`);
-  }else if(MG.gameData.box.length<30){
-    MG.gameData.box.push(wild);
-    mgSetMsg(`${MONS[wild.id].name}이(가) 박스에 보관됨`);
-  }else{
-    mgSetMsg('박스가 가득 찼습니다!');
-  }
+  if(MG.gameData.party.length<6)MG.gameData.party.push(wild);
+  else if(MG.gameData.box.length<30)MG.gameData.box.push(wild);
+  else{mgSetMsg('박스가 가득 찼습니다!');setTimeout(()=>mgEndBattle(),1500);return;}
+  mgSetMsg(`${MONS[wild.id].name}이(가) ${MG.gameData.party.includes(wild)?'파티에 합류':'박스에 보관'}!`);
   mgUpdateHUD();
-  setTimeout(()=>mgEndBattle(false),1500);
+  setTimeout(()=>mgEndBattle(),1600);
 }
 
-function mgEndBattle(fled){
-  MG.battleState=null;
-  MG.encounteredMon=null;
-  document.getElementById('mg-battle').style.display='none';
-  const sl=$c('mg-skill-list');
-  if(sl)sl.style.display='none';
-  const act=$c('mg-battle-actions');
-  if(act)act.style.display='';
+function mgEndBattle(){
+  if(MG.animFrame)cancelAnimationFrame(MG.animFrame);
+  MG.battleState=null;MG.dmgNumbers=[];
+  hide('mg-battle');
+  const sl=$c('mg-skill-list'),act=$c('mg-battle-actions');
+  if(sl)sl.style.display='none';if(act)act.style.display='';
   mgStartExplore();
   mgSaveData(buildSaveData());
 }
 
-/* ─── Box Screen ─── */
+/* ═══════════════════════════════════
+   BOX / PARTY SCREEN
+═══════════════════════════════════ */
 window.mgOpenBox=function(){
-  if(MG.animFrame) cancelAnimationFrame(MG.animFrame);
-  document.getElementById('mg-explore').style.display='none';
-  document.getElementById('mg-box-screen').style.display='';
+  if(MG.animFrame)cancelAnimationFrame(MG.animFrame);
+  hide('mg-explore');show('mg-box-screen');
   mgRenderBox();
 };
-
-window.mgCloseBox=function(){
-  document.getElementById('mg-box-screen').style.display='none';
-  mgStartExplore();
-};
+window.mgCloseBox=function(){hide('mg-box-screen');mgStartExplore();};
 
 function mgRenderBox(){
-  ['mg-party-list','mg-box-list'].forEach(id=>{
-    const el=$c(id);if(!el)return;
+  ['mg-party-list','mg-box-list'].forEach(listId=>{
+    const el=$c(listId);if(!el)return;
     el.innerHTML='';
-    const arr=id==='mg-party-list'?MG.gameData.party:MG.gameData.box;
-    const label=id==='mg-party-list'?'파티':'박스';
-    if(arr.length===0){
-      el.innerHTML=`<div style="color:var(--text-muted);font-size:.8rem">${label} 없음</div>`;
-      return;
-    }
-    for(let i=0;i<arr.length;i++){
-      const mon=arr[i];
+    const arr=listId==='mg-party-list'?MG.gameData.party:MG.gameData.box;
+    if(!arr||arr.length===0){el.innerHTML='<div style="color:var(--text-muted);font-size:.8rem;padding:8px">없음</div>';return;}
+    arr.forEach((mon,i)=>{
       const def=MONS[mon.id];
       const card=document.createElement('div');
       card.className='mg-mon-card';
-      const cv=document.createElement('canvas');
-      cv.width=48;cv.height=48;
-      const ctx2=cv.getContext('2d');
-      ctx2.imageSmoothingEnabled=false;
-      const s=SPR[mon.id];
-      if(s) drawSprite(ctx2,s.rows,s.pal,0,0,3);
+      const cv=document.createElement('canvas');cv.width=72;cv.height=80;
+      const ctx2=cv.getContext('2d');ctx2.imageSmoothingEnabled=false;
+      ART[mon.id](ctx2,0,8,2,0);
       card.appendChild(cv);
-      const pct=Math.max(0,Math.round(100*mon.hp/mon.maxHp));
-      card.innerHTML+=`<div class="mg-mc-name">${mon.nickname||def.name}</div><div class="mg-mc-lv">Lv.${mon.lv} <span style="color:${TYPE_CLR[def.type]}">${mgTypeName(def.type)}</span></div><div class="mg-mc-hp">${mon.hp}/${mon.maxHp} HP</div>`;
-      if(id==='mg-box-list'&&MG.gameData.party.length<6){
-        card.onclick=()=>{
-          MG.gameData.party.push(mon);
-          MG.gameData.box.splice(i,1);
-          mgRenderBox();mgUpdateHUD();
-        };
-        card.title='클릭: 파티에 추가';
-      }else if(id==='mg-party-list'&&MG.gameData.party.length>1){
-        card.onclick=()=>{
-          if(mon.hp>0&&MG.gameData.party.filter(m=>m.hp>0).length===1) return;
-          MG.gameData.box.push(mon);
-          MG.gameData.party.splice(i,1);
-          mgRenderBox();mgUpdateHUD();
-        };
-        card.title='클릭: 박스로 이동';
+      const pct=Math.round(100*mon.hp/mon.maxHp);
+      const hpClr=pct>50?'#4ade80':pct>20?'#facc15':'#ef4444';
+      card.innerHTML+=`<div class="mg-mc-name">${mon.nickname||def.name}</div><div class="mg-mc-sub" style="color:${TYPE_CLR[def.type]}">${TYPE_NAME[def.type]} · Lv.${mon.lv}</div><div class="mg-mc-sub">${mon.hp}/${mon.maxHp} HP</div><div class="mg-pc-hpbar" style="margin-top:4px"><div class="mg-pc-hpfill" style="width:${pct}%;background:${hpClr}"></div></div>`;
+      // Party→Box or Box→Party
+      if(listId==='mg-party-list'){
+        if(MG.gameData.party.length>1){
+          card.title='클릭: 박스로 이동';
+          card.onclick=()=>{MG.gameData.box.push(mon);MG.gameData.party.splice(i,1);mgRenderBox();mgUpdateHUD();};
+        }
+      }else{
+        if(MG.gameData.party.length<6){
+          card.title='클릭: 파티에 추가';
+          card.onclick=()=>{MG.gameData.party.push(mon);MG.gameData.box.splice(i,1);mgRenderBox();mgUpdateHUD();};
+        }
       }
       el.appendChild(card);
-    }
+    });
   });
 }
 
-/* ─── Helpers ─── */
-function mgTypeName(t){
-  return{fire:'불',water:'물',grass:'풀',electric:'전기',dark:'어둠',ice:'얼음',normal:'노말'}[t]||t;
-}
+/* ─── utility ─── */
+function show(id){const e=$c(id);if(e)e.style.display='';}
+function hide(id){const e=$c(id);if(e)e.style.display='none';}
 
-})(); // end IIFE
+})(); // end IIFE v2
 
 </script>
 </body>
