@@ -26,7 +26,7 @@ const DATA_DIR = resolveDataDir();
 console.log(`[DATA] DATA_DIR: ${DATA_DIR}`);
 
 // ── 배팅 밸런스 상수 ──
-const BET_MAX      = 20;    // 1판 최대 배팅 포인트
+const BET_MAX      = 100;   // 1판 최대 배팅 포인트
 const BET_MAX_MULT = 2.0;   // 배당 상한 (풀 쏠려도 최대 2배)
 const BET_RAKE     = 0.10;  // 하우스 수수료 10% → 실질 최대 1.8x
 
@@ -87,11 +87,11 @@ if (!fs.existsSync(BETTING_FILE))  writeJSON(BETTING_FILE, {
 });
 // 상점 기본 정의 — 가격/이름/설명은 항상 이 값 기준 (파일엔 stock만 보존)
 const SHOP_DEFAULTS = [
-  { id: 'priority', name: '선참권',          desc: '다음 내전 팀 배치 선택 우선권', price:  1000, stock: -1, icon: '⭐', rarity: 'common'    },
-  { id: 'no_ban',   name: '노밴권',          desc: '다음 내전 밴 페이즈 면제',       price:  2000, stock: -1, icon: '🛡️', rarity: 'uncommon'  },
-  { id: 'wr_reset', name: '승률 초기화권',   desc: '내전 승률 통계 초기화',          price:  5000, stock: -1, icon: '🔄', rarity: 'rare'      },
-  { id: 'extend',   name: '내전 1판 연장권', desc: '내전 1판 추가 연장',             price:  8000, stock: -1, icon: '⚡', rarity: 'epic'      },
-  { id: 'all_day',  name: '종일권',          desc: '당일 모든 내전 참가 가능',       price: 15000, stock: -1, icon: '🌙', rarity: 'legendary' },
+  { id: 'priority', name: '선참권',          desc: '다음 내전 팀 배치 선택 우선권', price:  2000, stock: -1, icon: '⭐', rarity: 'common'    },
+  { id: 'no_ban',   name: '노밴권',          desc: '다음 내전 밴 페이즈 면제',       price:  4000, stock: -1, icon: '🛡️', rarity: 'uncommon'  },
+  { id: 'wr_reset', name: '승률 초기화권',   desc: '내전 승률 통계 초기화',          price: 10000, stock: -1, icon: '🔄', rarity: 'rare'      },
+  { id: 'extend',   name: '내전 1판 연장권', desc: '내전 1판 추가 연장',             price: 15000, stock: -1, icon: '⚡', rarity: 'epic'      },
+  { id: 'all_day',  name: '종일권',          desc: '당일 모든 내전 참가 가능',       price: 30000, stock: -1, icon: '🌙', rarity: 'legendary' },
 ];
 // 서버 시작마다 가격/이름/설명 최신화 (stock만 파일에서 유지)
 {
@@ -726,7 +726,7 @@ const bridgeSessions = new Map();
 app.post('/api/game/bridge/start', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok: false, error: '로그인 필요' });
-  const bet = Math.max(5, Math.min(50, parseInt(req.body.bet) || 10));
+  const bet = Math.max(5, Math.min(200, parseInt(req.body.bet) || 10));
 
   const fg = checkFatigue(name, BRIDGE_FATIGUE);
   if (!fg.ok) return res.json({ ok: false, error: fg.error });
