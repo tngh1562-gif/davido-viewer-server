@@ -759,6 +759,19 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .mg-mc-name { font-weight:700; font-size:.78rem; }
 .mg-mc-sub  { font-size:.7rem; color:var(--text-muted); margin-top:1px; }
 
+/* ── 주식게임 ── */
+.st-stock-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px}
+.st-stock-card:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.st-stock-card.selected{border-color:rgba(168,85,247,.6);background:rgba(168,85,247,.08)}
+.st-ticker-badge{font-size:.65rem;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+.st-price{font-size:1.15rem;font-weight:900;font-variant-numeric:tabular-nums}
+.st-change-pos{color:#4ade80;font-size:.8rem;font-weight:700}
+.st-change-neg{color:#f87171;font-size:.8rem;font-weight:700}
+.st-change-neu{color:var(--text-muted);font-size:.8rem;font-weight:700}
+.st-mini-chart{flex:1;height:36px}
+.st-qty-chip{padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+.st-qty-chip:hover{background:rgba(255,255,255,.14)}
+.st-holding-tag{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
 /* Starter */
 .mg-starter-card {
   background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.12);
@@ -861,6 +874,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item active" onclick="switchTab('page-home',this)">메인 대시보드</div>
       <div class="nav-item" onclick="switchTab('page-community',this);loadCommunity('notice')">커뮤니티</div>
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
+      <div class="nav-item" onclick="switchTab('page-stock',this);initStock()">주식</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
       <div class="nav-item" onclick="switchTab('page-mypage',this);loadMyPage()">마이페이지</div>
       <div class="nav-item" style="display:none" onclick="switchTab('page-monster',this);initMonsterGame()">몬스터</div>
@@ -1210,6 +1224,72 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   </div>
   <div id="adminBanAttempts" style="display:flex;flex-direction:column;gap:6px">
     <div style="color:var(--text-muted);font-size:.82rem">없음</div>
+  </div>
+</div>
+
+<!-- ═══ STOCK GAME ═══ -->
+<div id="page-stock" class="page">
+  <div style="max-width:900px;margin:0 auto;padding:20px 16px">
+    <!-- 헤더 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:1.3rem;font-weight:900;letter-spacing:-.03em">다비도 증권거래소</div>
+        <div id="stMarketStatus" style="font-size:.75rem;margin-top:3px"></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:.7rem;color:var(--text-muted)">장 운영 시간</div>
+        <div style="font-size:.8rem;font-weight:700">09:00 ~ 15:00</div>
+      </div>
+    </div>
+    <!-- 포트폴리오 요약 -->
+    <div id="stPortfolioSummary" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;margin-bottom:20px;display:none">
+      <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">내 포트폴리오</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><div style="font-size:.7rem;color:var(--text-muted)">평가금액</div><div id="stPfVal" style="font-size:1.2rem;font-weight:900">0P</div></div>
+        <div><div style="font-size:.7rem;color:var(--text-muted)">손익</div><div id="stPfPnl" style="font-size:1.2rem;font-weight:900">0P</div></div>
+        <div><div style="font-size:.7rem;color:var(--text-muted)">수익률</div><div id="stPfRate" style="font-size:1.2rem;font-weight:900">0%</div></div>
+      </div>
+      <div id="stHoldings" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+    <!-- 종목 목록 -->
+    <div id="stStockList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px"></div>
+    <!-- 거래 패널 -->
+    <div id="stTradePanel" style="display:none;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div id="stTradeTicker" style="font-size:.9rem;font-weight:900"></div>
+        <div id="stTradePrice" style="font-size:1.1rem;font-weight:900"></div>
+        <button onclick="stClosePanel()" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button id="stTabBuy"  onclick="stSetMode('buy')"  style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:800;font-size:.85rem;cursor:pointer;font-family:inherit;background:#22c55e;color:#000">매수</button>
+        <button id="stTabSell" onclick="stSetMode('sell')" style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:800;font-size:.85rem;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.08);color:var(--text-muted)">매도</button>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:4px">수량 (주)</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="stQtyInput" type="number" min="1" step="1" value="1"
+            style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:1rem;font-weight:700;font-family:inherit;outline:none"
+            oninput="stUpdateTotal()">
+          <button onclick="stSetQtyAll()" style="padding:9px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">최대</button>
+        </div>
+        <div style="display:flex;gap:5px;margin-top:6px">
+          <button class="st-qty-chip" onclick="stAddQty(1)">+1</button>
+          <button class="st-qty-chip" onclick="stAddQty(10)">+10</button>
+          <button class="st-qty-chip" onclick="stAddQty(100)">+100</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:14px">
+        <span style="color:var(--text-muted)">총 <span id="stMode2">매수</span>금액</span>
+        <span id="stTotal" style="font-weight:800">0P</span>
+      </div>
+      <div id="stHoldingInfo" style="font-size:.75rem;color:var(--text-muted);margin-bottom:10px"></div>
+      <button id="stExecBtn" onclick="stExecute()" style="width:100%;padding:12px;border-radius:10px;border:none;font-weight:900;font-size:.95rem;cursor:pointer;font-family:inherit">주문 실행</button>
+    </div>
+    <!-- 차트 -->
+    <div id="stChartWrap" style="display:none;margin-top:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px">
+      <div id="stChartLabel" style="font-size:.75rem;color:var(--text-muted);margin-bottom:8px"></div>
+      <canvas id="stChart" width="860" height="160" style="width:100%;height:auto;display:block"></canvas>
+    </div>
   </div>
 </div>
 
@@ -1613,6 +1693,7 @@ async function placeBet(team) {
       if (msg.type === 'points_update' && msg.name === myName) savePts(msg.points);
       if (msg.type === 'feed_update' && msg.items) renderFeed(msg.items);
       if (msg.type === 'crash_state') applyCrashState(msg);
+      if (msg.type === 'stock_update' && stData) { stData.stocks=msg.stocks; stData.marketOpen=msg.stocks[0]?.marketOpen??stData.marketOpen; stRenderAll(); }
       if (msg.type === 'timing_won' && currentGame === 'timing') {
         tgSession = null; if (tgRaf){cancelAnimationFrame(tgRaf);tgRaf=null;}
         const wrap = document.getElementById('tgWrap');
@@ -5585,6 +5666,306 @@ function hide(id){const e=$c(id);if(e)e.style.display='none';}
 
 })(); // end IIFE v2
 
+/* ══════════════════════════════════════════════
+   주식 게임
+══════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+let stData = null;       // { stocks, portfolio, marketOpen }
+let stSelected = null;   // 선택된 종목 id
+let stMode = 'buy';      // 'buy' | 'sell'
+let stInited = false;
+let stPollTimer = null;
+
+window.initStock = async function() {
+  if(stInited){ stRefresh(); return; }
+  stInited = true;
+  await stRefresh();
+  // 30초 자동 갱신
+  stPollTimer = setInterval(stRefresh, 30000);
+  // WebSocket 이벤트 수신
+  document.addEventListener('ws_stock_update', e => {
+    if(!stData) return;
+    stData.stocks = e.detail.stocks;
+    stData.marketOpen = e.detail.stocks[0]?.marketOpen ?? stData.marketOpen;
+    stRenderAll();
+  });
+};
+
+async function stRefresh() {
+  const r = await fetch('/api/stocks').then(r=>r.json()).catch(()=>null);
+  if(!r||!r.ok) return;
+  stData = r;
+  stRenderAll();
+}
+
+window.stRenderAll = function stRenderAll() {
+  if(!stData) return;
+  stRenderMarketStatus();
+  stRenderPortfolio();
+  stRenderStockList();
+  if(stSelected) stRenderTradePanel(stSelected);
+  if(stSelected) stDrawChart(stSelected);
+}
+
+function stRenderMarketStatus() {
+  const el = document.getElementById('stMarketStatus');
+  if(!el) return;
+  el.innerHTML = stData.marketOpen
+    ? '<span style="color:#4ade80;font-weight:700">● 장 운영중</span>'
+    : '<span style="color:#f87171;font-weight:700">● 장 마감</span> <span style="color:var(--text-muted)">09:00~15:00에 거래 가능</span>';
+}
+
+function stRenderPortfolio() {
+  const pf = stData.portfolio;
+  const wrap = document.getElementById('stPortfolioSummary');
+  if(!wrap) return;
+  if(!pf || Object.keys(pf).length === 0) { wrap.style.display='none'; return; }
+  wrap.style.display = '';
+  let totalVal=0, totalCost=0;
+  Object.entries(pf).forEach(([id, hold]) => {
+    const s = stData.stocks.find(s=>s.id===id);
+    if(!s||!hold.shares) return;
+    totalVal  += s.price * hold.shares;
+    totalCost += hold.avgCost * hold.shares;
+  });
+  const pnl = totalVal - totalCost;
+  const rate = totalCost ? (pnl/totalCost*100).toFixed(2) : 0;
+  document.getElementById('stPfVal').textContent  = totalVal.toLocaleString() + 'P';
+  document.getElementById('stPfPnl').textContent  = (pnl>=0?'+':'')+pnl.toLocaleString()+'P';
+  document.getElementById('stPfPnl').style.color  = pnl>0?'#4ade80':pnl<0?'#f87171':'#fff';
+  document.getElementById('stPfRate').textContent = (pnl>=0?'+':'')+rate+'%';
+  document.getElementById('stPfRate').style.color = pnl>0?'#4ade80':pnl<0?'#f87171':'#fff';
+  // 보유 태그
+  const hEl = document.getElementById('stHoldings');
+  hEl.innerHTML = '';
+  Object.entries(pf).forEach(([id, hold]) => {
+    const s = stData.stocks.find(s=>s.id===id);
+    if(!s||!hold.shares) return;
+    const val = s.price * hold.shares;
+    const gain = val - hold.avgCost * hold.shares;
+    const gainStr = (gain>=0?'+':'')+gain.toLocaleString()+'P';
+    const gainClr = gain>0?'#4ade80':gain<0?'#f87171':'#aaa';
+    const tag = document.createElement('div');
+    tag.className='st-holding-tag';
+    tag.style.cursor='pointer';
+    tag.innerHTML=`<span style="color:${s.color}">${s.ticker}</span> ${hold.shares}주 <span style="color:${gainClr}">${gainStr}</span>`;
+    tag.onclick=()=>stSelectStock(id);
+    hEl.appendChild(tag);
+  });
+}
+
+function stRenderStockList() {
+  const wrap = document.getElementById('stStockList');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  (stData.stocks||[]).forEach(s => {
+    const isPos = s.change >= 0;
+    const chgCls = s.change>0?'st-change-pos':s.change<0?'st-change-neg':'st-change-neu';
+    const chgStr = (s.change>=0?'+':'')+s.change+'%';
+    const card = document.createElement('div');
+    card.className = 'st-stock-card' + (stSelected===s.id?' selected':'');
+    card.onclick = () => stSelectStock(s.id);
+    // 미니 스파크라인
+    const sparkId = 'spark_'+s.id;
+    card.innerHTML = `
+      <div style="width:44px;height:44px;border-radius:10px;background:${s.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span style="font-size:1.1rem;font-weight:900;color:${s.color}">${s.ticker[0]}</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:.9rem">${s.name}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+          <span class="st-ticker-badge" style="background:${s.color}22;color:${s.color}">${s.ticker}</span>
+          <span style="font-size:.7rem;color:var(--text-muted)">고:${s.high.toLocaleString()} 저:${s.low.toLocaleString()}</span>
+        </div>
+      </div>
+      <canvas id="${sparkId}" width="80" height="36" style="flex-shrink:0"></canvas>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="st-price">${s.price.toLocaleString()}P</div>
+        <div class="${chgCls}">${chgStr}</div>
+      </div>`;
+    wrap.appendChild(card);
+    // 스파크라인 그리기
+    requestAnimationFrame(() => stDrawSpark(sparkId, s));
+  });
+}
+
+function stDrawSpark(canvasId, s) {
+  const cv = document.getElementById(canvasId);
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const hist = s.history;
+  if(hist.length < 2) return;
+  const w=cv.width, h=cv.height;
+  const mn=Math.min(...hist), mx=Math.max(...hist);
+  const rng=mx-mn||1;
+  ctx.clearRect(0,0,w,h);
+  ctx.beginPath();
+  hist.forEach((v,i)=>{
+    const x=i/(hist.length-1)*w;
+    const y=h-(v-mn)/rng*(h-4)-2;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  const isUp = hist[hist.length-1] >= hist[0];
+  ctx.strokeStyle = isUp ? '#4ade80' : '#f87171';
+  ctx.lineWidth=2;
+  ctx.stroke();
+}
+
+function stSelectStock(id) {
+  stSelected = id;
+  stRenderStockList();
+  stRenderTradePanel(id);
+  stDrawChart(id);
+  const panel = document.getElementById('stTradePanel');
+  const chartWrap = document.getElementById('stChartWrap');
+  if(panel) panel.style.display='';
+  if(chartWrap) chartWrap.style.display='';
+  panel?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function stClosePanel() {
+  stSelected = null;
+  document.getElementById('stTradePanel').style.display='none';
+  document.getElementById('stChartWrap').style.display='none';
+  stRenderStockList();
+}
+
+function stRenderTradePanel(id) {
+  const s = stData?.stocks?.find(s=>s.id===id);
+  if(!s) return;
+  const tickerEl = document.getElementById('stTradeTicker');
+  const priceEl  = document.getElementById('stTradePrice');
+  if(tickerEl) tickerEl.innerHTML = `<span style="color:${s.color};font-weight:900">${s.ticker}</span> <span style="color:var(--text-muted);font-size:.8rem">${s.name}</span>`;
+  if(priceEl)  priceEl.textContent = s.price.toLocaleString()+'P/주';
+  stUpdateTotal();
+  stUpdateHoldingInfo();
+  const execBtn = document.getElementById('stExecBtn');
+  if(execBtn) {
+    execBtn.style.background = stMode==='buy' ? '#22c55e' : '#ef4444';
+    execBtn.style.color = '#000';
+    execBtn.textContent = stMode==='buy' ? `${s.name} 매수` : `${s.name} 매도`;
+  }
+}
+
+window.stSetMode = function(mode) {
+  stMode = mode;
+  const buyTab  = document.getElementById('stTabBuy');
+  const sellTab = document.getElementById('stTabSell');
+  const mode2   = document.getElementById('stMode2');
+  if(buyTab)  buyTab.style.background  = mode==='buy'  ? '#22c55e' : 'rgba(255,255,255,.08)';
+  if(buyTab)  buyTab.style.color       = mode==='buy'  ? '#000' : 'var(--text-muted)';
+  if(sellTab) sellTab.style.background = mode==='sell' ? '#ef4444' : 'rgba(255,255,255,.08)';
+  if(sellTab) sellTab.style.color      = mode==='sell' ? '#000' : 'var(--text-muted)';
+  if(mode2)   mode2.textContent        = mode==='buy'  ? '매수' : '매도';
+  if(stSelected) stRenderTradePanel(stSelected);
+  stUpdateHoldingInfo();
+};
+
+window.stUpdateTotal = function() {
+  const s = stData?.stocks?.find(s=>s.id===stSelected);
+  if(!s) return;
+  const qty = parseInt(document.getElementById('stQtyInput')?.value)||0;
+  const total = s.price * Math.max(0, qty);
+  const el = document.getElementById('stTotal');
+  if(el) el.textContent = total.toLocaleString()+'P';
+};
+
+window.stAddQty = function(n) {
+  const inp = document.getElementById('stQtyInput');
+  if(!inp) return;
+  inp.value = Math.max(1, (parseInt(inp.value)||0)+n);
+  stUpdateTotal();
+};
+
+window.stSetQtyAll = function() {
+  const s = stData?.stocks?.find(s=>s.id===stSelected);
+  if(!s) return;
+  const inp = document.getElementById('stQtyInput');
+  if(!inp) return;
+  if(stMode==='buy') {
+    const myPts = parseInt(document.getElementById('navPts')?.textContent?.replace(/,/g,''))||0;
+    inp.value = Math.max(1, Math.floor(myPts/s.price));
+  } else {
+    const pf = stData?.portfolio;
+    inp.value = pf?.[stSelected]?.shares || 1;
+  }
+  stUpdateTotal();
+};
+
+function stUpdateHoldingInfo() {
+  const el = document.getElementById('stHoldingInfo');
+  if(!el) return;
+  const pf = stData?.portfolio;
+  const hold = pf?.[stSelected];
+  if(!hold || !hold.shares) { el.textContent=''; return; }
+  const s = stData.stocks.find(s=>s.id===stSelected);
+  const val = s ? s.price * hold.shares : 0;
+  el.textContent = `보유: ${hold.shares.toLocaleString()}주 · 평단: ${hold.avgCost.toLocaleString()}P · 평가: ${val.toLocaleString()}P`;
+}
+
+window.stExecute = async function() {
+  if(!stSelected||!stData) return;
+  if(!stData.marketOpen) { toast('장이 닫혀 있습니다 (09:00~15:00)','err'); return; }
+  const qty = parseInt(document.getElementById('stQtyInput')?.value)||0;
+  if(qty<1) { toast('수량을 입력하세요','err'); return; }
+  const btn = document.getElementById('stExecBtn');
+  if(btn) btn.disabled=true;
+  const url = stMode==='buy' ? '/api/stocks/buy' : '/api/stocks/sell';
+  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stockId:stSelected,shares:qty})})
+    .then(r=>r.json()).catch(()=>({ok:false,error:'오류'}));
+  if(btn) btn.disabled=false;
+  if(!r.ok) { toast(r.error||'실패','err'); return; }
+  if(r.points!=null) savePts(r.points);
+  stData.portfolio = r.portfolio||{};
+  toast(stMode==='buy'?`${qty}주 매수 완료!`:`${qty}주 매도 완료!`, 'ok');
+  stRenderAll();
+};
+
+function stDrawChart(id) {
+  const s = stData?.stocks?.find(s=>s.id===id);
+  if(!s) return;
+  const cv = document.getElementById('stChart');
+  if(!cv) return;
+  const label = document.getElementById('stChartLabel');
+  if(label) label.textContent = `${s.name} (${s.ticker}) — 최근 ${s.history.length}틱 가격 추이`;
+  const ctx = cv.getContext('2d');
+  const w=cv.width, h=cv.height;
+  const hist=s.history;
+  if(hist.length<2){ctx.clearRect(0,0,w,h);return;}
+  const mn=Math.min(...hist), mx=Math.max(...hist);
+  const rng=mx-mn||1;
+  const pad=10;
+  ctx.clearRect(0,0,w,h);
+  // 그리드 라인
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+  for(let i=0;i<4;i++){const y=pad+(h-pad*2)/(3)*i;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  // 가격 영역 채우기
+  ctx.beginPath();
+  hist.forEach((v,i)=>{const x=pad+i/(hist.length-1)*(w-pad*2);const y=pad+(1-(v-mn)/rng)*(h-pad*2);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(pad+(hist.length-1)/(hist.length-1)*(w-pad*2),h);ctx.lineTo(pad,h);ctx.closePath();
+  const isUp=hist[hist.length-1]>=hist[0];
+  const grad=ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,isUp?'rgba(74,222,128,.25)':'rgba(248,113,113,.25)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grad;ctx.fill();
+  // 라인
+  ctx.beginPath();
+  hist.forEach((v,i)=>{const x=pad+i/(hist.length-1)*(w-pad*2);const y=pad+(1-(v-mn)/rng)*(h-pad*2);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle=isUp?'#4ade80':'#f87171';ctx.lineWidth=2;ctx.stroke();
+  // 현재가 표시
+  const lastX=w-pad, lastY=pad+(1-(hist[hist.length-1]-mn)/rng)*(h-pad*2);
+  ctx.beginPath();ctx.arc(lastX,lastY,4,0,Math.PI*2);ctx.fillStyle=isUp?'#4ade80':'#f87171';ctx.fill();
+  // 가격 텍스트
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='11px monospace';
+  ctx.fillText(mx.toLocaleString()+'P', 2, pad+4);
+  ctx.fillText(mn.toLocaleString()+'P', 2, h-pad+4);
+}
+
+// stock_update는 ws.onmessage에서 직접 stRenderAll() 호출
+
+})(); // end stock IIFE
 </script>
 </body>
 </html>

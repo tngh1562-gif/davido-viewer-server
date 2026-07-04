@@ -39,6 +39,7 @@ const POSTS_FILE      = path.join(DATA_DIR, 'posts.json');
 const COMMENTS_FILE   = path.join(DATA_DIR, 'comments.json');
 const FEED_FILE       = path.join(DATA_DIR, 'feed.json');
 const ATTENDANCE_FILE = path.join(DATA_DIR, 'attendance.json');
+const STOCKS_FILE     = path.join(DATA_DIR, 'stocks.json');
 
 // data/ 디렉토리 자동 생성 (Railway 배포 시 없으면 크래시 방지)
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
@@ -1763,6 +1764,167 @@ app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) 
   viewer.monsterGame = gameData;
   saveViewer(viewers);
   res.json({ ok: true });
+});
+
+// ══════════════════════════════════════════════════════════
+// 주식 게임
+// ══════════════════════════════════════════════════════════
+const STOCK_DEFS = [
+  { id:'dvdo',  name:'다비도Corp', ticker:'DVDO', basePrice:1000, vol:0.025, color:'#a855f7' },
+  { id:'blue',  name:'블루팀증권', ticker:'BLUE', basePrice:500,  vol:0.035, color:'#3b82f6' },
+  { id:'red',   name:'레드팀증권', ticker:'RED',  basePrice:500,  vol:0.035, color:'#ef4444' },
+  { id:'chkn',  name:'치킨거래소', ticker:'CHKN', basePrice:300,  vol:0.05,  color:'#f59e0b' },
+  { id:'bank',  name:'포인트은행', ticker:'BANK', basePrice:2000, vol:0.012, color:'#10b981' },
+];
+const STOCK_TICK_MS   = 30000; // 30초마다 가격 변동
+const STOCK_OPEN_H    = 9;     // KST 9시 장 시작
+const STOCK_CLOSE_H   = 15;    // KST 15시 장 마감
+const STOCK_HIST_MAX  = 60;    // 최대 60틱 히스토리
+
+function stocksInit() {
+  const saved = readJSON(STOCKS_FILE, {});
+  return STOCK_DEFS.map(def => {
+    const s = saved[def.id] || {};
+    return {
+      ...def,
+      price:   Math.max(10, s.price   || def.basePrice),
+      open:    s.open    || def.basePrice,
+      high:    s.high    || def.basePrice,
+      low:     s.low     || def.basePrice,
+      prevClose: s.prevClose || def.basePrice,
+      history: Array.isArray(s.history) ? s.history : [def.basePrice],
+      totalVol: s.totalVol || 0,
+    };
+  });
+}
+
+let stocks = stocksInit();
+
+function isMarketOpen() {
+  const now = new Date(Date.now() + 9*3600000); // KST
+  const h = now.getUTCHours();
+  return h >= STOCK_OPEN_H && h < STOCK_CLOSE_H;
+}
+
+function stockTick() {
+  if (!isMarketOpen()) return;
+  let changed = false;
+  stocks.forEach(s => {
+    const sign  = Math.random() < 0.5 ? 1 : -1;
+    const pct   = Math.random() * s.vol * sign;
+    // 평균회귀: 기준가 대비 50% 이상 이탈 시 당김
+    const drift = (s.basePrice - s.price) / s.basePrice * 0.008;
+    const newPrice = Math.max(10, Math.round(s.price * (1 + pct + drift)));
+    s.price = newPrice;
+    s.high  = Math.max(s.high, newPrice);
+    s.low   = Math.min(s.low,  newPrice);
+    s.history.push(newPrice);
+    if (s.history.length > STOCK_HIST_MAX) s.history.shift();
+    changed = true;
+  });
+  if (changed) {
+    const save = {};
+    stocks.forEach(s => { save[s.id] = { price:s.price, open:s.open, high:s.high, low:s.low, prevClose:s.prevClose, history:s.history, totalVol:s.totalVol }; });
+    writeJSON(STOCKS_FILE, save);
+    broadcast({ type:'stock_update', stocks: stocksPublic() });
+  }
+}
+
+// 장 마감 시 일일 데이터 초기화
+function stockDayClose() {
+  const nowH = new Date(Date.now()+9*3600000).getUTCHours();
+  if (nowH === STOCK_CLOSE_H) {
+    stocks.forEach(s => { s.prevClose = s.price; s.open = s.price; s.high = s.price; s.low = s.price; });
+    broadcast({ type:'stock_update', stocks: stocksPublic() });
+  }
+}
+
+setInterval(stockTick,     STOCK_TICK_MS);
+setInterval(stockDayClose, 60000);
+
+function stocksPublic() {
+  return stocks.map(s => ({
+    id:s.id, name:s.name, ticker:s.ticker, color:s.color,
+    price:s.price, open:s.open, high:s.high, low:s.low,
+    prevClose:s.prevClose, history:s.history,
+    change: s.prevClose ? Math.round((s.price-s.prevClose)/s.prevClose*10000)/100 : 0,
+    marketOpen: isMarketOpen(),
+  }));
+}
+
+// 포트폴리오 헬퍼
+function getPortfolio(viewer) {
+  if (!viewer.stockPortfolio) viewer.stockPortfolio = {};
+  return viewer.stockPortfolio;
+}
+
+// GET /api/stocks
+app.get('/api/stocks', (req, res) => {
+  const name = getSessionName(req);
+  let portfolio = null;
+  if (name) {
+    const { viewer } = getViewer(name);
+    portfolio = getPortfolio(viewer);
+  }
+  res.json({ ok:true, stocks: stocksPublic(), portfolio, marketOpen: isMarketOpen() });
+});
+
+// POST /api/stocks/buy  { stockId, shares }
+app.post('/api/stocks/buy', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok:false, error:'로그인 필요' });
+  if (!isMarketOpen()) return res.json({ ok:false, error:'장이 닫혀 있습니다 (09:00~15:00)' });
+  const { stockId, shares } = req.body || {};
+  const stock = stocks.find(s => s.id === stockId);
+  if (!stock) return res.json({ ok:false, error:'종목 없음' });
+  const qty = Math.floor(Number(shares));
+  if (!qty || qty < 1) return res.json({ ok:false, error:'최소 1주' });
+  if (qty > 10000) return res.json({ ok:false, error:'1회 최대 10,000주' });
+  const total = stock.price * qty;
+  try {
+    const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+      { nickname:name, amount:total, reason:`📈 ${stock.ticker} ${qty}주 매수 (-${total}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    if (!dr.ok) return res.json({ ok:false, error: dr.error || '포인트 부족' });
+    const { viewers, viewer } = getViewer(name);
+    const pf = getPortfolio(viewer);
+    if (!pf[stockId]) pf[stockId] = { shares:0, avgCost:0 };
+    const prev = pf[stockId];
+    const newShares = prev.shares + qty;
+    prev.avgCost = Math.round((prev.avgCost * prev.shares + total) / newShares);
+    prev.shares  = newShares;
+    stock.totalVol += qty;
+    saveViewer(viewers);
+    addFeed('stock', name, { reason:`📈 ${stock.name} ${qty}주 매수 (${stock.price}P)` });
+    res.json({ ok:true, points: dr.points, portfolio: getPortfolio(viewer) });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// POST /api/stocks/sell  { stockId, shares }
+app.post('/api/stocks/sell', async (req, res) => {
+  const name = getSessionName(req);
+  if (!name) return res.json({ ok:false, error:'로그인 필요' });
+  if (!isMarketOpen()) return res.json({ ok:false, error:'장이 닫혀 있습니다 (09:00~15:00)' });
+  const { stockId, shares } = req.body || {};
+  const stock = stocks.find(s => s.id === stockId);
+  if (!stock) return res.json({ ok:false, error:'종목 없음' });
+  const qty = Math.floor(Number(shares));
+  if (!qty || qty < 1) return res.json({ ok:false, error:'최소 1주' });
+  const { viewers, viewer } = getViewer(name);
+  const pf = getPortfolio(viewer);
+  if (!pf[stockId] || pf[stockId].shares < qty) return res.json({ ok:false, error:'보유 수량 부족' });
+  const total = stock.price * qty;
+  try {
+    const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
+      { nickname:name, amount:total, reason:`📉 ${stock.ticker} ${qty}주 매도 (+${total}P)` },
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    pf[stockId].shares -= qty;
+    if (pf[stockId].shares === 0) delete pf[stockId];
+    stock.totalVol += qty;
+    saveViewer(viewers);
+    addFeed('stock', name, { reason:`📉 ${stock.name} ${qty}주 매도 (+${total}P)` });
+    res.json({ ok:true, points: gr.points, portfolio: getPortfolio(viewer) });
+  } catch(e) { res.json({ ok:false, error:e.message }); }
 });
 
 // ── WebSocket ──
