@@ -982,14 +982,21 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div id="betTimer" style="display:none;font-size:15px;font-weight:700;color:#fbbf24;margin-bottom:8px">⏱ <span id="betTimerVal">3:00</span> 남음</div>
       <!-- 배팅 금액 버튼 -->
       <div id="betAmtSection">
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">배팅 금액 선택 (최대 20P)</div>
-        <div class="bet-amt-row">
-          <button class="bet-chip" onclick="setBetAmt(5)">5P</button>
-          <button class="bet-chip" onclick="setBetAmt(10)">10P</button>
-          <button class="bet-chip" onclick="setBetAmt(15)">15P</button>
-          <button class="bet-chip active" onclick="setBetAmt(20)">MAX 20P</button>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">배팅 금액 입력</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+          <input id="betAmtInput" type="number" min="1" step="1" value="100"
+            style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font-size:1rem;font-weight:700;font-family:inherit;outline:none"
+            oninput="setBetAmtInput(this.value)"
+            onkeydown="if(event.key==='Enter'){placeBet('blue')||placeBet('red')}">
+          <span style="color:var(--text-muted);font-weight:700">P</span>
         </div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">선택: <span id="betAmtDisplay" style="color:#fff;font-weight:700">20</span>P</div>
+        <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="bet-chip" onclick="setBetAmt(100)">100</button>
+          <button class="bet-chip" onclick="setBetAmt(300)">300</button>
+          <button class="bet-chip" onclick="setBetAmt(500)">500</button>
+          <button class="bet-chip" onclick="setBetAmt(1000)">1000</button>
+          <button class="bet-chip" onclick="setBetAmtAll()">ALL-IN</button>
+        </div>
         <div class="bet-action-row">
           <button class="bet-btn blue" id="betBlueBtn" onclick="placeBet('blue')">🔵 블루 배팅</button>
           <button class="bet-btn red" id="betRedBtn" onclick="placeBet('red')">🔴 레드 배팅</button>
@@ -1471,7 +1478,7 @@ async function refreshMe(){
 })();
 
 /* ══════════ LIVE BETTING ══════════ */
-let betAmt = 20;
+let betAmt = 100;
 let bettingData = { status: 'idle', blueTeam:{name:'BLUE',members:[]}, redTeam:{name:'RED',members:[]}, bets:{}, result:null };
 let betTimerInterval = null;
 
@@ -1500,8 +1507,22 @@ function stopBetCountdown() {
 
 function setBetAmt(n) {
   betAmt = n;
-  document.getElementById('betAmtDisplay').textContent = n;
-  document.querySelectorAll('.bet-chip').forEach(b => b.classList.toggle('active', parseInt(b.textContent) === n || (n===20 && b.textContent.includes('MAX'))));
+  const inp = document.getElementById('betAmtInput');
+  if (inp) inp.value = n;
+  document.querySelectorAll('.bet-chip').forEach(b => b.classList.remove('active'));
+}
+function setBetAmtInput(v) {
+  const n = parseInt(v) || 1;
+  betAmt = Math.max(1, n);
+  document.querySelectorAll('.bet-chip').forEach(b => b.classList.remove('active'));
+}
+function setBetAmtAll() {
+  const pts = parseInt(document.getElementById('navPts')?.textContent?.replace(/,/g,'')) || 0;
+  if (pts < 1) return;
+  betAmt = pts;
+  const inp = document.getElementById('betAmtInput');
+  if (inp) inp.value = pts;
+  document.querySelectorAll('.bet-chip').forEach(b => b.classList.toggle('active', b.textContent === 'ALL-IN'));
 }
 
 function renderBetting(data) {

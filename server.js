@@ -26,7 +26,7 @@ const DATA_DIR = resolveDataDir();
 console.log(`[DATA] DATA_DIR: ${DATA_DIR}`);
 
 // ── 배팅 밸런스 상수 ──
-const BET_MAX      = 100;   // 1판 최대 배팅 포인트
+const BET_MAX      = 100000; // 1판 최대 배팅 포인트 (사실상 무제한)
 const BET_MAX_MULT = 2.0;   // 배당 상한 (풀 쏠려도 최대 2배)
 const BET_RAKE     = 0.10;  // 하우스 수수료 10% → 실질 최대 1.8x
 
