@@ -1770,11 +1770,11 @@ app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) 
 // 주식 게임
 // ══════════════════════════════════════════════════════════
 const STOCK_DEFS = [
-  { id:'dvdo',  name:'다비도Corp', ticker:'DVDO', basePrice:1000, vol:0.025, color:'#a855f7' },
-  { id:'blue',  name:'블루팀증권', ticker:'BLUE', basePrice:500,  vol:0.035, color:'#3b82f6' },
-  { id:'red',   name:'레드팀증권', ticker:'RED',  basePrice:500,  vol:0.035, color:'#ef4444' },
-  { id:'chkn',  name:'치킨거래소', ticker:'CHKN', basePrice:300,  vol:0.05,  color:'#f59e0b' },
-  { id:'bank',  name:'포인트은행', ticker:'BANK', basePrice:2000, vol:0.012, color:'#10b981' },
+  { id:'dvdo',  name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, vol:0.025, color:'#a855f7' },
+  { id:'blue',  name:'개이득전자',       ticker:'GAIN', basePrice:500,  vol:0.035, color:'#3b82f6' },
+  { id:'red',   name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  vol:0.035, color:'#ef4444' },
+  { id:'chkn',  name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  vol:0.05,  color:'#f59e0b' },
+  { id:'bank',  name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, vol:0.012, color:'#10b981' },
 ];
 const STOCK_TICK_MS   = 30000; // 30초마다 가격 변동
 const STOCK_OPEN_H    = 9;     // KST 9시 장 시작

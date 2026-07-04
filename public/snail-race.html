@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🐌 달팽이 경주</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#0a0e1a;color:#f0f0f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.wrap{width:100%;max-width:860px;display:flex;flex-direction:column;gap:14px}
+
+/* ── 헤더 ── */
+.game-header{text-align:center}
+.game-title{font-size:2rem;font-weight:900;letter-spacing:-1px}
+.game-title span{background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.game-sub{font-size:.8rem;color:#64748b;margin-top:4px}
+
+/* ── 트랙 ── */
+.track-container{
+  position:relative;
+  border-radius:16px;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,.1);
+  background:#1a2744;
+  height:340px;
+}
+#trackBg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.7}
+.track-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,14,26,.4) 0%,transparent 10%,transparent 85%,rgba(10,14,26,.6) 100%)}
+#raceCanvas{position:absolute;inset:0;width:100%;height:100%}
+
+/* 이벤트 알림 */
+.event-banner{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.85);backdrop-filter:blur(8px);
+  border-radius:30px;padding:8px 20px;
+  font-size:.85rem;font-weight:800;
+  border:1px solid rgba(255,255,255,.15);
+  white-space:nowrap;z-index:10;
+  display:none;
+  animation:bounceIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes bounceIn{from{transform:translateX(-50%) scale(.5);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+
+/* 결승선 */
+.finish-flag{
+  position:absolute;right:40px;top:0;bottom:0;
+  width:4px;background:repeating-linear-gradient(180deg,#fff 0,#fff 10px,#000 10px,#000 20px);
+  z-index:5;opacity:.8;
+}
+.finish-flag::after{content:'🏁';position:absolute;top:-4px;left:-4px;font-size:20px}
+
+/* 레인 구분선 */
+.lane-line{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.08);z-index:2}
+
+/* ── 달팽이 정보 패널 ── */
+.snails-panel{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+}
+.snail-card{
+  background:#0f1420;border:2px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:10px 8px;text-align:center;
+  cursor:pointer;transition:all .15s;position:relative;
+  overflow:hidden;
+}
+.snail-card:hover{border-color:rgba(255,255,255,.2);background:#161d2e}
+.snail-card.selected{border-color:var(--sc);background:rgba(var(--scr),0.12);box-shadow:0 0 16px rgba(var(--scr),.3)}
+.snail-card.winner-glow{animation:winnerPulse .5s ease infinite alternate}
+@keyframes winnerPulse{from{box-shadow:0 0 10px var(--sc)}to{box-shadow:0 0 30px var(--sc),0 0 60px rgba(var(--scr),.4)}}
+.snail-emoji{font-size:2rem;margin-bottom:4px;display:block;transition:transform .3s}
+.snail-card:hover .snail-emoji{transform:scale(1.15)}
+.snail-name{font-size:.72rem;font-weight:800;margin-bottom:4px}
+.snail-odds{font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(255,200,68,.12);color:#fbbf24;border:1px solid rgba(255,200,68,.2)}
+.snail-pos{font-size:.65rem;color:#64748b;margin-top:4px}
+.snail-pos .pos-num{font-weight:900;color:#f0f0f8}
+.rank-badge{
+  position:absolute;top:6px;right:6px;
+  width:18px;height:18px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.58rem;font-weight:900;
+  display:none;
+}
+
+/* ── 베팅 ── */
+.bet-section{
+  background:#0f1420;border:1px solid rgba(255,255,255,.07);
+  border-radius:14px;padding:16px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.bet-label{font-size:.68rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.bet-chips{display:flex;gap:6px;flex-wrap:wrap}
+.bchip{
+  padding:6px 14px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
+  color:#64748b;font-size:.75rem;font-weight:700;
+  cursor:pointer;transition:all .12s;font-family:inherit;
+}
+.bchip:hover{border-color:rgba(251,191,36,.4);color:#fbbf24}
+.bchip.sel{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.4);color:#fbbf24}
+.bet-disp{font-size:.72rem;color:#64748b;margin-left:auto;white-space:nowrap}
+.bet-disp b{color:#fbbf24}
+
+/* ── 상태 ── */
+.state-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;
+}
+.my-pts{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);
+  font-size:.78rem;font-weight:800;color:#fbbf24;
+}
+.phase-info{
+  font-size:.8rem;font-weight:700;color:#64748b;
+  display:flex;align-items:center;gap:6px;
+}
+.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.phase-dot.betting{background:#10b981;animation:blink 1.2s ease-in-out infinite}
+.phase-dot.racing{background:#ef4444;animation:blink .6s ease-in-out infinite}
+.phase-dot.done{background:#64748b}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.timer-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.timer-bar-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:3px;transition:width .1s linear}
+
+/* ── 주요 액션 버튼 ── */
+.action-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#000;font-weight:900;font-size:.9rem;
+  border:none;border-radius:12px;cursor:pointer;
+  font-family:inherit;letter-spacing:.3px;
+  box-shadow:0 4px 20px rgba(16,185,129,.3);
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.action-btn:hover{box-shadow:0 4px 28px rgba(16,185,129,.5);filter:brightness(1.05)}
+.action-btn:disabled{opacity:.35;cursor:not-allowed;filter:none;box-shadow:none}
+.action-btn.waiting{background:linear-gradient(135deg,#374151,#1f2937);color:#64748b}
+
+/* ── 결과 ── */
+.result-card{
+  background:#0f1420;border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:20px;text-align:center;
+  display:none;
+}
+.result-card.show{display:block;animation:slideUp .3s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.result-title{font-size:1.3rem;font-weight:900;margin-bottom:8px}
+.result-sub{font-size:.8rem;color:#64748b;margin-bottom:12px}
+.result-reward{
+  display:inline-block;padding:8px 20px;border-radius:10px;
+  font-size:.9rem;font-weight:800;margin-bottom:14px;
+}
+.reward-win{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#10b981}
+.reward-lose{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#ef4444}
+.result-order{display:flex;justify-content:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.order-item{display:flex;align-items:center;gap:4px;font-size:.78rem;background:rgba(255,255,255,.05);padding:4px 10px;border-radius:8px}
+
+/* 폭죽 */
+.firework{position:fixed;pointer-events:none;z-index:1000}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="game-header">
+    <div class="game-title">🐌 <span>달팽이 경주</span> 🏁</div>
+    <div class="game-sub">누가 이길지 아무도 몰라요 — 이벤트로 판세가 뒤집힙니다!</div>
+  </div>
+
+  <!-- 포인트 + 상태 -->
+  <div class="state-bar">
+    <div class="my-pts">◈ <span id="myPts">500</span> P</div>
+    <div class="phase-info">
+      <div class="phase-dot betting" id="phaseDot"></div>
+      <span id="phaseText">베팅 구간</span>
+    </div>
+    <div class="timer-bar-wrap"><div class="timer-bar-fill" id="timerFill" style="width:100%"></div></div>
+  </div>
+
+  <!-- 트랙 -->
+  <div class="track-container" id="trackBox">
+    <img src="/race-track.png" id="trackBg" alt="">
+    <div class="track-overlay"></div>
+    <canvas id="raceCanvas"></canvas>
+    <div class="finish-flag"></div>
+    <div class="event-banner" id="eventBanner"></div>
+  </div>
+
+  <!-- 달팽이 카드 -->
+  <div class="snails-panel" id="snailsPanel"></div>
+
+  <!-- 베팅 -->
+  <div class="bet-section" id="betSection">
+    <span class="bet-label">베팅</span>
+    <div class="bet-chips">
+      <button class="bchip sel" onclick="setBet(10)">10P</button>
+      <button class="bchip" onclick="setBet(20)">20P</button>
+      <button class="bchip" onclick="setBet(30)">30P</button>
+      <button class="bchip" onclick="setBet(50)">50P</button>
+    </div>
+    <span class="bet-disp">선택: <b id="betAmt">10</b>P | 대상: <b id="betTarget">없음</b></span>
+  </div>
+
+  <!-- 액션 -->
+  <button class="action-btn" id="actionBtn" onclick="handleAction()">🐌 베팅하고 경주 시작!</button>
+
+  <!-- 결과 -->
+  <div class="result-card" id="resultCard">
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <div class="result-reward" id="resultReward"></div>
+    <div class="result-order" id="resultOrder"></div>
+    <button class="action-btn" onclick="resetGame()" style="max-width:200px;margin:0 auto">🔄 다시 하기</button>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════
+   달팽이 데이터
+════════════════════════════════ */
+const SNAILS = [
+  { id:0, name:'빨강이', emoji:'🐌', color:'#ef4444', colorRGB:'239,68,68',  odds:2.0 },
+  { id:1, name:'파랑이', emoji:'🐌', color:'#3b82f6', colorRGB:'59,130,246', odds:2.5 },
+  { id:2, name:'초록이', emoji:'🐌', color:'#10b981', colorRGB:'16,185,129', odds:3.0 },
+  { id:3, name:'노랑이', emoji:'🐌', color:'#fbbf24', colorRGB:'251,191,36', odds:1.8 },
+  { id:4, name:'보라이', emoji:'🐌', color:'#a855f7', colorRGB:'168,85,247', odds:4.0 },
+];
+
+/* 랜덤 이벤트 목록 */
+const EVENTS = [
+  { name:'🚀 로켓 점화!',     effect:'boost',    mult:3.5,  desc:name=>`${name}가 로켓처럼 튀어나갔다!` },
+  { name:'💤 낮잠 시간...',   effect:'sleep',    mult:0,    desc:name=>`${name}가 갑자기 잠들어버렸다...` },
+  { name:'⚡ 감전!',          effect:'zap',      mult:-1.5, desc:name=>`${name}가 감전돼서 뒤로 날아갔다!` },
+  { name:'🍄 버섯 파워업!',   effect:'mushroom', mult:2.5,  desc:name=>`${name}가 버섯을 먹고 슈퍼 파워 장착!` },
+  { name:'🌪️ 토네이도!',     effect:'tornado',  mult:0,    desc:name=>`${name}가 토네이도에 휘말렸다!` },
+  { name:'🧲 자석 효과!',     effect:'magnet',   mult:2.0,  desc:name=>`${name}가 결승선에 끌려가고 있다!` },
+  { name:'❄️ 얼음 장판!',    effect:'freeze',   mult:0,    desc:name=>`${name}가 얼어붙었다!` },
+  { name:'💨 돌풍!',          effect:'wind',     mult:2.8,  desc:name=>`거센 바람이 ${name}를 밀고 있다!` },
+  { name:'🍌 바나나 껍질!',   effect:'slip',     mult:-1.0, desc:name=>`${name}가 바나나 껍질에 미끄러졌다!` },
+  { name:'⭐ 무적 스타!',     effect:'star',     mult:4.0,  desc:name=>`${name}에게 무적 스타가 붙었다!` },
+];
+
+/* ════════════════════════════════
+   게임 상태
+════════════════════════════════ */
+let pts = 500;
+let bet = 10;
+let selectedSnail = -1;
+let phase = 'betting'; // betting | racing | result
+let raceTimer = null;
+let eventTimer = null;
+
+// 달팽이 레이스 상태
+const state = SNAILS.map((s,i) => ({
+  ...s,
+  x: 0,           // 0~1 진행도
+  baseSpeed: 0.002 + Math.random() * 0.001,
+  speedMult: 1,
+  effect: null,
+  effectTimer: 0,
+  wobble: Math.random() * Math.PI * 2,
+  rank: 0,
+}));
+
+let raceStarted = false;
+let raceFinished = false;
+let finishOrder = [];
+let frameId = null;
+
+/* ════════════════════════════════
+   UI 초기화
+════════════════════════════════ */
+function initUI() {
+  const panel = document.getElementById('snailsPanel');
+  panel.innerHTML = SNAILS.map(s => `
+    <div class="snail-card" id="card${s.id}"
+      style="--sc:${s.color};--scr:${s.colorRGB}"
+      onclick="selectSnail(${s.id})">
+      <div class="rank-badge" id="rank${s.id}" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44"></div>
+      <span class="snail-emoji" id="emoji${s.id}">${s.emoji}</span>
+      <div class="snail-name" style="color:${s.color}">${s.name}</div>
+      <div class="snail-odds">× ${s.odds.toFixed(1)}</div>
+      <div class="snail-pos">위치 <span class="pos-num" id="pos${s.id}">0%</span></div>
+    </div>`).join('');
+}
+
+function selectSnail(id) {
+  if (phase !== 'betting') return;
+  selectedSnail = id;
+  document.querySelectorAll('.snail-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card'+id).classList.add('selected');
+  document.getElementById('betTarget').textContent = SNAILS[id].name;
+}
+
+function setBet(n) {
+  bet = n;
+  document.querySelectorAll('.bchip').forEach(c => c.classList.remove('sel'));
+  event.target.classList.add('sel');
+  document.getElementById('betAmt').textContent = n;
+}
+
+function updatePts() {
+  document.getElementById('myPts').textContent = pts.toLocaleString();
+}
+
+/* ════════════════════════════════
+   캔버스 설정
+════════════════════════════════ */
+const canvas = document.getElementById('raceCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const box = document.getElementById('trackBox');
+  canvas.width = box.offsetWidth;
+  canvas.height = box.offsetHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+/* ════════════════════════════════
+   레이스 로직
+════════════════════════════════ */
+function startRace() {
+  // 결승 순서 미리 결정 (서버에서 해야 하지만 데모라 클라이언트에서)
+  // 선택한 달팽이에게 약간 유리한 확률 (but not 100%)
+  const shuffled = [...SNAILS.map(s=>s.id)].sort(() => Math.random() - .5);
+  finishOrder = shuffled;
+
+  // 상태 초기화
+  state.forEach(s => {
+    s.x = 0;
+    s.speedMult = 1;
+    s.effect = null;
+    s.effectTimer = 0;
+    s.baseSpeed = 0.0018 + Math.random() * 0.0012;
+  });
+
+  raceStarted = true;
+  raceFinished = false;
+  phase = 'racing';
+  document.getElementById('phaseDot').className = 'phase-dot racing';
+  document.getElementById('phaseText').textContent = '경주 진행 중!';
+  document.getElementById('betSection').style.display = 'none';
+  document.getElementById('actionBtn').style.display = 'none';
+
+  scheduleEvents();
+  animateRace();
+}
+
+/* 랜덤 이벤트 스케줄 */
+function scheduleEvents() {
+  let delay = 2000 + Math.random() * 2000;
+  function triggerEvent() {
+    if (raceFinished) return;
+    const target = state[Math.floor(Math.random() * 5)];
+    const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+    applyEvent(target, ev);
+    delay = 2500 + Math.random() * 3000;
+    eventTimer = setTimeout(triggerEvent, delay);
+  }
+  eventTimer = setTimeout(triggerEvent, delay);
+}
+
+function applyEvent(snail, ev) {
+  snail.effect = ev.effect;
+  snail.effectTimer = 120; // 프레임 수
+
+  if (ev.effect === 'boost' || ev.effect === 'mushroom' || ev.effect === 'magnet' || ev.effect === 'wind' || ev.effect === 'star') {
+    snail.speedMult = ev.mult;
+  } else if (ev.effect === 'sleep' || ev.effect === 'tornado' || ev.effect === 'freeze') {
+    snail.speedMult = 0;
+  } else if (ev.effect === 'zap' || ev.effect === 'slip' || ev.effect === 'banana') {
+    snail.speedMult = ev.mult; // 음수 = 뒤로
+  }
+
+  // 배너 표시
+  const banner = document.getElementById('eventBanner');
+  banner.textContent = ev.desc(snail.name);
+  banner.style.display = 'block';
+  banner.style.borderColor = snail.color;
+  banner.style.color = snail.color;
+
+  // 파티클
+  spawnEventParticles(snail);
+
+  setTimeout(() => {
+    banner.style.display = 'none';
+    snail.speedMult = 1;
+    snail.effect = null;
+  }, 2500);
+}
+
+/* ════════════════════════════════
+   애니메이션
+════════════════════════════════ */
+const LANE_COUNT = 5;
+function getLaneY(i) {
+  const H = canvas.height;
+  const laneH = H / LANE_COUNT;
+  return laneH * i + laneH / 2;
+}
+function getTrackEnd() { return canvas.width - 80; }
+
+let particles = [];
+
+function spawnEventParticles(snail) {
+  const x = snail.x * getTrackEnd() + 60;
+  const y = getLaneY(snail.id);
+  const colors = ['#fbbf24','#ef4444','#10b981','#3b82f6','#a855f7','#fff'];
+  for (let i = 0; i < 18; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*6,
+      vy: (Math.random()-0.5)*6 - 2,
+      life: 50+Math.random()*40,
+      maxLife: 90,
+      r: 3+Math.random()*4,
+      color: colors[Math.floor(Math.random()*colors.length)],
+    });
+  }
+}
+
+function animateRace() {
+  if (raceFinished) return;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 레인 라인
+  for (let i = 1; i < LANE_COUNT; i++) {
+    const y = H/LANE_COUNT * i;
+    ctx.save();
+    ctx.setLineDash([8,12]);
+    ctx.strokeStyle = 'rgba(255,255,255,.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 파티클
+  particles = particles.filter(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life--;
+    const a = p.life/p.maxLife;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle = p.color + Math.round(a*255).toString(16).padStart(2,'0');
+    ctx.fill();
+    return p.life > 0;
+  });
+
+  // 달팽이 이동 + 그리기
+  let finished = 0;
+  state.forEach((s,i) => {
+    // 속도 계산 — 결승 순서에 맞게 선두 조절
+    const targetRank = finishOrder.indexOf(s.id);
+    const progressFactor = 1 - (s.x * 0.3 * targetRank / 4);
+    const spd = s.baseSpeed * Math.max(0, s.speedMult) * progressFactor;
+    s.x = Math.max(0, Math.min(1, s.x + spd));
+    s.wobble += 0.12;
+
+    const x = s.x * getTrackEnd() + 60;
+    const y = getLaneY(i) + Math.sin(s.wobble) * 3;
+
+    // 이펙트별 시각 효과
+    if (s.effect === 'star') {
+      ctx.save();
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 20;
+    }
+    if (s.effect === 'freeze') {
+      ctx.save(); ctx.filter = 'hue-rotate(180deg) saturate(0.3)';
+    }
+    if (s.effect === 'sleep') {
+      // 💤 아이콘
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('💤', x, y - 28);
+    }
+
+    // 달팽이 몸통 (원형)
+    const sz = 22;
+    ctx.beginPath();
+    ctx.arc(x, y, sz, 0, Math.PI*2);
+    ctx.fillStyle = s.color + '33';
+    ctx.fill();
+
+    // 테두리
+    ctx.beginPath();
+    ctx.arc(x, y, sz, 0, Math.PI*2);
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 이모지
+    ctx.font = `${sz*1.2}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐌', x, y);
+
+    // 달팽이 이름
+    ctx.font = 'bold 10px Noto Sans KR, sans-serif';
+    ctx.fillStyle = s.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(s.name, x, y + sz + 10);
+
+    if (s.effect === 'star' || s.effect === 'freeze') ctx.restore();
+
+    // 위치 업데이트
+    document.getElementById('pos'+i).textContent = Math.round(s.x*100)+'%';
+
+    // 결승 도달 체크
+    if (s.x >= 1 && !finishOrder.includes(-s.id-99)) {
+      if (finishOrder[0] !== s.id) {} // 이미 순서 정해짐
+      finished++;
+    }
+  });
+
+  // 순위 배지 업데이트
+  const sorted = [...state].sort((a,b) => b.x-a.x);
+  sorted.forEach((s,rank) => {
+    const badge = document.getElementById('rank'+s.id);
+    badge.textContent = ['🥇','🥈','🥉','4','5'][rank];
+    badge.style.display = 'flex';
+  });
+
+  // 선두 달팽이가 결승선 도달?
+  const leader = state.reduce((a,b) => a.x>b.x?a:b);
+  if (leader.x >= 1 && !raceFinished) {
+    raceFinished = true;
+    clearTimeout(eventTimer);
+    showResult(sorted);
+    return;
+  }
+
+  frameId = requestAnimationFrame(animateRace);
+}
+
+/* ════════════════════════════════
+   결과
+════════════════════════════════ */
+function showResult(sorted) {
+  phase = 'result';
+  const winner = sorted[0];
+  const isWin = winner.id === selectedSnail;
+  const winBet = bet;
+  const reward = isWin ? Math.floor(winBet * winner.odds) : 0;
+  pts = isWin ? pts + reward : pts;
+  updatePts();
+
+  // 우승 카드 강조
+  document.getElementById('card'+winner.id).classList.add('winner-glow');
+
+  // 폭죽 (우승시)
+  if (isWin) launchFireworks(winner.color);
+
+  // 상태 업데이트
+  document.getElementById('phaseDot').className = 'phase-dot done';
+  document.getElementById('phaseText').textContent = '경주 종료';
+
+  // 결과 카드
+  const card = document.getElementById('resultCard');
+  card.classList.add('show');
+
+  document.getElementById('resultTitle').innerHTML = isWin
+    ? `🎉 ${winner.name} 우승! 당신이 맞췄어요!`
+    : `🐌 ${winner.name} 우승! 아쉽게도...`;
+
+  document.getElementById('resultSub').textContent = isWin
+    ? `${bet}P 베팅 × ${winner.odds}배 = ${reward}P 획득!`
+    : `${SNAILS[selectedSnail]?.name || '선택 없음'}에 베팅했지만... 다음엔 꼭!`;
+
+  const rewardEl = document.getElementById('resultReward');
+  rewardEl.textContent = isWin ? `+${reward}P 획득!` : `-${bet}P 손실`;
+  rewardEl.className = 'result-reward ' + (isWin ? 'reward-win' : 'reward-lose');
+
+  document.getElementById('resultOrder').innerHTML = sorted.map((s,i)=>
+    `<div class="order-item">
+      ${['🥇','🥈','🥉','4위','5위'][i]}
+      <span style="color:${s.color};font-weight:800">${s.name}</span>
+    </div>`
+  ).join('');
+}
+
+/* 폭죽 */
+function launchFireworks(color) {
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const fw = document.createElement('div');
+      fw.className = 'firework';
+      fw.style.left = (20+Math.random()*60)+'%';
+      fw.style.top = (10+Math.random()*40)+'%';
+      fw.style.fontSize = '2rem';
+      fw.textContent = '🎆';
+      fw.style.animation = 'none';
+      document.body.appendChild(fw);
+      setTimeout(()=>fw.remove(), 1200);
+    }, i*200);
+  }
+}
+
+/* ════════════════════════════════
+   액션 핸들러
+════════════════════════════════ */
+function handleAction() {
+  if (phase !== 'betting') return;
+  if (selectedSnail === -1) {
+    document.getElementById('betTarget').textContent = '← 달팽이를 선택하세요!';
+    document.getElementById('betTarget').style.color = '#ef4444';
+    setTimeout(() => {
+      document.getElementById('betTarget').textContent = '없음';
+      document.getElementById('betTarget').style.color = '';
+    }, 2000);
+    return;
+  }
+  if (pts < bet) { alert('포인트 부족!'); return; }
+  pts -= bet;
+  updatePts();
+  startRace();
+}
+
+function resetGame() {
+  if (frameId) cancelAnimationFrame(frameId);
+  if (eventTimer) clearTimeout(eventTimer);
+  particles = [];
+  finishOrder = [];
+  raceFinished = false;
+  raceStarted = false;
+  phase = 'betting';
+  selectedSnail = -1;
+
+  state.forEach(s => { s.x=0; s.speedMult=1; s.effect=null; s.effectTimer=0; });
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  document.querySelectorAll('.snail-card').forEach(c => {
+    c.classList.remove('selected','winner-glow');
+  });
+  document.querySelectorAll('.rank-badge').forEach(b=>b.style.display='none');
+  document.querySelectorAll('[id^="pos"]').forEach(p=>p.textContent='0%');
+
+  document.getElementById('phaseDot').className = 'phase-dot betting';
+  document.getElementById('phaseText').textContent = '베팅 구간';
+  document.getElementById('betSection').style.display = 'flex';
+  document.getElementById('actionBtn').style.display = 'flex';
+  document.getElementById('actionBtn').textContent = '🐌 베팅하고 경주 시작!';
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('betTarget').textContent = '없음';
+  document.getElementById('eventBanner').style.display = 'none';
+}
+
+/* ════════════════════════════════
+   초기화
+════════════════════════════════ */
+initUI();
+updatePts();
+// 대기 애니메이션 (배팅 구간)
+function idleAnim() {
+  if (raceStarted) return;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const now = Date.now()/1000;
+  state.forEach((s,i) => {
+    const y = getLaneY(i) + Math.sin(now*1.5 + i) * 4;
+    const x = 60 + Math.sin(now*0.5 + i*0.7)*8;
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐌', x, y);
+    ctx.font = 'bold 10px Noto Sans KR';
+    ctx.fillStyle = s.color;
+    ctx.fillText(s.name, x, y+22);
+  });
+  requestAnimationFrame(idleAnim);
+}
+idleAnim();
+</script>
+</body>
+</html>

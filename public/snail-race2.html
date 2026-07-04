@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🐌 달팽이 경주</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#111827;color:#f0f0f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:10px}
+
+/* ── 트랙 뷰포트 ── */
+.race-viewport{
+  position:relative;width:860px;height:320px;
+  border-radius:16px;overflow:hidden;
+  border:3px solid rgba(255,255,255,.12);
+  background:#2d5a27;
+  box-shadow:0 0 40px rgba(0,0,0,.5);
+}
+#raceCanvas{display:block;width:100%;height:100%}
+
+/* 이벤트 배너 */
+.ev-banner{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.9);border-radius:30px;padding:7px 20px;
+  font-size:.82rem;font-weight:900;white-space:nowrap;z-index:20;
+  display:none;pointer-events:none;
+  border:2px solid #fbbf24;color:#fbbf24;
+  animation:popIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+
+/* 카메라 줌 레이블 */
+.cam-label{
+  position:absolute;top:12px;left:12px;
+  background:rgba(239,68,68,.9);border-radius:6px;
+  padding:3px 8px;font-size:.6rem;font-weight:900;letter-spacing:1px;
+  color:#fff;display:none;z-index:20;
+}
+.cam-label.show{display:block;animation:blink2 .5s infinite}
+@keyframes blink2{50%{opacity:.4}}
+
+/* 레인 마커 */
+.rank-overlay{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:4px;z-index:15;
+}
+.rank-item{font-size:.62rem;font-weight:900;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.7);white-space:nowrap}
+
+/* ── 달팽이 카드 ── */
+.snail-row{display:flex;gap:8px;width:860px}
+.scard{
+  flex:1;padding:10px 8px;background:#0f1420;
+  border:2px solid rgba(255,255,255,.07);border-radius:12px;
+  text-align:center;cursor:pointer;transition:all .15s;
+  position:relative;overflow:hidden;
+}
+.scard:hover{border-color:rgba(255,255,255,.18);transform:translateY(-2px)}
+.scard.sel{border-color:var(--c);background:rgba(var(--cr),.1);box-shadow:0 0 16px rgba(var(--cr),.3)}
+.scard-num{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:900;margin:0 auto 4px;
+  background:var(--c);color:#fff;
+}
+.scard-name{font-size:.7rem;font-weight:800;color:var(--c);margin-bottom:3px}
+.scard-odds{font-size:.65rem;padding:2px 6px;border-radius:8px;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.scard-pg{font-size:.58rem;color:#64748b;margin-top:4px}
+.scard-state{font-size:.65rem;height:14px;margin-top:2px}
+
+/* ── 하단 컨트롤 ── */
+.ctrl-row{display:flex;align-items:center;gap:8px;width:860px}
+.chip-row{display:flex;gap:5px}
+.chip{padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#64748b;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .12s;font-family:inherit}
+.chip.sel{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.4);color:#fbbf24}
+.pts-badge{padding:6px 14px;border-radius:20px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);font-size:.76rem;font-weight:800;color:#fbbf24;white-space:nowrap}
+.go-btn{
+  padding:10px 24px;background:linear-gradient(135deg,#10b981,#059669);
+  color:#000;font-weight:900;font-size:.82rem;border:none;border-radius:10px;
+  cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 16px rgba(16,185,129,.3);
+  transition:all .15s;white-space:nowrap;margin-left:auto;
+}
+.go-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+.go-btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 16px rgba(239,68,68,.3)}
+
+/* ── 결과 오버레이 ── */
+.result-overlay{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(3px);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  z-index:30;
+}
+.result-overlay.show{display:flex;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.res-big{font-size:2rem;font-weight:900}
+.res-sub{font-size:.82rem;color:#94a3b8}
+.res-pts{font-size:1.1rem;font-weight:900;padding:8px 22px;border-radius:10px}
+.res-win{color:#10b981;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3)}
+.res-lose{color:#ef4444;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2)}
+.res-order{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+.res-o{font-size:.72rem;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.06)}
+.res-btn{padding:9px 24px;border:none;border-radius:10px;background:#10b981;color:#000;font-weight:900;cursor:pointer;font-size:.8rem;font-family:inherit;margin-top:4px}
+</style>
+</head>
+<body>
+
+<!-- 경주 뷰포트 -->
+<div class="race-viewport" id="viewport">
+  <canvas id="raceCanvas"></canvas>
+  <div class="ev-banner" id="evBanner"></div>
+  <div class="cam-label" id="camLabel">● LIVE</div>
+  <div class="rank-overlay" id="rankOverlay"></div>
+  <div class="result-overlay" id="resultOverlay">
+    <div class="res-big" id="resBig"></div>
+    <div class="res-sub" id="resSub"></div>
+    <div class="res-pts" id="resPts"></div>
+    <div class="res-order" id="resOrder"></div>
+    <button class="res-btn" onclick="resetGame()">🔄 다시 하기</button>
+  </div>
+</div>
+
+<!-- 달팽이 카드 -->
+<div class="snail-row" id="snailRow"></div>
+
+<!-- 컨트롤 -->
+<div class="ctrl-row">
+  <span style="font-size:.65rem;color:#64748b;font-weight:700;letter-spacing:1px">BET</span>
+  <div class="chip-row">
+    <button class="chip sel" onclick="setBet(10,this)">10P</button>
+    <button class="chip" onclick="setBet(20,this)">20P</button>
+    <button class="chip" onclick="setBet(30,this)">30P</button>
+    <button class="chip" onclick="setBet(50,this)">50P</button>
+  </div>
+  <span class="pts-badge">◈ <span id="ptsNum">500</span> P</span>
+  <button class="go-btn" id="goBtn" onclick="startRace()">🐌 경주 시작!</button>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   달팽이 데이터
+══════════════════════════════════════ */
+const SNAILS = [
+  {id:0, name:'빨강이', color:'#ef4444', cr:'239,68,68',  odds:2.0},
+  {id:1, name:'파랑이', color:'#3b82f6', cr:'59,130,246', odds:2.5},
+  {id:2, name:'초록이', color:'#10b981', cr:'16,185,129', odds:3.0},
+  {id:3, name:'노랑이', color:'#fbbf24', cr:'251,191,36', odds:1.8},
+  {id:4, name:'보라이', color:'#a855f7', cr:'168,85,247', odds:4.0},
+];
+
+const EVENTS = [
+  {key:'boost',  label:'🚀 로켓 부스터!',  color:'#f59e0b', mult:4.5, dur:2500, msg:n=>`${n}에게 로켓 부스터 발동!!`},
+  {key:'sleep',  label:'💤 낮잠...',        color:'#94a3b8', mult:0,   dur:2800, msg:n=>`${n}가 갑자기 잠들었다...`},
+  {key:'zap',    label:'⚡ 감전!',          color:'#fbbf24', mult:-2,  dur:1800, msg:n=>`${n}가 감전! 뒤로 날아갔다!`},
+  {key:'banana', label:'🍌 바나나!',        color:'#facc15', mult:0,   dur:2000, msg:n=>`${n}가 바나나 껍질에 미끄러졌다!`},
+  {key:'tornado',label:'🌪️ 토네이도!',     color:'#a78bfa', mult:-1,  dur:2200, msg:n=>`${n}가 토네이도에 휘말렸다!`},
+  {key:'star',   label:'⭐ 슈퍼스타!',     color:'#fbbf24', mult:5.0, dur:2000, msg:n=>`${n}에게 무적 스타 발동!!`},
+  {key:'giant',  label:'🔥 불꽃 질주!',    color:'#ef4444', mult:3.5, dur:2200, msg:n=>`${n}가 불꽃을 뿜으며 질주!`},
+  {key:'freeze', label:'❄️ 동결!',          color:'#60a5fa', mult:0,   dur:2500, msg:n=>`${n}가 꽁꽁 얼어붙었다!`},
+];
+
+/* ══════════════════════════════════════
+   스프라이트 로드
+══════════════════════════════════════ */
+const imgNormal = new Image(); imgNormal.src = '/spr-normal.png';
+const imgSleep  = new Image(); imgSleep.src  = '/spr-boost.png'; // sleep/dizzy poses
+const imgTrack  = new Image(); imgTrack.src  = '/spr-track.png';
+
+/* ══════════════════════════════════════
+   캔버스 설정
+══════════════════════════════════════ */
+const canvas = document.getElementById('raceCanvas');
+const ctx = canvas.getContext('2d');
+const VP = document.getElementById('viewport');
+
+function resizeCanvas(){
+  canvas.width  = VP.offsetWidth;
+  canvas.height = VP.offsetHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+const W = () => canvas.width;
+const H = () => canvas.height;
+const LANE_H = () => H() / 5;
+
+/* ══════════════════════════════════════
+   게임 상태
+══════════════════════════════════════ */
+let pts = 500, bet = 10, sel = -1;
+let phase = 'idle'; // idle | racing | done
+let finishOrder = [], evTimer = null, raf = null;
+
+// 달팽이별 레이스 상태
+const state = SNAILS.map((s,i) => ({
+  ...s, lane: i,
+  worldX: 80,           // 절대 월드 좌표
+  baseSpd: 1.5 + Math.random() * 0.8,
+  mult: 1,
+  effect: null,
+  effectT: 0,
+  wobble: Math.random() * 6.28,
+  finishPos: -1,
+}));
+
+// 카메라
+const cam = { x: 0, shake: 0, zoom: 1, targetZoom: 1 };
+const TRACK_END = 3200; // 결승선 월드 위치
+let particles = [];
+
+/* ══════════════════════════════════════
+   UI 초기화
+══════════════════════════════════════ */
+function initCards(){
+  document.getElementById('snailRow').innerHTML = SNAILS.map((s,i)=>`
+    <div class="scard" id="scard${i}" style="--c:${s.color};--cr:${s.cr}" onclick="selectSnail(${i})">
+      <div class="scard-num">${i+1}</div>
+      <div class="scard-name">${s.name}</div>
+      <div class="scard-odds">× ${s.odds.toFixed(1)}</div>
+      <div class="scard-pg" id="pg${i}">0%</div>
+      <div class="scard-state" id="st${i}"></div>
+    </div>`).join('');
+}
+
+function selectSnail(i){
+  if(phase !== 'idle') return;
+  sel = i;
+  document.querySelectorAll('.scard').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('scard'+i).classList.add('sel');
+}
+
+function setBet(n, el){
+  bet = n;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function updatePts(){ document.getElementById('ptsNum').textContent = pts.toLocaleString(); }
+
+/* ══════════════════════════════════════
+   달팽이 그리기 (스프라이트 슬라이스)
+══════════════════════════════════════ */
+function drawSnail(s, sx, sy, size){
+  const img   = (s.effect==='sleep'||s.effect==='banana'||s.effect==='freeze') ? imgSleep : imgNormal;
+  const idx   = s.id;
+  const srcW  = img.naturalWidth / 5;
+  const srcH  = img.naturalHeight;
+
+  ctx.save();
+
+  // 이펙트별 필터
+  if(s.effect === 'sleep' || s.effect === 'freeze'){
+    ctx.filter = 'saturate(0.3) brightness(0.8)';
+  } else if(s.effect === 'zap'){
+    ctx.filter = 'brightness(3) saturate(0)';
+  } else if(s.effect === 'star'){
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 20;
+  } else if(s.effect === 'boost' || s.effect === 'giant'){
+    ctx.shadowColor = '#ef4444';
+    ctx.shadowBlur = 16;
+  }
+
+  // 이펙트별 변형
+  if(s.effect === 'tornado'){
+    ctx.translate(sx, sy);
+    ctx.rotate(Math.sin(Date.now()/80)*0.4);
+    ctx.translate(-sx, -sy);
+  } else if(s.effect === 'zap'){
+    sx += Math.sin(Date.now()/30)*5;
+  }
+
+  // 뒤로 가면 뒤집기
+  if(s.mult < 0){
+    ctx.translate(sx + size, sy);
+    ctx.scale(-1, 1);
+    ctx.translate(-(sx + size) + (sx), 0);
+  }
+
+  // 부스터 불꽃 (뒤쪽)
+  if(s.effect === 'boost' || s.effect === 'star' || s.effect === 'giant'){
+    ctx.save();
+    const grd = ctx.createRadialGradient(sx - size*0.3, sy+size/2, 2, sx - size*0.3, sy+size/2, size*0.7);
+    grd.addColorStop(0, '#fff');
+    grd.addColorStop(0.3, '#fbbf24');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.ellipse(sx - size*0.4, sy+size/2, size*0.6*(0.6+Math.random()*0.4), size*0.3, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if(img.complete && img.naturalWidth > 0){
+    ctx.drawImage(img, srcW*idx, 0, srcW, srcH, sx, sy, size, size);
+  } else {
+    // 폴백: 번호 원
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(sx+size/2, sy+size/2, size/2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='#fff';ctx.font=`bold ${size*.4}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(s.id+1, sx+size/2, sy+size/2);
+  }
+
+  ctx.restore();
+
+  // ZZZ 이펙트
+  if(s.effect === 'sleep'){
+    const t = Date.now()/600;
+    ['z','Z','Z'].forEach((z,i)=>{
+      const a = Math.max(0,(Math.sin(t-i*.8)+1)/2);
+      ctx.globalAlpha = a;
+      ctx.font = `bold ${10+i*4}px sans-serif`;
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'left';
+      ctx.fillText(z, sx+size*.8+i*8, sy-5-i*10);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // 얼음 오버레이
+  if(s.effect === 'freeze'){
+    ctx.save();
+    ctx.fillStyle = 'rgba(147,210,255,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(sx+size/2, sy+size/2, size*.55, size*.55, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    ctx.font='18px sans-serif';ctx.textAlign='center';
+    ctx.fillText('❄️',sx+size/2,sy-4);
+  }
+}
+
+/* ══════════════════════════════════════
+   메인 렌더 루프
+══════════════════════════════════════ */
+function render(){
+  const W_ = W(), H_ = H();
+  ctx.clearRect(0,0,W_,H_);
+
+  // 카메라 스무딩
+  const leader = [...state].sort((a,b)=>b.worldX-a.worldX)[0];
+  const targetCamX = leader.worldX - W_*0.35;
+  cam.x += (targetCamX - cam.x) * 0.06;
+  cam.zoom += (cam.targetZoom - cam.zoom) * 0.05;
+  if(cam.shake > 0){
+    ctx.translate(
+      (Math.random()-.5)*cam.shake*8,
+      (Math.random()-.5)*cam.shake*4
+    );
+    cam.shake *= 0.85;
+  }
+
+  // 줌 적용
+  ctx.save();
+  ctx.translate(W_/2, H_/2);
+  ctx.scale(cam.zoom, cam.zoom);
+  ctx.translate(-W_/2, -H_/2);
+
+  // ── 배경 스크롤 ──
+  if(imgTrack.complete && imgTrack.naturalWidth > 0){
+    const tW = imgTrack.naturalWidth * (H_/imgTrack.naturalHeight);
+    const off = (cam.x * 0.85) % tW;
+    for(let x = -off; x < W_+tW; x += tW){
+      ctx.drawImage(imgTrack, x, 0, tW, H_);
+    }
+  } else {
+    // 폴백 배경
+    ctx.fillStyle='#3a7d44';ctx.fillRect(0,0,W_,H_);
+    ctx.fillStyle='#8B6914';
+    const laneTop = H_*0.15, laneBot = H_*0.85;
+    ctx.fillRect(0,laneTop,W_,laneBot-laneTop);
+  }
+
+  // 레인 구분선 (점선)
+  for(let i=1;i<5;i++){
+    const y = LANE_H()*i;
+    ctx.save();ctx.setLineDash([12,18]);
+    ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W_,y);ctx.stroke();
+    ctx.restore();
+  }
+
+  // 결승선
+  const finishScreenX = TRACK_END - cam.x;
+  if(finishScreenX > 0 && finishScreenX < W_){
+    // 체커 패턴
+    const sq=12;
+    for(let fy=0;fy<H_;fy+=sq){
+      for(let fx=0;fx<6;fx++){
+        const dark=(Math.floor(fy/sq)+fx)%2===0;
+        ctx.fillStyle = dark?'#000':'#fff';
+        ctx.fillRect(finishScreenX+fx*sq, fy, sq, sq);
+      }
+    }
+    ctx.font='20px sans-serif';ctx.textAlign='center';
+    ctx.fillText('🏁', finishScreenX+36, 24);
+  }
+
+  // 파티클
+  particles = particles.filter(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=.2; p.life--;
+    const a=p.life/p.max;
+    ctx.beginPath();ctx.arc(p.x-cam.x, p.y, p.r*a, 0, Math.PI*2);
+    ctx.fillStyle=p.c+Math.round(a*255).toString(16).padStart(2,'0');
+    ctx.fill();
+    return p.life>0;
+  });
+
+  // ── 달팽이 그리기 ──
+  state.forEach((s,i)=>{
+    const screenX = s.worldX - cam.x;
+    const laneY   = LANE_H()*i + LANE_H()*0.1;
+    const sz      = LANE_H()*0.78;
+
+    if(screenX > -sz*2 && screenX < W_+sz){
+      // 이동 바운스
+      s.wobble += 0.12;
+      const bounce = s.effect&&s.mult===0 ? 0 : Math.abs(Math.sin(s.wobble))*3;
+      drawSnail(s, screenX-sz/2, laneY-bounce, sz);
+    }
+
+    // 카드 진행도 업데이트
+    document.getElementById('pg'+i).textContent = Math.round(Math.min(100,s.worldX/TRACK_END*100))+'%';
+  });
+
+  ctx.restore(); // zoom 해제
+
+  // 순위 오버레이
+  const sorted = [...state].sort((a,b)=>b.worldX-a.worldX);
+  document.getElementById('rankOverlay').innerHTML = sorted.map((s,r)=>
+    `<div class="rank-item" style="color:${s.color}">
+      ${['🥇','🥈','🥉','4위','5위'][r]} ${s.name}
+    </div>`
+  ).join('');
+
+  if(phase==='racing') raf=requestAnimationFrame(tick);
+}
+
+function tick(){
+  // 달팽이 이동
+  state.forEach((s,i)=>{
+    if(s.finishPos>=0) return; // 이미 완주
+    const spd = Math.max(s.mult*s.baseSpd, s.mult<0?s.mult*s.baseSpd:0);
+    s.worldX = Math.max(40, s.worldX + spd);
+
+    // 완주 체크
+    if(s.worldX >= TRACK_END && s.finishPos<0){
+      s.finishPos = finishOrder.filter(x=>x>=0).length;
+      finishOrder.push(s.id);
+      if(finishOrder.length === 1){
+        // 1위 결정 → 2초 후 결과
+        setTimeout(()=>endRace(), 1500);
+      }
+    }
+  });
+  render();
+}
+
+/* ══════════════════════════════════════
+   이벤트 시스템
+══════════════════════════════════════ */
+function scheduleEvent(){
+  if(phase!=='racing') return;
+  const delay = 1800 + Math.random()*2500;
+  evTimer = setTimeout(()=>{
+    if(phase!=='racing') return;
+    triggerEvent();
+    scheduleEvent();
+  }, delay);
+}
+
+function triggerEvent(){
+  const target = state[Math.floor(Math.random()*5)];
+  if(target.finishPos>=0) return;
+  const ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+
+  // 이전 이펙트 초기화
+  target.effect = ev.key;
+  target.mult   = ev.mult === 0 ? 0 : ev.mult;
+
+  // 배너
+  showBanner(ev.msg(target.name), ev.color);
+
+  // 카메라 드라마틱 줌
+  if(ev.mult >= 4){
+    cam.targetZoom = 1.25;
+    cam.shake = 1.2;
+    setTimeout(()=>{ cam.targetZoom=1; }, 1500);
+  } else if(ev.mult<0){
+    cam.shake = 0.8;
+  }
+
+  // 파티클 스폰
+  spawnParticles(target.worldX, LANE_H()*target.lane+LANE_H()/2, ev.color);
+
+  // 이펙트 해제
+  target.effectT = setTimeout(()=>{
+    target.effect = null;
+    target.mult = 1;
+  }, ev.dur);
+}
+
+function showBanner(txt, color){
+  const b = document.getElementById('evBanner');
+  b.textContent = txt;
+  b.style.borderColor = color;
+  b.style.color = color;
+  b.style.display = 'block';
+  clearTimeout(b._t);
+  b._t = setTimeout(()=>b.style.display='none', 2800);
+}
+
+function spawnParticles(wx, wy, color){
+  const cols = [color,'#fff','#fbbf24','#f0f0f8'];
+  for(let i=0;i<20;i++){
+    particles.push({
+      x:wx, y:wy,
+      vx:(Math.random()-.5)*9,
+      vy:(Math.random()-.5)*9-3,
+      life:40+Math.random()*50, max:90,
+      r:3+Math.random()*5,
+      c:cols[Math.floor(Math.random()*cols.length)],
+    });
+  }
+}
+
+/* ══════════════════════════════════════
+   게임 제어
+══════════════════════════════════════ */
+function startRace(){
+  if(sel<0){ showBanner('달팽이를 선택하세요!','#ef4444'); return; }
+  if(pts<bet){ showBanner('포인트가 부족합니다!','#ef4444'); return; }
+  pts -= bet; updatePts();
+  phase = 'racing';
+
+  // 상태 초기화
+  state.forEach((s,i)=>{
+    s.worldX = 80;
+    s.mult = 1;
+    s.effect = null;
+    s.finishPos = -1;
+    s.wobble = Math.random()*6.28;
+    s.baseSpd = 1.4 + Math.random()*0.8;
+  });
+  finishOrder = [];
+  particles = [];
+  cam.x = 0; cam.zoom = 1; cam.targetZoom = 1; cam.shake = 0;
+
+  document.getElementById('goBtn').disabled = true;
+  document.getElementById('resultOverlay').classList.remove('show');
+  document.getElementById('camLabel').classList.add('show');
+
+  scheduleEvent();
+  raf = requestAnimationFrame(tick);
+}
+
+function endRace(){
+  phase = 'done';
+  clearTimeout(evTimer);
+  cancelAnimationFrame(raf);
+  document.getElementById('camLabel').classList.remove('show');
+  document.getElementById('evBanner').style.display = 'none';
+
+  const winner = SNAILS[finishOrder[0]];
+  const sorted = finishOrder.map(id=>SNAILS[id]);
+  const isWin  = finishOrder[0] === sel;
+  const reward = isWin ? Math.floor(bet * winner.odds) : 0;
+  if(isWin) pts += reward;
+  updatePts();
+
+  document.getElementById('resBig').textContent = isWin
+    ? `🎉 ${winner.name} 우승!` : `${winner.name} 우승...`;
+  document.getElementById('resSub').textContent = isWin
+    ? `정확히 맞추셨습니다!` : `${SNAILS[sel]?.name||''}에 베팅하셨는데... 아쉽네요!`;
+
+  const rp = document.getElementById('resPts');
+  rp.textContent = isWin ? `+${reward}P 획득!` : `-${bet}P`;
+  rp.className = 'res-pts ' + (isWin?'res-win':'res-lose');
+
+  document.getElementById('resOrder').innerHTML = sorted.map((s,r)=>
+    `<div class="res-o" style="color:${s.color}">${['🥇','🥈','🥉','4위','5위'][r]} ${s.name}</div>`
+  ).join('');
+
+  document.getElementById('resultOverlay').classList.add('show');
+  document.getElementById('goBtn').disabled = false;
+}
+
+function resetGame(){
+  phase = 'idle';
+  sel = -1;
+  particles = [];
+  document.querySelectorAll('.scard').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('resultOverlay').classList.remove('show');
+  document.getElementById('evBanner').style.display='none';
+  document.querySelectorAll('[id^="pg"]').forEach(p=>p.textContent='0%');
+  document.querySelectorAll('[id^="st"]').forEach(s=>s.textContent='');
+  // 대기 애니
+  state.forEach(s=>{ s.worldX=80; s.mult=1; s.effect=null; });
+  cam.x=0; cam.zoom=1;
+  idleLoop();
+}
+
+/* 대기 애니메이션 */
+function idleLoop(){
+  if(phase!=='idle') return;
+  const W_=W(), H_=H();
+  ctx.clearRect(0,0,W_,H_);
+
+  // 배경
+  if(imgTrack.complete && imgTrack.naturalWidth>0){
+    const tW=imgTrack.naturalWidth*(H_/imgTrack.naturalHeight);
+    const off=(Date.now()/60)%tW;
+    for(let x=-off;x<W_+tW;x+=tW) ctx.drawImage(imgTrack,x,0,tW,H_);
+  } else {
+    ctx.fillStyle='#3a7d44';ctx.fillRect(0,0,W_,H_);
+  }
+
+  const t=Date.now()/1000;
+  SNAILS.forEach((_,i)=>{
+    const laneY=LANE_H()*i+LANE_H()*0.1;
+    const sz=LANE_H()*0.78;
+    const bounce=Math.abs(Math.sin(t*2+i))*3;
+    drawSnail(state[i], 60, laneY-bounce, sz);
+  });
+
+  requestAnimationFrame(idleLoop);
+}
+
+/* ══════════════════════════════════════
+   시작
+══════════════════════════════════════ */
+initCards();
+updatePts();
+
+// 이미지 로드 대기
+let loaded=0;
+[imgNormal,imgSleep,imgTrack].forEach(img=>{
+  img.onload=()=>{ if(++loaded>=2) idleLoop(); };
+  if(img.complete) { if(++loaded>=2) idleLoop(); }
+});
+</script>
+</body>
+</html>

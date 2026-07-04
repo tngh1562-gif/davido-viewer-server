@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>A안 - 프리미엄 다크</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#080c14;color:#e2e8f0;height:100vh;display:flex;overflow:hidden;font-size:13px}
+/* 사이드바 */
+.sidebar{width:148px;background:#0d1117;border-right:1px solid rgba(0,200,160,.1);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.logo-text{font-size:.75rem;font-weight:800;color:#00c8a0;letter-spacing:.5px}
+.logo-sub{font-size:.55rem;color:#334155;margin-top:2px}
+.sidebar-nav{padding:8px 8px;display:flex;flex-direction:column;gap:1px;flex:1}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:.75rem;font-weight:500;color:#475569;cursor:pointer;transition:all .12s;border-left:2px solid transparent;white-space:nowrap}
+.nav-item:hover{color:#94a3b8;background:rgba(255,255,255,.04)}
+.nav-item.on{color:#00c8a0;background:rgba(0,200,160,.08);border-left-color:#00c8a0;font-weight:700}
+.nav-icon{font-size:13px;width:16px;flex-shrink:0;text-align:center}
+.sidebar-bottom{padding:10px 8px;border-top:1px solid rgba(255,255,255,.05)}
+.version{font-size:.6rem;color:#1e293b;text-align:center}
+/* 메인 */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;background:#080c14;flex-shrink:0}
+.page-title{font-size:.95rem;font-weight:800;color:#f1f5f9}
+.badge{padding:2px 8px;border-radius:12px;font-size:.6rem;font-weight:700}
+.badge-live{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.25)}
+.btn-bar{display:flex;align-items:center;gap:6px;padding:8px 18px;border-bottom:1px solid rgba(255,255,255,.05);background:#080c14;flex-shrink:0;flex-wrap:wrap}
+.btn{padding:5px 12px;border-radius:6px;border:none;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px}
+.btn-teal{background:linear-gradient(135deg,#00c8a0,#0097a7);color:#000}
+.btn-outline{background:transparent;border:1px solid rgba(255,255,255,.12);color:#64748b}
+.btn-outline:hover{border-color:rgba(255,255,255,.2);color:#94a3b8}
+.btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);color:#f87171}
+.sel{padding:4px 8px;border-radius:6px;background:#131c2b;border:1px solid rgba(255,255,255,.1);color:#94a3b8;font-size:.72rem;font-family:inherit}
+.info-bar{display:flex;align-items:center;gap:8px;padding:6px 18px;border-bottom:1px solid rgba(255,255,255,.04);background:#080c14;flex-shrink:0}
+.info-chip{padding:3px 8px;border-radius:5px;font-size:.65rem;font-weight:600}
+.chip-warn{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.15)}
+.chip-neutral{background:rgba(255,255,255,.05);color:#475569}
+.chip-btn{background:rgba(0,200,160,.08);color:#00c8a0;border:1px solid rgba(0,200,160,.2);cursor:pointer}
+/* 컨텐츠 */
+.content{display:flex;flex:1;overflow:hidden}
+.center{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+/* 팀 영역 */
+.teams-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team-box{background:#0d1117;border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden}
+.team-header{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.team-header.blue{background:linear-gradient(135deg,rgba(59,130,246,.15),transparent)}
+.team-header.red{background:linear-gradient(135deg,rgba(239,68,68,.15),transparent)}
+.team-dot{width:8px;height:8px;border-radius:50%}
+.team-dot.blue{background:#3b82f6}
+.team-dot.red{background:#ef4444}
+.team-label{font-size:.82rem;font-weight:800}
+.team-label.blue{color:#60a5fa}
+.team-label.red{color:#f87171}
+.team-body{padding:10px 14px;min-height:90px;display:flex;align-items:center;justify-content:center}
+.empty-hint{font-size:.72rem;color:#1e293b}
+/* 참가자 */
+.section-title{font-size:.7rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.player-row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:7px;background:#0d1117;border:1px solid rgba(255,255,255,.05);margin-bottom:4px}
+.player-num{font-size:.65rem;color:#334155;width:14px}
+.player-select{flex:1;background:#131c2b;border:1px solid rgba(255,255,255,.08);border-radius:5px;color:#64748b;font-size:.7rem;padding:3px 6px;font-family:inherit}
+.player-tier{padding:2px 6px;border-radius:4px;font-size:.62rem;font-weight:700;background:rgba(255,200,68,.1);color:#fbbf24}
+.mini-sel{background:#131c2b;border:1px solid rgba(255,255,255,.08);border-radius:4px;color:#475569;font-size:.65rem;padding:2px 4px;font-family:inherit}
+.del-btn{color:#1e293b;border:none;background:none;cursor:pointer;font-size:12px;padding:2px}
+/* 우측 패널 */
+.right-panel{width:210px;background:#0d1117;border-left:1px solid rgba(255,255,255,.06);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;flex-shrink:0}
+.rp-section{background:#080c14;border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:12px}
+.rp-title{font-size:.65rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.rp-row{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;color:#475569;margin-bottom:5px}
+.rp-val{color:#94a3b8;font-weight:600}
+.chart-ring{width:70px;height:70px;border-radius:50%;background:conic-gradient(#3b82f6 0% 50%, #ef4444 50% 100%);margin:6px auto 8px;display:flex;align-items:center;justify-content:center}
+.chart-inner{width:48px;height:48px;border-radius:50%;background:#080c14;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#334155;font-weight:700}
+.chart-legend{display:flex;justify-content:center;gap:12px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:.65rem;color:#475569}
+.legend-dot{width:7px;height:7px;border-radius:50%}
+.op-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.op-btn{padding:7px;border-radius:6px;border:none;font-size:.68rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center}
+.op-btn.teal{background:rgba(0,200,160,.12);color:#00c8a0;border:1px solid rgba(0,200,160,.2)}
+.op-btn.gray{background:rgba(255,255,255,.05);color:#475569;border:1px solid rgba(255,255,255,.08)}
+.op-btn.blue{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.op-btn.red{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.start-btn{width:100%;padding:12px;background:linear-gradient(135deg,#00c8a0,#0097a7);color:#000;font-weight:900;font-size:.82rem;border:none;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:.5px}
+</style></head><body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-text">DAVIDO</div><div class="logo-sub">INHOUSE ADMIN</div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-item on"><span class="nav-icon">⚔️</span>내전 진행</div>
+    <div class="nav-item"><span class="nav-icon">⚙️</span>내전 설정</div>
+    <div class="nav-item"><span class="nav-icon">🃏</span>Draft</div>
+    <div class="nav-item"><span class="nav-icon">📊</span>Records</div>
+    <div class="nav-item"><span class="nav-icon">🗄️</span>시청자 DB</div>
+    <div class="nav-item"><span class="nav-icon">📺</span>오버레이</div>
+    <div class="nav-item"><span class="nav-icon">🤖</span>치지직 봇</div>
+    <div class="nav-item"><span class="nav-icon">🎡</span>룰렛 관리자</div>
+    <div class="nav-item"><span class="nav-icon">🔧</span>설정</div>
+  </nav>
+  <div class="sidebar-bottom"><div class="version">v2.5.1</div></div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <span class="page-title">내전 진행</span>
+    <span class="badge badge-live">● 진행 중</span>
+  </div>
+  <div class="btn-bar">
+    <select class="sel"><option>5 vs 5</option></select>
+    <span style="font-size:.68rem;color:#334155">포지션 고려</span>
+    <button class="btn btn-teal">⚡ 자동 배정</button>
+    <button class="btn btn-outline">🃏 밴픽</button>
+    <button class="btn btn-outline">🗺 서울</button>
+    <button class="btn btn-outline">🔀 팀 전체 스왑</button>
+    <button class="btn btn-danger">↺ 행단 초기화</button>
+  </div>
+  <div class="info-bar">
+    <span class="info-chip chip-btn">✕ 밴픽 삭제</span>
+    <span class="info-chip chip-neutral">인원 0/10</span>
+    <span class="info-chip chip-neutral">0 MMR</span>
+    <span class="info-chip chip-warn">⚠ 10명 부족</span>
+    <span class="info-chip chip-btn">+ 추가</span>
+    <span class="info-chip chip-btn">DB ↓</span>
+    <span class="info-chip chip-btn">버프 추가...</span>
+  </div>
+  <div class="content">
+    <div class="center">
+      <div class="teams-row">
+        <div class="team-box">
+          <div class="team-header blue"><div class="team-dot blue"></div><span class="team-label blue">BLUE</span></div>
+          <div class="team-body"><span class="empty-hint">배정 후 표시</span></div>
+        </div>
+        <div class="team-box">
+          <div class="team-header red"><div class="team-dot red"></div><span class="team-label red">RED</span></div>
+          <div class="team-body"><span class="empty-hint">배정 후 표시</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">참가자 1-5</div>
+        <div class="player-row"><span class="player-num">1</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">2</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">3</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">4</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">5</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+      </div>
+      <div>
+        <div class="section-title">참가자 6-10</div>
+        <div class="player-row"><span class="player-num">6</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">7</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="rp-section">
+        <div class="rp-title">배정 후 가능</div>
+        <div class="rp-row"><span>참가 인원</span><span class="rp-val">0/10</span></div>
+        <div class="rp-row"><span>팀 상태</span><span style="color:#f59e0b;font-weight:600">대기 중</span></div>
+        <div class="rp-row"><span>평균 MMR</span><span class="rp-val">—</span></div>
+        <div class="rp-row"><span>디코 이름</span><span class="rp-val">팀박스 기준</span></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">실시간 요약</div>
+        <div class="chart-ring"><div class="chart-inner">대기</div></div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>BLUE 0%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>RED 0%</div>
+        </div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">운영 도구</div>
+        <div class="op-grid">
+          <button class="op-btn teal">💰 포인트 지급</button>
+          <button class="op-btn gray">🔑 코드 생성</button>
+          <button class="op-btn blue">🔵 블루 승</button>
+          <button class="op-btn red">🔴 레드 승</button>
+        </div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">최근 내전</div>
+        <div style="font-size:.68rem;color:#1e293b;text-align:center;padding:8px 0">전적 없음</div>
+      </div>
+      <button class="start-btn">▶ 내전 시작하기</button>
+    </div>
+  </div>
+</div>
+</body></html>

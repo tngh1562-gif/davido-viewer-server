@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>버전B — 영상</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#0a0e1a;color:#f0f0f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}
+h2{font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.video-wrap{
+  position:relative;width:860px;border-radius:16px;overflow:hidden;
+  border:2px solid rgba(255,255,255,.1);background:#000;
+  aspect-ratio:16/9;
+}
+video{width:100%;height:100%;object-fit:cover;display:block}
+
+/* 베팅 오버레이 */
+.overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(10,14,26,.92),rgba(10,14,26,.85));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;z-index:5;
+  transition:opacity .4s;
+}
+.overlay.hidden{opacity:0;pointer-events:none}
+.ol-title{font-size:1.1rem;font-weight:900;color:#fbbf24}
+.ol-sub{font-size:.75rem;color:#64748b}
+
+.snail-pick{display:flex;gap:10px}
+.sp{
+  width:120px;padding:12px 8px;background:rgba(255,255,255,.04);
+  border:2px solid rgba(255,255,255,.1);border-radius:12px;
+  text-align:center;cursor:pointer;transition:all .15s;
+}
+.sp:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.07)}
+.sp.sel{border-color:var(--c);background:rgba(var(--cr),.12);box-shadow:0 0 16px rgba(var(--cr),.3)}
+.sp-emoji{font-size:1.8rem;display:block;margin-bottom:4px}
+.sp-name{font-size:.75rem;font-weight:800}
+.sp-odds{font-size:.65rem;color:#fbbf24;margin-top:2px}
+
+.chips{display:flex;gap:6px}
+.chip{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#64748b;font-size:.73rem;font-weight:700;cursor:pointer;transition:all .12s;font-family:inherit}
+.chip.sel{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.4);color:#fbbf24}
+
+.start-btn{
+  padding:12px 40px;background:linear-gradient(135deg,#ef4444,#dc2626);
+  color:#fff;font-weight:900;font-size:.95rem;border:none;border-radius:12px;
+  cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 20px rgba(239,68,68,.4);
+  animation:pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 4px 20px rgba(239,68,68,.4)}50%{box-shadow:0 4px 32px rgba(239,68,68,.7)}}
+
+/* 중계 자막 */
+.subtitle{
+  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.88);border-radius:8px;padding:6px 20px;
+  font-size:.82rem;font-weight:700;white-space:nowrap;z-index:10;
+  display:none;letter-spacing:.3px;
+  border-left:3px solid #ef4444;
+}
+
+/* 결과 오버레이 */
+.result-overlay{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.8);backdrop-filter:blur(4px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  z-index:20;display:none;
+}
+.res-title{font-size:1.8rem;font-weight:900}
+.res-reward{font-size:1rem;font-weight:800;padding:8px 24px;border-radius:12px}
+.res-win{color:#10b981;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3)}
+.res-lose{color:#ef4444;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.res-btn{padding:10px 28px;border:none;border-radius:10px;background:#10b981;color:#000;font-weight:900;cursor:pointer;font-size:.85rem;font-family:inherit}
+
+/* 하단 */
+.bottom{display:flex;align-items:center;gap:12px;width:860px}
+.pts-badge{padding:7px 16px;border-radius:20px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);font-size:.78rem;font-weight:800;color:#fbbf24}
+.status-txt{font-size:.78rem;color:#64748b;flex:1;text-align:center}
+</style>
+</head>
+<body>
+<h2>🎬 버전 B — 영상 기반</h2>
+
+<div class="video-wrap" id="videoWrap">
+  <!-- 경주 영상 -->
+  <video id="raceVid" src="/race-full.mp4" preload="auto" playsinline muted></video>
+
+  <!-- 베팅 오버레이 -->
+  <div class="overlay" id="overlay">
+    <div class="ol-title">🐌 달팽이 경주 — 베팅하세요!</div>
+    <div class="ol-sub">경주가 시작되면 영상으로 펼쳐집니다</div>
+    <div class="snail-pick" id="snailPick"></div>
+    <div class="chips">
+      <button class="chip sel" onclick="setBet(10,this)">10P</button>
+      <button class="chip" onclick="setBet(20,this)">20P</button>
+      <button class="chip" onclick="setBet(30,this)">30P</button>
+      <button class="chip" onclick="setBet(50,this)">50P</button>
+    </div>
+    <button class="start-btn" onclick="doRace()">🏁 경주 시작!</button>
+  </div>
+
+  <!-- 중계 자막 -->
+  <div class="subtitle" id="sub"></div>
+
+  <!-- 결과 오버레이 -->
+  <div class="result-overlay" id="resOverlay">
+    <div class="res-title" id="resTitle"></div>
+    <div class="res-reward" id="resReward"></div>
+    <button class="res-btn" onclick="resetGame()">🔄 다시 하기</button>
+  </div>
+</div>
+
+<div class="bottom">
+  <span class="pts-badge">◈ <span id="pts">500</span> P</span>
+  <span class="status-txt" id="statusTxt">달팽이를 선택하고 베팅하세요</span>
+</div>
+
+<script>
+const SNAILS=[
+  {name:'빨강이',emoji:'🐌',color:'#ef4444',cr:'239,68,68',  odds:2.0},
+  {name:'파랑이',emoji:'🐌',color:'#3b82f6',cr:'59,130,246', odds:2.5},
+  {name:'초록이',emoji:'🐌',color:'#10b981',cr:'16,185,129', odds:3.0},
+  {name:'노랑이',emoji:'🐌',color:'#fbbf24',cr:'251,191,36', odds:1.8},
+  {name:'보라이',emoji:'🐌',color:'#a855f7',cr:'168,85,247', odds:4.0},
+];
+
+// 우승 달팽이 (영상에 따라 결정 - 지금은 영상 1개라 빨강이 우승)
+
+let pts=500, bet=10, sel=-1;
+
+// 달팽이 선택 카드 렌더
+document.getElementById('snailPick').innerHTML = SNAILS.map((s,i)=>`
+  <div class="sp" id="sp${i}" style="--c:${s.color};--cr:${s.cr}" onclick="selSnail(${i})">
+    <span class="sp-emoji">${s.emoji}</span>
+    <div class="sp-name" style="color:${s.color}">${s.name}</div>
+    <div class="sp-odds">× ${s.odds.toFixed(1)}</div>
+  </div>`).join('');
+
+function selSnail(i){
+  sel=i;
+  document.querySelectorAll('.sp').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('sp'+i).classList.add('sel');
+  document.getElementById('statusTxt').textContent=`${SNAILS[i].name} 선택됨 — ${bet}P 베팅 예정`;
+}
+
+function setBet(n,el){
+  bet=n;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  if(sel>=0) document.getElementById('statusTxt').textContent=`${SNAILS[sel].name} 선택됨 — ${bet}P 베팅 예정`;
+}
+
+function updatePts(){ document.getElementById('pts').textContent=pts.toLocaleString(); }
+
+// 중계 멘트 시나리오
+const COMMENTS=[
+  {t:0.5, txt:'🎙️ 선수 입장! 5마리 모두 출발선에 섰습니다!'},
+  {t:2.5, txt:'🏁 탕! — 경주 시작!!'},
+  {t:5,   txt:'🎙️ 위에서 보니 엄청난 혼전입니다!'},
+  {t:7,   txt:'⚡ 노랑이가 감전돼서 거꾸로 달리고 있습니다!?'},
+  {t:9,   txt:'🚀 빨강이에게 로켓 부스터 발동! 폭주 중!'},
+  {t:11,  txt:'💤 파랑이가 갑자기 잠들었습니다... ZZZ'},
+  {t:13,  txt:'🍌 초록이가 바나나 껍질에 미끄러져 뱅글뱅글!'},
+  {t:15,  txt:'🎙️ 누가 이길지 전혀 모르겠습니다!!'},
+  {t:17,  txt:'💥 파랑이가 갑자기 깨어나 메가 부스터 발동!!'},
+  {t:19,  txt:'🎙️ 파랑이가 전원을 추월합니다! 믿을 수 없다!'},
+  {t:21,  txt:'🎙️ 결승선이 코앞입니다! 빨강이 vs 파랑이!'},
+  {t:23,  txt:'😱 빨강이가 결승선 직전에 넘어졌습니다!!'},
+  {t:24,  txt:'🏆 파랑이 우승!! 기적의 역전극!!'},
+];
+const VIDEO_WINNER = 1; // 파랑이 우승
+
+let commentTimers=[];
+
+function doRace(){
+  if(sel<0){alert('달팽이를 선택하세요!');return;}
+  if(pts<bet){alert('포인트 부족!');return;}
+  pts-=bet; updatePts();
+
+  // 오버레이 숨김
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('statusTxt').textContent='🔴 경주 진행 중...';
+
+  // 영상 재생
+  const vid=document.getElementById('raceVid');
+  vid.currentTime=0;
+  vid.play();
+
+  // 중계 멘트 타이머
+  COMMENTS.forEach(({t,txt})=>{
+    const timer=setTimeout(()=>showSub(txt), t*1000);
+    commentTimers.push(timer);
+  });
+
+  // 영상 종료 → 결과
+  vid.onended=()=>showResult();
+  // 영상이 없거나 짧으면 26초 후 강제 결과
+  const fallback=setTimeout(()=>showResult(), 26000);
+  commentTimers.push(fallback);
+}
+
+function showSub(txt){
+  const el=document.getElementById('sub');
+  el.textContent=txt; el.style.display='block';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.style.display='none',2800);
+}
+
+function showResult(){
+  commentTimers.forEach(clearTimeout); commentTimers=[];
+  document.getElementById('sub').style.display='none';
+
+  const isWin = sel===VIDEO_WINNER;
+  const winner=SNAILS[VIDEO_WINNER];
+  const reward=isWin?Math.floor(bet*winner.odds):0;
+  if(isWin)pts+=reward; updatePts();
+
+  const ro=document.getElementById('resOverlay');
+  document.getElementById('resTitle').textContent=isWin?`🎉 ${winner.name} 우승! 맞췄어요!`:`😢 ${winner.name} 우승...`;
+  const rr=document.getElementById('resReward');
+  rr.textContent=isWin?`+${reward}P 획득!`:`-${bet}P 손실`;
+  rr.className='res-reward '+(isWin?'res-win':'res-lose');
+  ro.style.display='flex';
+  document.getElementById('statusTxt').textContent=isWin?`+${reward}P 획득!`:`-${bet}P`;
+}
+
+function resetGame(){
+  const vid=document.getElementById('raceVid');
+  vid.pause(); vid.currentTime=0;
+  document.getElementById('resOverlay').style.display='none';
+  document.getElementById('overlay').classList.remove('hidden');
+  document.getElementById('sub').style.display='none';
+  sel=-1; document.querySelectorAll('.sp').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('statusTxt').textContent='달팽이를 선택하고 베팅하세요';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🐾 몬스터 도감</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--surface:#0d1117;--border:rgba(255,255,255,.08);
+  --text:#f0f0f8;--muted:#64748b;
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+
+/* ── 헤더 ── */
+.header{text-align:center;margin-bottom:28px}
+.header h1{font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{font-size:.82rem;color:var(--muted);margin-top:4px}
+
+/* ── 포인트/뽑기 섹션 ── */
+.gacha-section{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:16px 24px;margin-bottom:24px;flex-wrap:wrap;
+}
+.pts-disp{font-size:.9rem;font-weight:800;color:#fbbf24;white-space:nowrap}
+.gacha-btn{
+  padding:10px 24px;border:none;border-radius:10px;
+  font-weight:900;font-size:.82rem;cursor:pointer;font-family:inherit;
+  transition:all .15s;
+}
+.gacha-btn.basic{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.35)}
+.gacha-btn.premium{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;box-shadow:0 4px 14px rgba(245,158,11,.35)}
+.gacha-btn:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.gacha-btn:active{transform:translateY(0)}
+
+/* ── 진행도 ── */
+.progress-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 18px;margin-bottom:20px;
+  display:flex;align-items:center;gap:12px;
+}
+.prog-text{font-size:.78rem;font-weight:700;white-space:nowrap}
+.prog-track{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:4px;transition:width .4s ease}
+.prog-pct{font-size:.72rem;color:var(--muted);white-space:nowrap}
+
+/* ── 필터 탭 ── */
+.filter-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.ftab{padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;transition:all .12s;font-family:inherit}
+.ftab.active{color:#fff;border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.1)}
+
+/* ── 도감 그리드 ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+
+/* ── 몬스터 카드 ── */
+.mcard{
+  position:relative;border-radius:16px;padding:3px;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;
+  aspect-ratio:3/4;
+}
+.mcard:hover{transform:translateY(-4px) scale(1.02)}
+.mcard-inner{
+  border-radius:14px;height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:12px 10px 10px;position:relative;overflow:hidden;
+}
+
+/* 등급별 카드 테두리/배경 */
+.rarity-common .mcard{background:linear-gradient(135deg,#4b5563,#6b7280)}
+.rarity-common .mcard-inner{background:linear-gradient(180deg,#1c2130,#111827)}
+.rarity-uncommon .mcard{background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa)}
+.rarity-uncommon .mcard-inner{background:linear-gradient(180deg,#0f1e3a,#0a1628)}
+.rarity-rare .mcard{background:linear-gradient(135deg,#7c3aed,#a855f7,#c084fc)}
+.rarity-rare .mcard-inner{background:linear-gradient(180deg,#1a0d2e,#110820)}
+.rarity-legendary .mcard{background:linear-gradient(135deg,#d97706,#f59e0b,#fbbf24,#fcd34d);box-shadow:0 0 20px rgba(251,191,36,.4)}
+.rarity-legendary .mcard-inner{background:linear-gradient(180deg,#1f1400,#150e00)}
+.rarity-mythic .mcard{
+  background:linear-gradient(135deg,#7c3aed,#ec4899,#06b6d4,#7c3aed);
+  background-size:200%;animation:mythicShine 3s linear infinite;
+  box-shadow:0 0 30px rgba(168,85,247,.5);
+}
+@keyframes mythicShine{0%{background-position:0%}100%{background-position:200%}}
+.rarity-mythic .mcard-inner{background:linear-gradient(180deg,#0d0520,#050210)}
+
+/* 미발견 카드 */
+.mcard.undiscovered .mcard-inner{background:#0a0a0a;border:1px solid rgba(255,255,255,.05)}
+.mcard.undiscovered{opacity:.7}
+
+/* 카드 내부 */
+.card-rarity-badge{
+  position:absolute;top:7px;left:7px;
+  font-size:.52rem;font-weight:900;padding:2px 7px;border-radius:6px;letter-spacing:.5px;
+  text-transform:uppercase;z-index:2;
+}
+.rarity-common .card-rarity-badge{background:rgba(107,114,128,.3);color:#9ca3af}
+.rarity-uncommon .card-rarity-badge{background:rgba(59,130,246,.3);color:#93c5fd}
+.rarity-rare .card-rarity-badge{background:rgba(168,85,247,.3);color:#d8b4fe}
+.rarity-legendary .card-rarity-badge{background:rgba(251,191,36,.3);color:#fcd34d}
+.rarity-mythic .card-rarity-badge{background:rgba(236,72,153,.3);color:#f9a8d4}
+
+.card-id{position:absolute;top:7px;right:8px;font-size:.5rem;color:rgba(255,255,255,.25);font-weight:700}
+
+.card-img-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%;padding:6px 0}
+.card-img{width:80%;height:80%;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+.silhouette{width:65%;height:65%;background:rgba(255,255,255,.07);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;opacity:.4}
+
+.card-info{width:100%;text-align:center}
+.card-name{font-size:.72rem;font-weight:900;margin-bottom:2px;letter-spacing:-.3px}
+.card-type{font-size:.55rem;color:var(--muted);margin-bottom:6px}
+.card-stars{font-size:.65rem;letter-spacing:1px}
+
+/* 등급별 별 색상 */
+.rarity-common .card-stars{color:#9ca3af}
+.rarity-uncommon .card-stars{color:#60a5fa}
+.rarity-rare .card-stars{color:#c084fc}
+.rarity-legendary .card-stars{color:#fbbf24}
+.rarity-mythic .card-stars{color:#f472b6}
+
+.card-count{
+  position:absolute;bottom:7px;right:8px;
+  font-size:.58rem;font-weight:900;
+  background:rgba(255,255,255,.12);border-radius:6px;padding:2px 6px;
+  color:rgba(255,255,255,.7);
+}
+
+/* ── 뽑기 결과 오버레이 ── */
+.pull-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);
+}
+.pull-overlay.show{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.pull-card-big{
+  width:240px;position:relative;border-radius:24px;padding:4px;
+  animation:cardReveal .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cardReveal{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.pull-card-inner{
+  border-radius:20px;padding:24px 20px 20px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:10px;min-height:300px;justify-content:center;
+}
+.pull-monster-img{width:130px;height:130px;object-fit:contain;filter:drop-shadow(0 8px 20px rgba(0,0,0,.6))}
+.pull-name{font-size:1.4rem;font-weight:900;margin-top:4px}
+.pull-stars{font-size:1rem;letter-spacing:2px}
+.pull-type{font-size:.75rem;color:var(--muted)}
+.pull-badge{font-size:.68rem;font-weight:900;padding:4px 14px;border-radius:10px;margin-top:4px}
+.pull-new{background:rgba(16,185,129,.2);color:#10b981;border:1px solid rgba(16,185,129,.4)}
+.pull-dup{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
+.pull-close-btn{
+  margin-top:16px;padding:10px 32px;border:none;border-radius:10px;
+  background:rgba(255,255,255,.1);color:#fff;font-weight:800;font-size:.85rem;
+  cursor:pointer;font-family:inherit;transition:all .12s;
+}
+.pull-close-btn:hover{background:rgba(255,255,255,.2)}
+
+/* 파티클 */
+.particle{position:fixed;pointer-events:none;z-index:200;font-size:1.2rem;animation:particleFly 1.5s ease-out forwards}
+@keyframes particleFly{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-120px) scale(0)}}
+
+/* ── 모달 (상세) ── */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.detail-overlay.show{display:flex;animation:fadeIn .2s ease}
+.detail-card{
+  width:320px;border-radius:20px;padding:4px;
+  animation:cardReveal .35s cubic-bezier(.34,1.56,.64,1);
+}
+.detail-inner{border-radius:17px;padding:24px;background:var(--surface)}
+.detail-img{width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 12px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))}
+.detail-name{font-size:1.3rem;font-weight:900;text-align:center;margin-bottom:4px}
+.detail-type{font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:12px}
+.detail-desc{font-size:.78rem;color:rgba(255,255,255,.7);line-height:1.6;text-align:center;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:8px}
+.detail-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat-item{background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;text-align:center}
+.stat-label{font-size:.58rem;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
+.stat-val{font-size:.9rem;font-weight:900;margin-top:2px}
+.detail-count{font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:12px}
+.detail-close{width:100%;padding:9px;border:none;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-weight:800;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐾 몬스터 도감</h1>
+  <p>포인트를 소모해서 몬스터를 포획하세요 · 총 30종 수집</p>
+</div>
+
+<!-- 포인트 + 뽑기 -->
+<div class="gacha-section">
+  <div class="pts-disp">◈ <span id="demoPoints">500</span> P</div>
+  <button class="gacha-btn basic" onclick="doPull(10)">🎲 일반 소환 <b>10P</b></button>
+  <button class="gacha-btn premium" onclick="doPull(30)">✨ 프리미엄 소환 <b>30P</b></button>
+  <span style="font-size:.68rem;color:var(--muted)">프리미엄: 희귀↑확률 2배</span>
+</div>
+
+<!-- 진행도 -->
+<div class="progress-bar">
+  <span class="prog-text">📖 수집 현황</span>
+  <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  <span class="prog-pct" id="progText">0 / 30</span>
+</div>
+
+<!-- 필터 -->
+<div class="filter-tabs">
+  <button class="ftab active" onclick="setFilter('all',this)">전체</button>
+  <button class="ftab" onclick="setFilter('common',this)">⬜ 일반</button>
+  <button class="ftab" onclick="setFilter('uncommon',this)">🟦 고급</button>
+  <button class="ftab" onclick="setFilter('rare',this)">🟪 희귀</button>
+  <button class="ftab" onclick="setFilter('legendary',this)">🟨 전설</button>
+  <button class="ftab" onclick="setFilter('mythic',this)">🌈 신화</button>
+  <button class="ftab" onclick="setFilter('collected',this)">✅ 보유중</button>
+</div>
+
+<!-- 도감 그리드 -->
+<div class="grid" id="monsterGrid"></div>
+
+<!-- 뽑기 결과 오버레이 -->
+<div class="pull-overlay" id="pullOverlay" onclick="closePull()">
+  <div onclick="event.stopPropagation()">
+    <div class="pull-card-big" id="pullCardBig">
+      <div class="pull-card-inner" id="pullCardInner">
+        <img id="pullImg" class="pull-monster-img" src="" alt="">
+        <div id="pullStars" class="pull-stars"></div>
+        <div id="pullName" class="pull-name"></div>
+        <div id="pullType" class="pull-type"></div>
+        <div id="pullBadge" class="pull-badge"></div>
+        <button class="pull-close-btn" onclick="closePull()">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()">
+  <div class="detail-card" id="detailCard" onclick="event.stopPropagation()">
+    <div class="detail-inner">
+      <img id="detailImg" class="detail-img" src="" alt="">
+      <div id="detailStars" style="text-align:center;font-size:.9rem;margin-bottom:4px"></div>
+      <div id="detailName" class="detail-name"></div>
+      <div id="detailType" class="detail-type"></div>
+      <div id="detailDesc" class="detail-desc"></div>
+      <div class="detail-stats" id="detailStats"></div>
+      <div id="detailCount" class="detail-count"></div>
+      <button class="detail-close" onclick="closeDetail()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   몬스터 데이터 (30종)
+═══════════════════════════════════ */
+const MONSTERS = [
+  // ── 일반 (Common) ──
+  {id:1,name:'슬라임',type:'점액 괴물',rarity:'common',img:'/monsters/slime.png',desc:'던전 어디서나 만날 수 있는 가장 약한 몬스터. 하지만 핵을 먹으면 이야기가 달라진다.',atk:12,def:5,spd:8,stars:'★'},
+  {id:2,name:'고블린',type:'잔머리 종족',rarity:'common',img:'/monsters/goblin.png',desc:'작고 교활한 녀석. 빠른 손으로 아이템을 훔쳐가기로 유명하다.',atk:18,def:8,spd:22,stars:'★'},
+  {id:3,name:'박쥐',type:'동굴 생물',rarity:'common',img:null,desc:'어두운 동굴에 사는 초음파 발사 박쥐. 귀엽지만 물리면 아프다.',atk:10,def:4,spd:28,stars:'★'},
+  {id:4,name:'독버섯',type:'식물형',rarity:'common',img:null,desc:'맹독을 내뿜는 버섯. 움직이지 않아서 방심하면 큰 코 다친다.',atk:8,def:15,spd:2,stars:'★'},
+  {id:5,name:'해골 전사',type:'언데드',rarity:'common',img:null,desc:'오래된 뼈로 이루어진 전사. 부수면 쓰러지지만 다시 조립된다.',atk:16,def:12,spd:10,stars:'★'},
+  {id:6,name:'늑대',type:'야생 동물',rarity:'common',img:null,desc:'무리를 지어 사냥하는 영리한 포식자. 혼자면 괜찮지만 여럿이면 위험.',atk:22,def:10,spd:30,stars:'★'},
+
+  // ── 고급 (Uncommon) ──
+  {id:7,name:'트롤',type:'거인족',rarity:'uncommon',img:null,desc:'돌다리 아래 사는 재생 능력자. 불에 약하다.',atk:35,def:28,spd:6,stars:'★★'},
+  {id:8,name:'마법구슬',type:'마법체',rarity:'uncommon',img:null,desc:'마력이 응집된 구슬. 건드리면 마법을 마구 뿜어낸다.',atk:40,def:10,spd:20,stars:'★★'},
+  {id:9,name:'독거미',type:'절지류',rarity:'uncommon',img:null,desc:'8개의 눈으로 모든 방향을 감지. 거미줄로 움직임을 봉쇄한다.',atk:28,def:18,spd:25,stars:'★★'},
+  {id:10,name:'인어',type:'수중 생물',rarity:'uncommon',img:null,desc:'물속에서만 살 수 있는 듯 보이지만 육지에서도 의외로 강하다.',atk:30,def:20,spd:35,stars:'★★'},
+  {id:11,name:'하피',type:'비행 종족',rarity:'uncommon',img:null,desc:'날카로운 발톱과 날개를 가진 반인반조. 고공에서 급강하 공격.',atk:38,def:15,spd:40,stars:'★★'},
+  {id:12,name:'도깨비불',type:'정령',rarity:'uncommon',img:null,desc:'습지에 떠도는 불의 정령. 저주를 걸어 방향감각을 빼앗는다.',atk:25,def:8,spd:45,stars:'★★'},
+  {id:13,name:'오크 전사',type:'오크족',rarity:'uncommon',img:null,desc:'전투에 미친 오크 전사. 체력이 절반 이하로 떨어지면 오히려 강해진다.',atk:42,def:22,spd:12,stars:'★★'},
+  {id:14,name:'그림자 도둑',type:'암흑 인간',rarity:'uncommon',img:null,desc:'그림자 속에 숨어 기습하는 전문가. 치명타 확률이 매우 높다.',atk:50,def:12,spd:48,stars:'★★'},
+
+  // ── 희귀 (Rare) ──
+  {id:15,name:'불도마뱀',type:'화염 파충류',rarity:'rare',img:'/monsters/fire-sal.png',desc:'태어날 때부터 온몸에 불꽃이 타오른다. 건드리면 화상 보장.',atk:62,def:30,spd:35,stars:'★★★'},
+  {id:16,name:'달빛여우',type:'신비 여우',rarity:'rare',img:'/monsters/moon-fox.png',desc:'보름달 밤에만 나타나는 신비한 여우. 꼬리가 많을수록 강하다.',atk:55,def:35,spd:60,stars:'★★★'},
+  {id:17,name:'얼음 골렘',type:'구조체',rarity:'rare',img:null,desc:'고대 마법으로 만들어진 얼음 거인. 공격할 때 주변이 얼어붙는다.',atk:70,def:60,spd:8,stars:'★★★'},
+  {id:18,name:'천둥새',type:'전기 조류',rarity:'rare',img:null,desc:'날갯짓 한번에 번개가 떨어진다. 깃털 하나가 전기 뱀장어 100마리 분량.',atk:75,def:28,spd:70,stars:'★★★'},
+  {id:19,name:'독룡',type:'드래곤',rarity:'rare',img:null,desc:'소형 드래곤이지만 독성은 최상급. 한 방에 쓰러뜨리지 않으면 독에 죽는다.',atk:68,def:40,spd:45,stars:'★★★'},
+  {id:20,name:'인형술사',type:'마법사',rarity:'rare',img:null,desc:'인형을 조종해 싸우는 마법사. 본체를 찾지 못하면 무한 전투.',atk:58,def:25,spd:30,stars:'★★★'},
+  {id:21,name:'폭풍게',type:'갑각류',rarity:'rare',img:null,desc:'집게발로 폭풍을 일으키는 바다의 폭군. 껍데기가 매우 단단하다.',atk:60,def:72,spd:15,stars:'★★★'},
+  {id:22,name:'뱀파이어 군주',type:'언데드 귀족',rarity:'rare',img:null,desc:'수백 년을 살아온 흡혈귀. 공격할 때마다 체력을 흡수한다.',atk:80,def:45,spd:55,stars:'★★★'},
+
+  // ── 전설 (Legendary) ──
+  {id:23,name:'불사조',type:'전설 조류',rarity:'legendary',img:'/monsters/phoenix.png',desc:'죽어도 재에서 부활한다. 진정한 의미의 불멸. 꼬리 깃털 하나로 도시를 태울 수 있다.',atk:120,def:80,spd:100,stars:'★★★★'},
+  {id:24,name:'해신',type:'신화 생물',rarity:'legendary',img:null,desc:'바다를 지배하는 자. 분노하면 해일을 일으킨다. 수천 년간 잠들어 있었다.',atk:140,def:100,spd:60,stars:'★★★★'},
+  {id:25,name:'뇌신',type:'신화 생물',rarity:'legendary',img:null,desc:'번개를 조종하는 신. 화가 나면 하늘이 붉게 물든다.',atk:160,def:70,spd:120,stars:'★★★★'},
+  {id:26,name:'빙신',type:'신화 생물',rarity:'legendary',img:null,desc:'절대영도를 구현하는 신. 쳐다보는 것만으로도 얼어붙는다.',atk:130,def:110,spd:50,stars:'★★★★'},
+  {id:27,name:'어둠왕',type:'암흑 군주',rarity:'legendary',img:null,desc:'빛이 닿지 않는 곳에서 군림하는 자. 그의 이름을 부르면 불길한 일이 생긴다.',atk:180,def:90,spd:80,stars:'★★★★'},
+
+  // ── 신화 (Mythic) ──
+  {id:28,name:'창조신',type:'신화 존재',rarity:'mythic',img:null,desc:'세계를 만든 최초의 존재. 포획이 가능한지조차 불분명하다. 도감에 올리는 것 자체가 기적.',atk:999,def:999,spd:999,stars:'★★★★★'},
+  {id:29,name:'파멸왕',type:'신화 존재',rarity:'mythic',img:null,desc:'세계를 끝내러 온 자. 그의 존재 자체가 재앙이다. 진짜로 잡은 사람이 있을까?',atk:999,def:888,spd:777,stars:'★★★★★'},
+  {id:30,name:'시간룡',type:'신화 드래곤',rarity:'mythic',img:'/monsters/shadow-dragon.png',desc:'시간의 흐름을 지배하는 궁극의 드래곤. 과거와 미래를 동시에 본다.',atk:900,def:900,spd:900,stars:'★★★★★'},
+];
+
+const RARITY_RATES = {
+  basic:    {common:55,uncommon:30,rare:12,legendary:3,mythic:0},
+  premium:  {common:35,uncommon:30,rare:22,legendary:10,mythic:3},
+};
+const RARITY_LABEL = {common:'일반',uncommon:'고급',rare:'희귀',legendary:'전설',mythic:'신화'};
+const RARITY_COLOR = {common:'#9ca3af',uncommon:'#60a5fa',rare:'#c084fc',legendary:'#fbbf24',mythic:'#f472b6'};
+
+/* ── 상태 ── */
+let demoPoints = 9999;
+let collection = {}; // id → count
+let currentFilter = 'all';
+
+/* ── 뽑기 ── */
+function pickRarity(type) {
+  const rates = RARITY_RATES[type];
+  const r = Math.random() * 100;
+  let acc = 0;
+  for (const [rarity, rate] of Object.entries(rates)) {
+    acc += rate;
+    if (r < acc) return rarity;
+  }
+  return 'common';
+}
+
+function doPull(cost) {
+  if (demoPoints < cost) { alert('포인트가 부족합니다!'); return; }
+  demoPoints -= cost;
+  document.getElementById('demoPoints').textContent = demoPoints;
+
+  const type = cost === 10 ? 'basic' : 'premium';
+  const rarity = pickRarity(type);
+  const pool = MONSTERS.filter(m => m.rarity === rarity);
+  const monster = pool[Math.floor(Math.random() * pool.length)];
+
+  const isNew = !collection[monster.id];
+  collection[monster.id] = (collection[monster.id] || 0) + 1;
+
+  showPullResult(monster, isNew);
+  updateGrid();
+  updateProgress();
+  if (isNew) spawnParticles(monster.rarity);
+}
+
+/* ── 뽑기 결과 표시 ── */
+function showPullResult(m, isNew) {
+  const ov = document.getElementById('pullOverlay');
+  const big = document.getElementById('pullCardBig');
+  const inner = document.getElementById('pullCardInner');
+
+  big.className = 'pull-card-big rarity-' + m.rarity;
+  inner.className = 'pull-card-inner rarity-' + m.rarity;
+
+  const img = document.getElementById('pullImg');
+  if (m.img) { img.src = m.img; img.style.display = 'block'; }
+  else { img.style.display = 'none'; }
+
+  document.getElementById('pullStars').textContent = m.stars;
+  document.getElementById('pullStars').style.color = RARITY_COLOR[m.rarity];
+  document.getElementById('pullName').textContent = m.name;
+  document.getElementById('pullType').textContent = m.type + ' · ' + RARITY_LABEL[m.rarity];
+
+  const badge = document.getElementById('pullBadge');
+  if (isNew) { badge.textContent = '🎉 새로운 몬스터!'; badge.className = 'pull-badge pull-new'; }
+  else { badge.textContent = '✨ 중복 (보유 ' + collection[m.id] + '마리)'; badge.className = 'pull-badge pull-dup'; }
+
+  ov.classList.add('show');
+}
+function closePull() { document.getElementById('pullOverlay').classList.remove('show'); }
+
+/* ── 파티클 ── */
+function spawnParticles(rarity) {
+  const emojis = {common:'⭐',uncommon:'💫',rare:'✨',legendary:'🌟',mythic:'🌈'};
+  for (let i = 0; i < 12; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'particle';
+      el.textContent = emojis[rarity] || '✨';
+      el.style.left = (20 + Math.random() * 60) + '%';
+      el.style.top = (20 + Math.random() * 40) + '%';
+      el.style.animationDelay = Math.random() * 0.4 + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2000);
+    }, i * 80);
+  }
+}
+
+/* ── 그리드 렌더 ── */
+function updateGrid() {
+  const grid = document.getElementById('monsterGrid');
+  const list = MONSTERS.filter(m => {
+    if (currentFilter === 'collected') return !!collection[m.id];
+    if (currentFilter !== 'all') return m.rarity === currentFilter;
+    return true;
+  });
+
+  grid.innerHTML = list.map(m => {
+    const owned = collection[m.id] || 0;
+    const discovered = owned > 0;
+    return `
+      <div class="mcard rarity-${m.rarity} ${discovered?'':'undiscovered'}" onclick="showDetail(${m.id})">
+        <div class="mcard-inner rarity-${m.rarity}">
+          <span class="card-rarity-badge">${RARITY_LABEL[m.rarity]}</span>
+          <span class="card-id">#${String(m.id).padStart(3,'0')}</span>
+          <div class="card-img-wrap">
+            ${discovered && m.img
+              ? `<img class="card-img" src="${m.img}" alt="${m.name}">`
+              : `<div class="silhouette">${discovered ? '👾' : '❓'}</div>`}
+          </div>
+          <div class="card-info">
+            <div class="card-name">${discovered ? m.name : '???'}</div>
+            <div class="card-type">${discovered ? m.type : '미발견'}</div>
+            <div class="card-stars" style="color:${RARITY_COLOR[m.rarity]}">${m.stars}</div>
+          </div>
+          ${owned > 0 ? `<span class="card-count">×${owned}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ── 진행도 ── */
+function updateProgress() {
+  const total = MONSTERS.length;
+  const found = Object.keys(collection).length;
+  document.getElementById('progFill').style.width = (found/total*100) + '%';
+  document.getElementById('progText').textContent = found + ' / ' + total;
+}
+
+/* ── 상세 모달 ── */
+function showDetail(id) {
+  const m = MONSTERS.find(x => x.id === id);
+  const owned = collection[id] || 0;
+  const discovered = owned > 0;
+
+  const dc = document.getElementById('detailCard');
+  dc.className = 'detail-card rarity-' + m.rarity;
+
+  const img = document.getElementById('detailImg');
+  if (discovered && m.img) { img.src = m.img; img.style.display = 'block'; }
+  else if (!discovered) { img.style.display = 'none'; }
+  else { img.style.display = 'none'; }
+
+  document.getElementById('detailStars').textContent = m.stars;
+  document.getElementById('detailStars').style.color = RARITY_COLOR[m.rarity];
+  document.getElementById('detailName').textContent = discovered ? m.name : '#' + String(id).padStart(3,'0') + ' ???';
+  document.getElementById('detailType').textContent = discovered ? (m.type + ' · ' + RARITY_LABEL[m.rarity]) : '미발견 몬스터';
+  document.getElementById('detailDesc').textContent = discovered ? m.desc : '아직 이 몬스터와 만나지 못했습니다...';
+
+  document.getElementById('detailStats').innerHTML = discovered ? `
+    <div class="stat-item"><div class="stat-label">공격력</div><div class="stat-val" style="color:#ef4444">${m.atk}</div></div>
+    <div class="stat-item"><div class="stat-label">방어력</div><div class="stat-val" style="color:#3b82f6">${m.def}</div></div>
+    <div class="stat-item"><div class="stat-label">속도</div><div class="stat-val" style="color:#10b981">${m.spd}</div></div>
+    <div class="stat-item"><div class="stat-label">보유 수</div><div class="stat-val">${owned}마리</div></div>
+  ` : '';
+
+  document.getElementById('detailCount').textContent = discovered ? `보유 ${owned}마리` : '';
+  document.getElementById('detailOverlay').classList.add('show');
+}
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('show'); }
+
+/* ── 필터 ── */
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  updateGrid();
+}
+
+/* ── 초기화 ── */
+updateGrid();
+updateProgress();
+</script>
+</body>
+</html>

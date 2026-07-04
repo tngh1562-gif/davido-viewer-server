@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>B안 - 네온 퍼플</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#0f0a1e 0%,#130d2b 50%,#0a0f1e 100%);color:#e2e8f0;height:100vh;display:flex;overflow:hidden}
+
+.sidebar{width:200px;background:rgba(124,58,237,.08);backdrop-filter:blur(20px);border-right:1px solid rgba(168,85,247,.15);display:flex;flex-direction:column;flex-shrink:0}
+.logo{padding:24px 18px 18px;border-bottom:1px solid rgba(168,85,247,.12)}
+.logo-title{font-size:.95rem;font-weight:900;letter-spacing:-.5px;background:linear-gradient(135deg,#a855f7,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:.62rem;color:#7c3aed;letter-spacing:3px;text-transform:uppercase;margin-top:3px}
+.nav{padding:12px 10px;display:flex;flex-direction:column;gap:2px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:.8rem;font-weight:500;color:#7c6fa0;cursor:pointer;transition:all .15s}
+.nav-item:hover{color:#c4b5fd;background:rgba(168,85,247,.08)}
+.nav-item.active{color:#fff;background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(124,58,237,.2));border:1px solid rgba(168,85,247,.3);box-shadow:0 0 20px rgba(168,85,247,.15)}
+.nav-icon{font-size:14px;width:18px;text-align:center}
+.nav-bottom{padding:12px 10px;border-top:1px solid rgba(168,85,247,.1)}
+.admin-pill{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2)}
+.admin-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800}
+.admin-txt{font-size:.72rem;color:#c4b5fd;font-weight:600}
+
+.main{flex:1;overflow-y:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(168,85,247,.1);backdrop-filter:blur(10px)}
+.topbar-title{font-size:1rem;font-weight:700;color:#fff}
+.topbar-right{display:flex;gap:10px}
+.btn{padding:7px 16px;border-radius:8px;border:none;font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-primary{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 0 20px rgba(168,85,247,.4)}
+.btn-outline{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.25);color:#c4b5fd}
+.content{padding:20px 24px}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:rgba(255,255,255,.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:-20px;right:-20px;width:60px;height:60px;border-radius:50%;opacity:.3}
+.stat-card:nth-child(1)::before{background:#a855f7}
+.stat-card:nth-child(2)::before{background:#fbbf24}
+.stat-card:nth-child(3)::before{background:#60a5fa}
+.stat-card:nth-child(4)::before{background:#f87171}
+.stat-label{font-size:.65rem;color:#7c6fa0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.stat-val{font-size:1.7rem;font-weight:900;letter-spacing:-1px}
+.stat-val.purple{color:#c4b5fd}
+.stat-val.gold{color:#fbbf24}
+.stat-val.blue{color:#93c5fd}
+.stat-val.red{color:#fca5a5}
+
+.teams-grid{display:grid;grid-template-columns:1fr 80px 1fr;gap:12px;align-items:start;margin-bottom:20px}
+.team-card{background:rgba(255,255,255,.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+.team-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.team-header.blue{background:linear-gradient(135deg,rgba(59,130,246,.25),transparent);border-bottom:1px solid rgba(59,130,246,.2)}
+.team-header.red{background:linear-gradient(135deg,rgba(239,68,68,.25),transparent);border-bottom:1px solid rgba(239,68,68,.2)}
+.team-name{font-size:.9rem;font-weight:800}
+.team-name.blue{color:#93c5fd}
+.team-name.red{color:#fca5a5}
+.player-list{padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.player-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04)}
+.player-pos{font-size:.6rem;font-weight:800;color:#a855f7;width:28px}
+.player-name{font-size:.76rem;font-weight:600;color:#e2e8f0;flex:1}
+.player-tier{font-size:.62rem;color:#6b5f8a}
+.vs-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px 0}
+.vs-text{font-size:1.2rem;font-weight:900;color:rgba(168,85,247,.4);letter-spacing:2px}
+.start-btn{padding:8px 14px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:900;font-size:.76rem;border:none;cursor:pointer;box-shadow:0 0 20px rgba(168,85,247,.5);white-space:nowrap}
+
+.bottom-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+.section-title{font-size:.65rem;font-weight:700;color:#6b5f8a;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
+.table-card{background:rgba(255,255,255,.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px}
+.table{width:100%;border-collapse:collapse}
+.table th{font-size:.62rem;color:#6b5f8a;text-transform:uppercase;letter-spacing:1px;padding:6px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+.table td{font-size:.76rem;color:#94a3b8;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.table tr:last-child td{border:none}
+.rank-num{font-weight:900;color:#fbbf24}
+.points{font-weight:700;color:#c4b5fd}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title">DAVIDO INHOUSE</div>
+    <div class="logo-sub">Admin</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active"><span class="nav-icon">⚔️</span>메인</div>
+    <div class="nav-item"><span class="nav-icon">🛒</span>상점</div>
+    <div class="nav-item"><span class="nav-icon">👥</span>로스터</div>
+    <div class="nav-item"><span class="nav-icon">🎯</span>자동배정</div>
+    <div class="nav-item"><span class="nav-icon">🃏</span>밴픽</div>
+    <div class="nav-item"><span class="nav-icon">📊</span>기록</div>
+    <div class="nav-item"><span class="nav-icon">🗄️</span>시청자 DB</div>
+    <div class="nav-item"><span class="nav-icon">📺</span>오버레이</div>
+    <div class="nav-item"><span class="nav-icon">🤖</span>봇 설정</div>
+    <div class="nav-item"><span class="nav-icon">🎡</span>룰렛</div>
+    <div class="nav-item"><span class="nav-icon">⚙️</span>설정</div>
+  </nav>
+  <div class="nav-bottom">
+    <div class="admin-pill"><div class="admin-avatar">다</div><div class="admin-txt">다비도 · 관리자</div></div>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">⚔️ 현재 내전</div>
+    <div class="topbar-right">
+      <button class="btn btn-outline">초기화</button>
+      <button class="btn btn-primary">✨ 자동 배정</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">등록 시청자</div><div class="stat-val purple">24명</div></div>
+      <div class="stat-card"><div class="stat-label">오늘 내전</div><div class="stat-val gold">3판</div></div>
+      <div class="stat-card"><div class="stat-label">블루 승률</div><div class="stat-val blue">58%</div></div>
+      <div class="stat-card"><div class="stat-label">레드 승률</div><div class="stat-val red">42%</div></div>
+    </div>
+    <div class="teams-grid">
+      <div class="team-card">
+        <div class="team-header blue"><span class="team-name blue">🔵 블루팀</span><span style="font-size:.68rem;color:#6b5f8a">5/5명</span></div>
+        <div class="player-list">
+          <div class="player-row"><span class="player-pos">탑</span><span class="player-name">다비도</span><span class="player-tier">다이아1</span></div>
+          <div class="player-row"><span class="player-pos">정글</span><span class="player-name">메무</span><span class="player-tier">플래1</span></div>
+          <div class="player-row"><span class="player-pos">미드</span><span class="player-name">Kyron</span><span class="player-tier">다이아2</span></div>
+          <div class="player-row"><span class="player-pos">원딜</span><span class="player-name">달냠달냠</span><span class="player-tier">플래2</span></div>
+          <div class="player-row"><span class="player-pos">서포</span><span class="player-name">해스크</span><span class="player-tier">골드1</span></div>
+        </div>
+      </div>
+      <div class="vs-box"><div class="vs-text">VS</div><button class="start-btn">시작</button></div>
+      <div class="team-card">
+        <div class="team-header red"><span class="team-name red">🔴 레드팀</span><span style="font-size:.68rem;color:#6b5f8a">5/5명</span></div>
+        <div class="player-list">
+          <div class="player-row"><span class="player-pos">탑</span><span class="player-name">물결의</span><span class="player-tier">플래1</span></div>
+          <div class="player-row"><span class="player-pos">정글</span><span class="player-name">Zeion</span><span class="player-tier">다이아1</span></div>
+          <div class="player-row"><span class="player-pos">미드</span><span class="player-name">지수시</span><span class="player-tier">플래3</span></div>
+          <div class="player-row"><span class="player-pos">원딜</span><span class="player-name">린격</span><span class="player-tier">다이아3</span></div>
+          <div class="player-row"><span class="player-pos">서포</span><span class="player-name">비비주민</span><span class="player-tier">골드2</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-grid">
+      <div class="table-card">
+        <div class="section-title">포인트 랭킹</div>
+        <table class="table">
+          <tr><th>#</th><th>닉네임</th><th>티어</th><th>포인트</th></tr>
+          <tr><td class="rank-num">1</td><td>다비도</td><td>다이아1</td><td class="points">841P</td></tr>
+          <tr><td class="rank-num">2</td><td>치킨추적자</td><td>플래1</td><td class="points">724P</td></tr>
+          <tr><td class="rank-num">3</td><td>Kyron</td><td>다이아2</td><td class="points">612P</td></tr>
+          <tr><td class="rank-num">4</td><td>메무</td><td>플래1</td><td class="points">589P</td></tr>
+        </table>
+      </div>
+      <div class="table-card">
+        <div class="section-title">최근 기록</div>
+        <table class="table">
+          <tr><th>시각</th><th>결과</th><th>MVP</th></tr>
+          <tr><td>20:14</td><td style="color:#93c5fd;font-weight:700">블루 승</td><td>다비도</td></tr>
+          <tr><td>18:52</td><td style="color:#fca5a5;font-weight:700">레드 승</td><td>Zeion</td></tr>
+          <tr><td>17:30</td><td style="color:#93c5fd;font-weight:700">블루 승</td><td>Kyron</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

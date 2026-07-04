@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>숫자야구 데모</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Noto Sans KR','Inter',sans-serif;
+  background:#07080f;
+  color:#f0f0f8;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.game-wrap{
+  width:100%;
+  max-width:460px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+/* 헤더 */
+.header{text-align:center;margin-bottom:4px}
+.title{
+  font-size:1.6rem;font-weight:900;letter-spacing:-1px;
+  background:linear-gradient(135deg,#e8a020,#ffc347);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.subtitle{font-size:.78rem;color:#475569;margin-top:4px}
+
+/* 상태 카드 */
+.status-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stat-box{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;
+  padding:12px;
+  text-align:center;
+}
+.stat-label{font-size:.6rem;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.stat-val{font-size:1.4rem;font-weight:900;letter-spacing:-1px}
+.stat-val.gold{color:#e8a020}
+.stat-val.green{color:#10b981}
+.stat-val.red{color:#ef4444}
+
+/* 베팅 */
+.bet-card{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.bet-label{font-size:.68rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.bet-chips{display:flex;gap:6px}
+.chip{
+  flex:1;padding:7px;border-radius:7px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
+  color:#64748b;font-size:.75rem;font-weight:700;
+  cursor:pointer;text-align:center;transition:all .12s;
+  font-family:inherit;
+}
+.chip:hover{border-color:rgba(232,160,32,.4);color:#e8a020}
+.chip.sel{
+  background:rgba(232,160,32,.12);
+  border-color:rgba(232,160,32,.4);
+  color:#e8a020;
+}
+.bet-disp{font-size:.72rem;color:#64748b;text-align:center}
+.bet-disp span{color:#e8a020;font-weight:700}
+
+/* 멀티플라이어 가이드 */
+.mult-guide{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  padding:14px 16px;
+}
+.mult-title{font-size:.62rem;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700}
+.mult-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:.74rem;
+}
+.mult-row:last-child{border:none}
+.mult-tries{color:#64748b}
+.mult-tries b{color:#94a3b8}
+.mult-x{font-weight:800;color:#e8a020}
+
+/* 입력 */
+.input-area{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  padding:16px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.input-label{font-size:.68rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.digit-row{display:flex;gap:8px;justify-content:center}
+.digit-input{
+  width:60px;height:60px;
+  text-align:center;font-size:1.6rem;font-weight:900;
+  background:#161820;
+  border:2px solid rgba(255,255,255,.1);
+  border-radius:10px;color:#f0f0f8;
+  font-family:'Inter',monospace;
+  outline:none;transition:all .15s;
+}
+.digit-input:focus{border-color:#e8a020;background:#1a1c28;box-shadow:0 0 16px rgba(232,160,32,.15)}
+.digit-input.filled{border-color:rgba(232,160,32,.3)}
+.submit-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,#b87800,#e8a020);
+  color:#000;font-weight:900;font-size:.88rem;
+  border:none;border-radius:10px;cursor:pointer;
+  font-family:inherit;letter-spacing:.3px;
+  box-shadow:0 4px 20px rgba(232,160,32,.3);
+  transition:all .15s;
+}
+.submit-btn:hover{box-shadow:0 4px 28px rgba(232,160,32,.5);filter:brightness(1.05)}
+.submit-btn:disabled{opacity:.35;cursor:not-allowed;filter:none;box-shadow:none}
+
+/* 히스토리 */
+.history{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  overflow:hidden;
+  display:none;
+}
+.history.show{display:block}
+.history-header{
+  padding:10px 16px;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  font-size:.62rem;color:#475569;text-transform:uppercase;letter-spacing:1px;font-weight:700;
+  display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:8px;
+}
+.history-list{padding:6px 8px;display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto}
+.h-row{
+  display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:8px;
+  padding:7px 8px;border-radius:7px;
+  background:rgba(255,255,255,.03);
+  align-items:center;
+  animation:fadeSlide .2s ease;
+}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.h-num{font-size:.62rem;color:#334155;font-weight:700;text-align:center}
+.h-guess{font-size:.95rem;font-weight:900;letter-spacing:4px;color:#f0f0f8;font-family:'Inter',monospace}
+.h-s{
+  display:flex;align-items:center;gap:5px;
+  font-size:.78rem;font-weight:800;
+}
+.h-s .cnt{
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:900;
+}
+.s-dot{background:rgba(232,160,32,.2);color:#e8a020;border:1px solid rgba(232,160,32,.3)}
+.b-dot{background:rgba(14,165,233,.12);color:#38bdf8;border:1px solid rgba(14,165,233,.25)}
+.h-hint{font-size:.72rem;font-weight:700}
+.s-text{color:#e8a020}
+.b-text{color:#38bdf8}
+.out-text{color:#334155}
+
+/* 결과 */
+.result-overlay{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  padding:24px;
+  text-align:center;
+  display:none;
+  flex-direction:column;
+  gap:12px;
+}
+.result-overlay.show{display:flex}
+.result-emoji{font-size:2.5rem}
+.result-title{font-size:1.2rem;font-weight:900}
+.result-title.win{color:#10b981}
+.result-title.lose{color:#ef4444}
+.result-sub{font-size:.78rem;color:#64748b;line-height:1.6}
+.result-reward{
+  background:rgba(16,185,129,.08);
+  border:1px solid rgba(16,185,129,.2);
+  border-radius:8px;padding:10px;
+  font-size:.88rem;font-weight:800;color:#10b981;
+}
+.result-answer{
+  font-size:.78rem;color:#64748b;
+}
+.result-answer span{color:#f0f0f8;font-weight:700;font-family:monospace;letter-spacing:3px}
+.retry-btn{
+  padding:12px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;color:#94a3b8;font-weight:700;font-size:.82rem;
+  cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.retry-btn:hover{background:rgba(255,255,255,.1);color:#f0f0f8}
+
+/* 포인트 배지 */
+.pts-badge{
+  position:fixed;top:20px;right:20px;
+  background:#0f1117;border:1px solid rgba(232,160,32,.3);
+  border-radius:20px;padding:6px 14px;
+  font-size:.75rem;font-weight:800;color:#e8a020;
+  display:flex;align-items:center;gap:6px;
+}
+.pts-dot{width:6px;height:6px;border-radius:50%;background:#e8a020}
+</style>
+</head>
+<body>
+
+<div class="pts-badge"><div class="pts-dot"></div>◈ <span id="myPts">500</span> P <span style="color:#334155;font-weight:500">(데모)</span></div>
+
+<div class="game-wrap">
+
+  <div class="header">
+    <div class="title">⚾ 숫자야구</div>
+    <div class="subtitle">4자리 숫자를 추리해서 정답을 맞추세요</div>
+  </div>
+
+  <!-- 상태 -->
+  <div class="status-row">
+    <div class="stat-box">
+      <div class="stat-label">시도</div>
+      <div class="stat-val gold" id="triesLeft">10</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">베팅</div>
+      <div class="stat-val" id="betDisplay" style="color:#f0f0f8">—</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">예상 배당</div>
+      <div class="stat-val green" id="multDisplay">—</div>
+    </div>
+  </div>
+
+  <!-- 베팅 (게임 시작 전) -->
+  <div class="bet-card" id="betSection">
+    <div class="bet-label">베팅 금액</div>
+    <div class="bet-chips">
+      <button class="chip sel" onclick="setBet(10)">10P</button>
+      <button class="chip" onclick="setBet(20)">20P</button>
+      <button class="chip" onclick="setBet(30)">30P</button>
+      <button class="chip" onclick="setBet(50)">50P</button>
+    </div>
+    <div class="bet-disp">선택: <span id="betAmt">10</span>P</div>
+  </div>
+
+  <!-- 배당 가이드 -->
+  <div class="mult-guide" id="multSection">
+    <div class="mult-title">시도 횟수별 배당</div>
+    <div class="mult-row"><span class="mult-tries"><b>1~3</b>번 안에</span><span class="mult-x">10x</span></div>
+    <div class="mult-row"><span class="mult-tries"><b>4~5</b>번 안에</span><span class="mult-x">5x</span></div>
+    <div class="mult-row"><span class="mult-tries"><b>6~7</b>번 안에</span><span class="mult-x">3x</span></div>
+    <div class="mult-row"><span class="mult-tries"><b>8~9</b>번 안에</span><span class="mult-x">2x</span></div>
+    <div class="mult-row"><span class="mult-tries"><b>10</b>번</span><span class="mult-x" style="color:#64748b">1x (원금)</span></div>
+    <div class="mult-row"><span class="mult-tries">실패</span><span class="mult-x" style="color:#ef4444">0x</span></div>
+  </div>
+
+  <!-- 입력 -->
+  <div class="input-area">
+    <div class="input-label" id="inputLabel">숫자 입력 (겹치는 숫자 없이)</div>
+    <div class="digit-row">
+      <input class="digit-input" id="d0" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input class="digit-input" id="d1" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input class="digit-input" id="d2" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input class="digit-input" id="d3" maxlength="1" inputmode="numeric" pattern="[0-9]">
+    </div>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">▶ 게임 시작</button>
+  </div>
+
+  <!-- 히스토리 -->
+  <div class="history" id="historyBox">
+    <div class="history-header">
+      <div>#</div><div>입력</div><div>결과</div><div></div>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- 결과 -->
+  <div class="result-overlay" id="resultBox">
+    <div class="result-emoji" id="resultEmoji"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <div class="result-reward" id="resultReward" style="display:none"></div>
+    <div class="result-answer" id="resultAnswer"></div>
+    <button class="retry-btn" onclick="resetGame()">🔄 다시 하기</button>
+  </div>
+
+</div>
+
+<script>
+let secret = '';
+let tries = 0;
+let maxTries = 10;
+let bet = 10;
+let pts = 500;
+let gameStarted = false;
+
+const MULT = [10, 10, 10, 5, 5, 3, 3, 2, 2, 1];
+
+function genSecret() {
+  const digits = [...'0123456789'];
+  let arr = digits.sort(() => Math.random() - .5).slice(0, 4);
+  if (arr[0] === '0') { // 첫 자리 0 방지
+    const nonZero = arr.findIndex(d => d !== '0');
+    [arr[0], arr[nonZero]] = [arr[nonZero], arr[0]];
+  }
+  return arr.join('');
+}
+
+function setBet(n) {
+  bet = n;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
+  event.target.classList.add('sel');
+  document.getElementById('betAmt').textContent = n;
+}
+
+function getGuess() {
+  return [0,1,2,3].map(i => document.getElementById('d'+i).value).join('');
+}
+
+function clearInputs() {
+  [0,1,2,3].forEach(i => {
+    const el = document.getElementById('d'+i);
+    el.value = '';
+    el.classList.remove('filled');
+  });
+  document.getElementById('d0').focus();
+}
+
+function checkGuess(guess, secret) {
+  let s = 0, b = 0;
+  for (let i = 0; i < 4; i++) {
+    if (guess[i] === secret[i]) s++;
+    else if (secret.includes(guess[i])) b++;
+  }
+  return { s, b };
+}
+
+function getMultiplier(triesUsed) {
+  return MULT[Math.min(triesUsed - 1, 9)];
+}
+
+function updateMultDisplay(triesUsed) {
+  const m = getMultiplier(triesUsed);
+  const el = document.getElementById('multDisplay');
+  el.textContent = m + 'x';
+  el.style.color = m >= 5 ? '#10b981' : m >= 3 ? '#e8a020' : m >= 2 ? '#60a5fa' : '#64748b';
+}
+
+function handleSubmit() {
+  if (!gameStarted) {
+    startGame();
+    return;
+  }
+  submitGuess();
+}
+
+function startGame() {
+  if (pts < bet) { alert('포인트가 부족합니다'); return; }
+  secret = genSecret();
+  tries = 0;
+  gameStarted = true;
+  pts -= bet;
+  document.getElementById('myPts').textContent = pts;
+
+  document.getElementById('betSection').style.display = 'none';
+  document.getElementById('multSection').style.display = 'none';
+  document.getElementById('historyBox').classList.add('show');
+  document.getElementById('betDisplay').textContent = bet + 'P';
+  document.getElementById('inputLabel').textContent = '4자리 숫자 추리';
+  document.getElementById('submitBtn').textContent = '⚾ 추리하기';
+  updateMultDisplay(1);
+  document.getElementById('d0').focus();
+}
+
+function submitGuess() {
+  const guess = getGuess();
+  if (guess.length < 4 || /\D/.test(guess)) {
+    shakeInputs(); return;
+  }
+  const digits = new Set(guess);
+  if (digits.size < 4) {
+    showHint('숫자가 겹칩니다!'); return;
+  }
+
+  tries++;
+  const { s, b } = checkGuess(guess, secret);
+  addHistory(tries, guess, s, b);
+  clearInputs();
+
+  if (s === 4) {
+    win();
+  } else if (tries >= maxTries) {
+    lose();
+  } else {
+    document.getElementById('triesLeft').textContent = maxTries - tries;
+    updateMultDisplay(tries + 1);
+  }
+}
+
+function addHistory(num, guess, s, b) {
+  const list = document.getElementById('historyList');
+  const row = document.createElement('div');
+  row.className = 'h-row';
+
+  let hint = '';
+  if (s === 0 && b === 0) hint = `<span class="out-text">아웃</span>`;
+  else {
+    if (s > 0) hint += `<span class="s-text">${s}S</span>`;
+    if (s > 0 && b > 0) hint += ' ';
+    if (b > 0) hint += `<span class="b-text">${b}B</span>`;
+  }
+
+  row.innerHTML = `
+    <div class="h-num">${num}</div>
+    <div class="h-guess">${guess}</div>
+    <div class="h-s">
+      <div class="cnt s-dot">${s}</div>
+      <div class="cnt b-dot">${b}</div>
+    </div>
+    <div class="h-hint">${hint}</div>`;
+  list.prepend(row);
+}
+
+function win() {
+  const m = getMultiplier(tries);
+  const gain = bet * m;
+  pts += gain;
+  document.getElementById('myPts').textContent = pts;
+  showResult(true, tries, m, gain);
+}
+
+function lose() {
+  showResult(false, tries, 0, 0);
+}
+
+function showResult(isWin, tries, mult, gain) {
+  document.getElementById('submitBtn').disabled = true;
+  const box = document.getElementById('resultBox');
+  box.classList.add('show');
+
+  document.getElementById('resultEmoji').textContent = isWin ? '🎉' : '😭';
+  const titleEl = document.getElementById('resultTitle');
+  titleEl.textContent = isWin ? `${tries}번 만에 정답!` : '실패...';
+  titleEl.className = 'result-title ' + (isWin ? 'win' : 'lose');
+
+  document.getElementById('resultSub').textContent = isWin
+    ? `${tries}번 시도 → ${mult}x 배당 적용`
+    : `10번을 모두 사용했습니다`;
+
+  const rewardEl = document.getElementById('resultReward');
+  if (isWin) {
+    rewardEl.style.display = 'block';
+    rewardEl.textContent = `+${gain}P 획득! (${bet}P × ${mult}x)`;
+  }
+
+  document.getElementById('resultAnswer').innerHTML =
+    `정답: <span>${secret}</span>`;
+}
+
+function resetGame() {
+  gameStarted = false;
+  tries = 0;
+  secret = '';
+
+  document.getElementById('triesLeft').textContent = maxTries;
+  document.getElementById('betDisplay').textContent = '—';
+  document.getElementById('multDisplay').textContent = '—';
+  document.getElementById('multDisplay').style.color = '#10b981';
+  document.getElementById('betSection').style.display = '';
+  document.getElementById('multSection').style.display = '';
+  document.getElementById('historyBox').classList.remove('show');
+  document.getElementById('historyList').innerHTML = '';
+  document.getElementById('resultBox').classList.remove('show');
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').textContent = '▶ 게임 시작';
+  document.getElementById('inputLabel').textContent = '숫자 입력 (겹치는 숫자 없이)';
+  clearInputs();
+}
+
+function shakeInputs() {
+  const row = document.querySelector('.digit-row');
+  row.style.animation = 'shake .3s ease';
+  setTimeout(() => row.style.animation = '', 300);
+}
+
+function showHint(msg) {
+  const label = document.getElementById('inputLabel');
+  const orig = label.textContent;
+  label.textContent = '⚠ ' + msg;
+  label.style.color = '#ef4444';
+  setTimeout(() => { label.textContent = orig; label.style.color = ''; }, 1500);
+}
+
+// 자동 포커스 이동
+[0,1,2,3].forEach(i => {
+  const el = document.getElementById('d'+i);
+  el.addEventListener('input', () => {
+    el.value = el.value.replace(/\D/,'').slice(-1);
+    if (el.value) {
+      el.classList.add('filled');
+      if (i < 3) document.getElementById('d'+(i+1)).focus();
+      else document.getElementById('submitBtn').focus();
+    } else {
+      el.classList.remove('filled');
+    }
+  });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !el.value && i > 0) {
+      document.getElementById('d'+(i-1)).focus();
+    }
+    if (e.key === 'Enter') handleSubmit();
+  });
+});
+
+// CSS 추가
+const style = document.createElement('style');
+style.textContent = `@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}60%{transform:translateX(8px)}}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>

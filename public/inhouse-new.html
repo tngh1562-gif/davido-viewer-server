@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DAVIDO INHOUSE — 내전 진행</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════ */
+:root {
+  --bg:        #07080f;
+  --surface:   #0c0d1a;
+  --surface-2: #111228;
+  --border:    rgba(255,255,255,.07);
+  --border-2:  rgba(255,255,255,.04);
+  --gold:      #f0a500;
+  --gold-dim:  #c47f00;
+  --gold-glow: rgba(240,165,0,.18);
+  --blue:      #00c8ff;
+  --blue-dim:  rgba(0,200,255,.12);
+  --blue-glow: rgba(0,200,255,.2);
+  --red:       #ff3860;
+  --red-dim:   rgba(255,56,96,.12);
+  --red-glow:  rgba(255,56,96,.2);
+  --text:      #f0f0f8;
+  --text-2:    #5a5a7a;
+  --text-3:    #3a3a5a;
+  --success:   #00c896;
+  --warn:      #ffb300;
+  --r-sm:      6px;
+  --r-md:      10px;
+  --r-lg:      14px;
+}
+
+/* ═══════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans KR', 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.5;
+  /* 미세 노이즈 텍스처 */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(240,165,0,.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,200,255,.03) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+}
+select, input, button { font-family: inherit; font-size: inherit; }
+button { cursor: pointer; }
+
+/* ═══════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 2px; }
+
+/* ═══════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════ */
+.sidebar {
+  width: 200px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -1px; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--gold-glow) 40%, transparent);
+  pointer-events: none;
+}
+.logo {
+  padding: 22px 18px 18px;
+  border-bottom: 1px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 30px; height: 30px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px var(--gold-glow);
+}
+.logo-text { font-size: .78rem; font-weight: 900; letter-spacing: -.3px; color: var(--text); }
+.logo-sub { font-size: .58rem; color: var(--text-3); margin-top: 1px; letter-spacing: 1px; text-transform: uppercase; }
+
+.nav { padding: 12px 10px; display: flex; flex-direction: column; gap: 1px; flex: 1; }
+.nav-section { font-size: .58rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 2px; padding: 10px 10px 4px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  font-size: .78rem; font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all .15s;
+  border-left: 2px solid transparent;
+  position: relative;
+  white-space: nowrap;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-item.active {
+  color: var(--gold);
+  background: linear-gradient(90deg, rgba(240,165,0,.1), transparent);
+  border-left-color: var(--gold);
+  font-weight: 700;
+}
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  right: 10px; top: 50%; transform: translateY(-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+}
+.nav-icon { font-size: 13px; width: 17px; text-align: center; flex-shrink: 0; }
+
+.sidebar-footer {
+  padding: 12px 10px;
+  border-top: 1px solid var(--border-2);
+}
+.user-pill {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.user-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-weight: 900; color: #000;
+  flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: .72rem; font-weight: 700; color: var(--text); }
+.user-role { font-size: .6rem; color: var(--text-3); }
+.user-status {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════
+   MAIN
+═══════════════════════════════════ */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ── 탑바 ── */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7,8,15,.7);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+.page-title { font-size: 1rem; font-weight: 800; letter-spacing: -.3px; }
+.badge {
+  padding: 3px 9px; border-radius: 20px;
+  font-size: .6rem; font-weight: 700; letter-spacing: .5px;
+}
+.badge-live {
+  background: rgba(0,200,150,.12);
+  color: var(--success);
+  border: 1px solid rgba(0,200,150,.25);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,200,150,.3); }
+  50%      { box-shadow: 0 0 0 4px rgba(0,200,150,0); }
+}
+
+/* ── 버튼바 ── */
+.btn-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--border-2);
+  background: var(--surface);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  font-size: .72rem; font-weight: 700;
+  border: none;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: #000;
+  box-shadow: 0 0 16px rgba(240,165,0,.3);
+}
+.btn-gold:hover { box-shadow: 0 0 24px rgba(240,165,0,.5); filter: brightness(1.05); }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+.btn-ghost:hover { border-color: rgba(255,255,255,.15); color: var(--text); background: rgba(255,255,255,.04); }
+.btn-danger {
+  background: transparent;
+  border: 1px solid rgba(255,56,96,.2);
+  color: rgba(255,56,96,.7);
+}
+.btn-danger:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+.sel-control {
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: .72rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sel-control:hover { border-color: rgba(255,255,255,.15); color: var(--text); }
+.ctrl-label { font-size: .68rem; color: var(--text-3); }
+
+/* ── 인포바 ── */
+.info-bar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 7px 20px;
+  border-bottom: 1px solid var(--border-2);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 20px;
+  font-size: .64rem; font-weight: 600;
+  white-space: nowrap;
+}
+.chip-action { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text-2); cursor: pointer; transition: all .12s; }
+.chip-action:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+.chip-info { background: transparent; border: 1px solid var(--border-2); color: var(--text-3); }
+.chip-warn { background: rgba(255,179,0,.08); border: 1px solid rgba(255,179,0,.2); color: var(--warn); }
+.chip-add { background: var(--gold-glow); border: 1px solid rgba(240,165,0,.3); color: var(--gold); cursor: pointer; }
+
+/* ═══════════════════════════════════
+   CONTENT AREA
+═══════════════════════════════════ */
+.content { display: flex; flex: 1; overflow: hidden; }
+
+.center { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* ── 팀 카드 ── */
+.teams-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.team-card {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: box-shadow .2s;
+}
+.team-card:hover { box-shadow: 0 0 0 1px var(--border); }
+
+.team-card.blue-card {
+  border-color: rgba(0,200,255,.2);
+  background: linear-gradient(160deg, rgba(0,200,255,.05) 0%, var(--surface) 50%);
+}
+.team-card.blue-card:hover { box-shadow: 0 0 30px rgba(0,200,255,.08); }
+.team-card.red-card {
+  border-color: rgba(255,56,96,.2);
+  background: linear-gradient(160deg, rgba(255,56,96,.05) 0%, var(--surface) 50%);
+}
+.team-card.red-card:hover { box-shadow: 0 0 30px rgba(255,56,96,.08); }
+
+.team-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-2);
+}
+.team-header.blue { border-bottom-color: rgba(0,200,255,.15); }
+.team-header.red  { border-bottom-color: rgba(255,56,96,.15); }
+
+.team-color-bar { width: 3px; height: 18px; border-radius: 2px; flex-shrink: 0; }
+.team-color-bar.blue { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
+.team-color-bar.red  { background: var(--red);  box-shadow: 0 0 10px var(--red); }
+
+.team-name { font-size: .85rem; font-weight: 800; letter-spacing: .5px; }
+.team-name.blue { color: var(--blue); }
+.team-name.red  { color: var(--red); }
+.team-count { margin-left: auto; font-size: .65rem; color: var(--text-3); font-weight: 600; }
+
+.team-body {
+  padding: 14px 16px;
+  min-height: 80px;
+  display: flex; align-items: center; justify-content: center;
+}
+.empty-hint { font-size: .72rem; color: var(--text-3); font-style: italic; }
+
+/* ── 참가자 ── */
+.section-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.section-title { font-size: .65rem; font-weight: 800; color: var(--text-3); text-transform: uppercase; letter-spacing: 2px; }
+.section-line { flex: 1; height: 1px; background: var(--border-2); }
+
+.player-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  margin-bottom: 3px;
+  transition: all .12s;
+}
+.player-row:hover { border-color: var(--border); background: var(--surface-2); }
+.p-num { font-size: .62rem; color: var(--text-3); width: 14px; text-align: right; font-weight: 700; flex-shrink: 0; }
+.p-sel {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  color: var(--text-2);
+  font-size: .7rem;
+  padding: 3px 8px;
+  min-width: 0;
+  transition: border-color .12s;
+}
+.p-sel:focus { outline: none; border-color: var(--gold); }
+.tier-badge {
+  padding: 2px 7px; border-radius: 4px;
+  font-size: .6rem; font-weight: 800;
+  background: rgba(240,165,0,.1);
+  color: var(--gold);
+  border: 1px solid rgba(240,165,0,.2);
+  white-space: nowrap; flex-shrink: 0;
+}
+.mini-sel {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  color: var(--text-3);
+  font-size: .62rem;
+  padding: 2px 5px;
+  flex-shrink: 0;
+}
+.del-btn { background: none; border: none; color: var(--text-3); font-size: 11px; padding: 2px 4px; border-radius: 3px; transition: all .12s; flex-shrink: 0; }
+.del-btn:hover { color: var(--red); background: var(--red-dim); }
+
+/* ═══════════════════════════════════
+   RIGHT PANEL
+═══════════════════════════════════ */
+.right-panel {
+  width: 215px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: 14px 12px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  flex-shrink: 0;
+}
+
+.rp-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-md);
+  padding: 12px 13px;
+}
+.rp-card:hover { border-color: var(--border); }
+.rp-title {
+  font-size: .6rem; font-weight: 800; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rp-title::before { content: ''; width: 12px; height: 2px; background: var(--gold); border-radius: 1px; }
+.rp-row { display: flex; justify-content: space-between; align-items: center; font-size: .72rem; color: var(--text-3); margin-bottom: 5px; }
+.rp-row:last-child { margin-bottom: 0; }
+.rp-val { color: var(--text-2); font-weight: 600; }
+.rp-status-waiting { color: var(--warn); font-weight: 700; font-size: .7rem; }
+
+/* 도넛 차트 */
+.donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.donut {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: conic-gradient(var(--blue) 0% 50%, var(--red) 50% 100%);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 20px rgba(0,200,255,.15), 0 0 20px rgba(255,56,96,.1);
+  position: relative;
+}
+.donut-inner {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .6rem; font-weight: 700; color: var(--text-3);
+  z-index: 1;
+}
+.donut-legend { display: flex; gap: 12px; }
+.dl-item { display: flex; align-items: center; gap: 5px; font-size: .62rem; color: var(--text-2); }
+.dl-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dl-dot.blue { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+.dl-dot.red  { background: var(--red);  box-shadow: 0 0 6px var(--red); }
+
+/* 운영 도구 */
+.op-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.op-btn {
+  padding: 7px 6px; border-radius: var(--r-sm); border: 1px solid;
+  font-size: .65rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; text-align: center; transition: all .12s;
+  line-height: 1.3;
+}
+.op-gold  { background: rgba(240,165,0,.1); border-color: rgba(240,165,0,.2); color: var(--gold); }
+.op-gold:hover  { background: rgba(240,165,0,.2); border-color: var(--gold); }
+.op-gray  { background: rgba(255,255,255,.03); border-color: var(--border); color: var(--text-3); }
+.op-gray:hover  { background: rgba(255,255,255,.07); color: var(--text-2); }
+.op-blue  { background: var(--blue-dim); border-color: rgba(0,200,255,.25); color: var(--blue); }
+.op-blue:hover  { background: rgba(0,200,255,.2); border-color: var(--blue); }
+.op-red   { background: var(--red-dim); border-color: rgba(255,56,96,.2); color: var(--red); }
+.op-red:hover   { background: rgba(255,56,96,.2); border-color: var(--red); }
+
+.empty-recent { font-size: .68rem; color: var(--text-3); text-align: center; padding: 8px 0; }
+
+/* 내전 시작 버튼 */
+.start-btn {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #00a076, #00c896);
+  color: #000; font-weight: 900; font-size: .82rem;
+  border: none; border-radius: var(--r-md);
+  cursor: pointer; font-family: inherit;
+  letter-spacing: .5px;
+  box-shadow: 0 0 24px rgba(0,200,150,.3);
+  transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.start-btn:hover { box-shadow: 0 0 36px rgba(0,200,150,.5); filter: brightness(1.05); transform: translateY(-1px); }
+.start-btn:active { transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">⚔</div>
+    <div>
+      <div class="logo-text">DAVIDO</div>
+      <div class="logo-sub">Inhouse Admin</div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-item active"><span class="nav-icon">⚔️</span>내전 진행</div>
+    <div class="nav-item"><span class="nav-icon">⚙️</span>내전 설정</div>
+    <div class="nav-item"><span class="nav-icon">🃏</span>Draft</div>
+    <div class="nav-item"><span class="nav-icon">📊</span>Records</div>
+    <div class="nav-section">시청자</div>
+    <div class="nav-item"><span class="nav-icon">🗄️</span>시청자 DB</div>
+    <div class="nav-section">시스템</div>
+    <div class="nav-item"><span class="nav-icon">📺</span>오버레이</div>
+    <div class="nav-item"><span class="nav-icon">🤖</span>치지직 봇</div>
+    <div class="nav-item"><span class="nav-icon">🎡</span>룰렛 관리자</div>
+    <div class="nav-item"><span class="nav-icon">🔧</span>설정</div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar">다</div>
+      <div class="user-info">
+        <div class="user-name">다비도</div>
+        <div class="user-role">관리자</div>
+      </div>
+      <div class="user-status"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- 탑바 -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="page-title">내전 진행</span>
+      <span class="badge badge-live">● LIVE</span>
+    </div>
+  </header>
+
+  <!-- 버튼바 -->
+  <div class="btn-bar">
+    <select class="sel-control"><option>5 vs 5</option><option>3 vs 3</option></select>
+    <span class="ctrl-label">포지션 고려</span>
+    <div class="sep"></div>
+    <button class="btn btn-gold">⚡ 자동 배정</button>
+    <button class="btn btn-ghost">🃏 밴픽</button>
+    <button class="btn btn-ghost">🗺 서울</button>
+    <button class="btn btn-ghost">🔀 팀 전체 스왑</button>
+    <div class="sep"></div>
+    <button class="btn btn-danger">↺ 행단 초기화</button>
+  </div>
+
+  <!-- 인포바 -->
+  <div class="info-bar">
+    <button class="chip chip-action">✕ 밴픽 삭제</button>
+    <span class="chip chip-info">인원 0/10</span>
+    <span class="chip chip-info">0 MMR</span>
+    <span class="chip chip-warn">⚠ 10명 부족</span>
+    <button class="chip chip-add">+ 추가</button>
+    <button class="chip chip-action">DB ↓</button>
+    <button class="chip chip-action">버프 추가...</button>
+  </div>
+
+  <!-- 콘텐츠 -->
+  <div class="content">
+    <div class="center">
+
+      <!-- 팀 카드 -->
+      <div class="teams-grid">
+        <div class="team-card blue-card">
+          <div class="team-header blue">
+            <div class="team-color-bar blue"></div>
+            <span class="team-name blue">BLUE</span>
+            <span class="team-count">0 / 5명</span>
+          </div>
+          <div class="team-body">
+            <span class="empty-hint">배정 후 표시</span>
+          </div>
+        </div>
+        <div class="team-card red-card">
+          <div class="team-header red">
+            <div class="team-color-bar red"></div>
+            <span class="team-name red">RED</span>
+            <span class="team-count">0 / 5명</span>
+          </div>
+          <div class="team-body">
+            <span class="empty-hint">배정 후 표시</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 참가자 1-5 -->
+      <div>
+        <div class="section-hd">
+          <span class="section-title">참가자 1–5</span>
+          <div class="section-line"></div>
+        </div>
+        <div class="player-row"><span class="p-num">1</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">2</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">3</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">4</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">5</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+      </div>
+
+      <!-- 참가자 6-10 -->
+      <div>
+        <div class="section-hd">
+          <span class="section-title">참가자 6–10</span>
+          <div class="section-line"></div>
+        </div>
+        <div class="player-row"><span class="p-num">6</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">7</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">8</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">9</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="p-num">10</span><select class="p-sel"><option>+ DB에서 선택</option></select><span class="tier-badge">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- 우측 패널 -->
+    <aside class="right-panel">
+
+      <div class="rp-card">
+        <div class="rp-title">배정 후 가능</div>
+        <div class="rp-row"><span>참가 인원</span><span class="rp-val">0 / 10</span></div>
+        <div class="rp-row"><span>팀 상태</span><span class="rp-status-waiting">대기 중</span></div>
+        <div class="rp-row"><span>평균 MMR</span><span class="rp-val">—</span></div>
+        <div class="rp-row"><span>디코 이름</span><span class="rp-val" style="font-size:.65rem">팀박스 기준</span></div>
+      </div>
+
+      <div class="rp-card">
+        <div class="rp-title">실시간 요약</div>
+        <div class="donut-wrap">
+          <div class="donut"><div class="donut-inner">대기</div></div>
+          <div class="donut-legend">
+            <div class="dl-item"><div class="dl-dot blue"></div>BLUE 0%</div>
+            <div class="dl-item"><div class="dl-dot red"></div>RED 0%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rp-card">
+        <div class="rp-title">운영 도구</div>
+        <div class="op-grid">
+          <button class="op-btn op-gold">💰 포인트<br>지급</button>
+          <button class="op-btn op-gray">🔑 코드<br>생성</button>
+          <button class="op-btn op-blue">🔵 블루 승</button>
+          <button class="op-btn op-red">🔴 레드 승</button>
+        </div>
+      </div>
+
+      <div class="rp-card">
+        <div class="rp-title">최근 내전</div>
+        <div class="empty-recent">전적 없음</div>
+      </div>
+
+      <button class="start-btn">▶ 내전 시작하기</button>
+
+    </aside>
+  </div><!-- /content -->
+
+</div><!-- /main -->
+
+</body>
+</html>

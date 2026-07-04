@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>버전A — 스프라이트</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#0a0e1a;color:#f0f0f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}
+h2{font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.track-wrap{position:relative;width:860px;height:320px;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.1)}
+#trackBg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.75}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+.finish{position:absolute;right:50px;top:0;bottom:0;width:4px;background:repeating-linear-gradient(180deg,#fff 0,#fff 10px,#111 10px,#111 20px);z-index:5}
+.finish::after{content:'🏁';position:absolute;top:-2px;left:-4px;font-size:18px}
+.event-box{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.88);border-radius:30px;padding:7px 18px;
+  font-size:.82rem;font-weight:800;border:1px solid #fbbf24;color:#fbbf24;
+  white-space:nowrap;z-index:10;display:none;
+}
+.cards{display:flex;gap:8px}
+.card{
+  width:148px;padding:10px;background:#0f1420;border:2px solid rgba(255,255,255,.08);
+  border-radius:12px;text-align:center;cursor:pointer;transition:all .15s;
+}
+.card:hover{border-color:rgba(255,255,255,.2)}
+.card.sel{border-color:var(--c);background:rgba(var(--cr),.1);box-shadow:0 0 16px rgba(var(--cr),.3)}
+.card .nm{font-size:.78rem;font-weight:800;margin-bottom:3px}
+.card .od{font-size:.68rem;padding:2px 8px;border-radius:10px;background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.card .pg{font-size:.65rem;color:#64748b;margin-top:4px}
+.bet-row{display:flex;align-items:center;gap:8px;background:#0f1420;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 14px}
+.chip{padding:5px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#64748b;font-size:.73rem;font-weight:700;cursor:pointer;transition:all .12s;font-family:inherit}
+.chip.sel{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.4);color:#fbbf24}
+.go-btn{padding:12px 32px;background:linear-gradient(135deg,#10b981,#059669);color:#000;font-weight:900;font-size:.88rem;border:none;border-radius:10px;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(16,185,129,.3);transition:all .15s}
+.go-btn:disabled{opacity:.3;cursor:not-allowed}
+.pts{padding:6px 14px;border-radius:20px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);font-size:.78rem;font-weight:800;color:#fbbf24}
+.result{display:none;padding:14px 20px;border-radius:12px;text-align:center;font-weight:800;font-size:1rem;margin-top:4px}
+.result.win{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#10b981;display:block}
+.result.lose{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#ef4444;display:block}
+</style>
+</head>
+<body>
+<h2>🐌 버전 A — 스프라이트</h2>
+
+<div class="track-wrap" id="trackWrap">
+  <img src="/race-track.png" id="trackBg">
+  <canvas id="c"></canvas>
+  <div class="finish"></div>
+  <div class="event-box" id="evBox"></div>
+</div>
+
+<div class="cards" id="cards"></div>
+
+<div class="bet-row">
+  <span style="font-size:.68rem;color:#64748b;font-weight:700;letter-spacing:1px">베팅</span>
+  <button class="chip sel" onclick="setBet(10,this)">10P</button>
+  <button class="chip" onclick="setBet(20,this)">20P</button>
+  <button class="chip" onclick="setBet(30,this)">30P</button>
+  <button class="chip" onclick="setBet(50,this)">50P</button>
+  <span id="pts" class="pts" style="margin-left:auto">◈ 500 P</span>
+  <button class="go-btn" id="goBtn" onclick="startRace()">🐌 경주 시작!</button>
+</div>
+
+<div class="result" id="result"></div>
+
+<script>
+const SNAILS = [
+  {name:'빨강이',color:'#ef4444',cr:'239,68,68',  odds:2.0, sx:0,   sy:0,   sw:200, sh:200},
+  {name:'파랑이',color:'#3b82f6',cr:'59,130,246', odds:2.5, sx:200, sy:0,   sw:200, sh:200},
+  {name:'초록이',color:'#10b981',cr:'16,185,129', odds:3.0, sx:400, sy:0,   sw:200, sh:200},
+  {name:'노랑이',color:'#fbbf24',cr:'251,191,36', odds:1.8, sx:600, sy:0,   sw:200, sh:200},
+  {name:'보라이',color:'#a855f7',cr:'168,85,247', odds:4.0, sx:800, sy:0,   sw:200, sh:200},
+];
+
+const EVENTS = [
+  {txt:'🚀 로켓 점화!',    spd:4.0,  color:'#ef4444'},
+  {txt:'💤 낮잠...',       spd:0,    color:'#94a3b8'},
+  {txt:'⚡ 감전!',         spd:-1.5, color:'#fbbf24'},
+  {txt:'🍄 버섯 파워업!',  spd:2.8,  color:'#10b981'},
+  {txt:'❄️ 동결!',         spd:0,    color:'#60a5fa'},
+  {txt:'⭐ 무적 스타!',    spd:4.5,  color:'#f59e0b'},
+  {txt:'🌪️ 토네이도!',    spd:0,    color:'#a78bfa'},
+  {txt:'🍌 미끄러짐!',    spd:-1.0, color:'#fbbf24'},
+  {txt:'💨 돌풍!',         spd:3.0,  color:'#38bdf8'},
+  {txt:'🎯 집중력!',       spd:2.0,  color:'#34d399'},
+];
+
+let pts=500, bet=10, sel=-1, racing=false, finished=false;
+const state = SNAILS.map((s,i)=>({...s, x:0, spd:0.002+Math.random()*.001, mult:1, wobble:Math.random()*6.28, rank:0}));
+let particles=[], finishOrder=[], evTimer=null, raf=null;
+
+// 스프라이트 이미지 로드
+const spriteImg = new Image();
+spriteImg.src = '/snails-raw.png';
+// 투명배경 버전 (로드되면 대체)
+const spriteClean = new Image();
+spriteClean.src = '/snails-nobg.png';
+let useClean = false;
+spriteClean.onload = () => { useClean = true; };
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resize(){
+  const w=document.getElementById('trackWrap');
+  canvas.width=w.offsetWidth; canvas.height=w.offsetHeight;
+}
+window.addEventListener('resize',resize); resize();
+
+// 카드 렌더
+document.getElementById('cards').innerHTML = SNAILS.map((s,i)=>`
+  <div class="card" id="card${i}" style="--c:${s.color};--cr:${s.cr}" onclick="selectSnail(${i})">
+    <div class="nm" style="color:${s.color}">${s.name}</div>
+    <div class="od">× ${s.odds.toFixed(1)}</div>
+    <div class="pg">위치 <b id="pg${i}">0%</b></div>
+  </div>`).join('');
+
+function selectSnail(i){
+  if(racing)return;
+  sel=i;
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('card'+i).classList.add('sel');
+}
+
+function setBet(n,el){
+  bet=n;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function updatePts(){ document.getElementById('pts').textContent='◈ '+pts+' P'; }
+
+function getLaneY(i){ return canvas.height/5*i + canvas.height/10; }
+function getEnd(){ return canvas.width - 70; }
+
+function startRace(){
+  if(sel<0){alert('달팽이를 선택하세요!');return;}
+  if(pts<bet){alert('포인트 부족!');return;}
+  pts-=bet; updatePts();
+  racing=true; finished=false;
+
+  finishOrder=[...SNAILS.map((_,i)=>i)].sort(()=>Math.random()-.5);
+  state.forEach(s=>{s.x=0;s.mult=1;s.wobble=Math.random()*6.28;s.spd=0.002+Math.random()*.001;});
+
+  document.getElementById('goBtn').disabled=true;
+  document.getElementById('result').className='result';
+  document.getElementById('result').textContent='';
+
+  scheduleEv();
+  animate();
+}
+
+function scheduleEv(){
+  evTimer=setTimeout(()=>{
+    if(finished)return;
+    const target=state[Math.floor(Math.random()*5)];
+    const ev=EVENTS[Math.floor(Math.random()*EVENTS.length)];
+    target.mult=ev.spd;
+    spawnParticles(target);
+    showEv(`${target.name} — ${ev.txt}`, ev.color);
+    setTimeout(()=>{target.mult=1;},2200);
+    scheduleEv();
+  }, 2000+Math.random()*2500);
+}
+
+function showEv(txt,color){
+  const b=document.getElementById('evBox');
+  b.textContent=txt; b.style.borderColor=color; b.style.color=color;
+  b.style.display='block';
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>b.style.display='none',2500);
+}
+
+function spawnParticles(s){
+  const x=s.x*getEnd()+40, y=getLaneY(s.id||SNAILS.findIndex(n=>n.name===s.name));
+  const cols=['#fbbf24','#ef4444','#10b981','#60a5fa','#a855f7','#fff'];
+  for(let i=0;i<16;i++) particles.push({
+    x,y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7-2,
+    life:50+Math.random()*40,max:90,r:3+Math.random()*4,
+    c:cols[Math.floor(Math.random()*cols.length)]
+  });
+}
+
+function animate(){
+  if(finished)return;
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 레인
+  for(let i=1;i<5;i++){
+    const y=H/5*i;
+    ctx.save();ctx.setLineDash([8,14]);
+    ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    ctx.restore();
+  }
+
+  // 파티클
+  particles=particles.filter(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;
+    const a=p.life/p.max;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle=p.c+Math.round(a*255).toString(16).padStart(2,'0');
+    ctx.fill();
+    return p.life>0;
+  });
+
+  let leader=null;
+  state.forEach((s,i)=>{
+    const ri=finishOrder.indexOf(i);
+    const f=1-s.x*.25*(ri/4);
+    const speed=s.spd*Math.max(0,s.mult)*f;
+    s.x=Math.max(0,Math.min(1,s.x+speed));
+    s.wobble+=.1;
+
+    const x=s.x*getEnd()+40;
+    const y=getLaneY(i)+Math.sin(s.wobble)*3;
+
+    // 스프라이트 or 이모지 폴백
+    const img = useClean ? spriteClean : spriteImg;
+    if(img.complete && img.naturalWidth>0){
+      // 스프라이트 시트에서 개별 달팽이 잘라서 그리기
+      const sw=img.naturalWidth/5, sh=img.naturalHeight;
+      ctx.save();
+      if(s.mult===0){ctx.filter='grayscale(1)';}
+      if(s.mult>3){ctx.shadowColor=s.color;ctx.shadowBlur=18;}
+      const sz=44;
+      ctx.drawImage(img, sw*i,0,sw,sh, x-sz/2, y-sz/2, sz, sz);
+      ctx.restore();
+    } else {
+      // 이모지 폴백
+      ctx.font='32px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🐌',x,y);
+    }
+
+    // 이름 라벨
+    ctx.font='bold 10px Noto Sans KR,sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillStyle=s.color;
+    ctx.fillText(s.name,x,y+26);
+
+    document.getElementById('pg'+i).textContent=Math.round(s.x*100)+'%';
+    if(!leader||s.x>leader.x)leader={s,i};
+  });
+
+  // 선두가 결승선 도달?
+  if(leader && leader.s.x>=1 && !finished){
+    finished=true;
+    racing=false;
+    clearTimeout(evTimer);
+    showResult([...state].sort((a,b)=>b.x-a.x));
+    return;
+  }
+
+  raf=requestAnimationFrame(animate);
+}
+
+function showResult(sorted){
+  const winner=sorted[0];
+  const wi=SNAILS.indexOf(SNAILS.find(s=>s.name===winner.name));
+  const isWin=wi===sel;
+  const reward=isWin?Math.floor(bet*winner.odds):0;
+  if(isWin)pts+=reward; updatePts();
+  const el=document.getElementById('result');
+  el.className='result '+(isWin?'win':'lose');
+  el.innerHTML=isWin
+    ?`🎉 ${winner.name} 우승! +${reward}P 획득!`
+    :`😢 ${winner.name} 우승... -${bet}P 손실 <button onclick="reset()" style="margin-left:12px;padding:4px 12px;border-radius:8px;border:none;background:#10b981;color:#000;font-weight:900;cursor:pointer;font-family:inherit">다시</button>`;
+  document.getElementById('goBtn').disabled=false;
+  sel=-1;document.querySelectorAll('.card').forEach(c=>c.classList.remove('sel'));
+}
+
+function reset(){
+  particles=[];
+  state.forEach(s=>{s.x=0;s.mult=1;});
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  document.getElementById('result').className='result';
+  document.getElementById('result').textContent='';
+  document.querySelectorAll('[id^="pg"]').forEach(p=>p.textContent='0%');
+  idleAnim();
+}
+
+function idleAnim(){
+  if(racing)return;
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const t=Date.now()/1000;
+  const img=useClean?spriteClean:spriteImg;
+  SNAILS.forEach((_,i)=>{
+    const y=getLaneY(i)+Math.sin(t*1.5+i)*5;
+    const x=40+Math.sin(t*.5+i*.8)*8;
+    if(img.complete&&img.naturalWidth>0){
+      const sw=img.naturalWidth/5,sh=img.naturalHeight;
+      ctx.drawImage(img,sw*i,0,sw,sh,x-22,y-22,44,44);
+    } else {
+      ctx.font='32px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🐌',x,y);
+    }
+    ctx.font='bold 10px Noto Sans KR,sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillStyle=SNAILS[i].color;
+    ctx.fillText(SNAILS[i].name,x,y+26);
+  });
+  requestAnimationFrame(idleAnim);
+}
+idleAnim();
+</script>
+</body>
+</html>

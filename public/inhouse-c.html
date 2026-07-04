@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>C안 - 클린 미니멀</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#111827;color:#f9fafb;height:100vh;display:flex;overflow:hidden;font-size:13px}
+.sidebar{width:148px;background:#1f2937;border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo-mark{display:flex;align-items:center;gap:8px}
+.logo-icon{width:24px;height:24px;border-radius:6px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px}
+.logo-text{font-size:.75rem;font-weight:800;color:#f9fafb}
+.logo-sub{font-size:.55rem;color:#4b5563;margin-top:1px}
+.sidebar-nav{padding:8px 8px;display:flex;flex-direction:column;gap:1px;flex:1}
+.nav-group{font-size:.58rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1.5px;padding:8px 8px 3px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:.75rem;font-weight:500;color:#6b7280;cursor:pointer;transition:all .12s;white-space:nowrap}
+.nav-item:hover{color:#f9fafb;background:rgba(255,255,255,.06)}
+.nav-item.on{color:#fff;background:#2563eb;font-weight:700}
+.nav-icon{font-size:12px;width:16px;flex-shrink:0;text-align:center}
+.sidebar-bottom{padding:10px 8px;border-top:1px solid rgba(255,255,255,.07)}
+.user-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:7px;background:rgba(255,255,255,.04)}
+.user-dot{width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0}
+.user-txt{font-size:.68rem;color:#6b7280;font-weight:500}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;background:#111827;flex-shrink:0}
+.page-title{font-size:.95rem;font-weight:800;color:#f9fafb}
+.badge-live{padding:2px 8px;border-radius:12px;font-size:.6rem;font-weight:700;background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.2)}
+.btn-bar{display:flex;align-items:center;gap:6px;padding:8px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:#111827;flex-shrink:0;flex-wrap:wrap}
+.btn{padding:5px 12px;border-radius:6px;border:none;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;transition:all .12s}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.1);color:#6b7280}
+.btn-ghost:hover{border-color:rgba(255,255,255,.2);color:#9ca3af}
+.btn-danger{background:transparent;border:1px solid rgba(239,68,68,.2);color:#f87171}
+.sel{padding:4px 8px;border-radius:5px;background:#1f2937;border:1px solid rgba(255,255,255,.1);color:#9ca3af;font-size:.72rem;font-family:inherit}
+.info-bar{display:flex;align-items:center;gap:6px;padding:6px 20px;border-bottom:1px solid rgba(255,255,255,.05);background:#111827;flex-shrink:0}
+.info-chip{padding:3px 8px;border-radius:5px;font-size:.65rem;font-weight:600}
+.chip-warn{background:rgba(239,68,68,.1);color:#fca5a5}
+.chip-neutral{background:rgba(255,255,255,.05);color:#4b5563;border:1px solid rgba(255,255,255,.07)}
+.chip-btn{background:rgba(37,99,235,.1);color:#93c5fd;border:1px solid rgba(37,99,235,.15);cursor:pointer}
+.content{display:flex;flex:1;overflow:hidden}
+.center{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.teams-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team-box{background:#1f2937;border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden}
+.team-header{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+.team-header.blue{border-bottom-color:rgba(59,130,246,.2)}
+.team-header.red{border-bottom-color:rgba(239,68,68,.15)}
+.team-indicator{width:3px;height:16px;border-radius:2px}
+.team-indicator.blue{background:#3b82f6}
+.team-indicator.red{background:#ef4444}
+.team-label{font-size:.82rem;font-weight:700}
+.team-label.blue{color:#93c5fd}
+.team-label.red{color:#fca5a5}
+.team-body{padding:10px 14px;min-height:90px;display:flex;align-items:center;justify-content:center}
+.empty-hint{font-size:.72rem;color:#374151}
+.section-label{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.section-title{font-size:.7rem;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:1px}
+.player-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:7px;background:#1f2937;border:1px solid rgba(255,255,255,.06);margin-bottom:3px}
+.player-num{font-size:.65rem;color:#374151;width:14px;font-weight:600}
+.player-select{flex:1;background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:5px;color:#4b5563;font-size:.7rem;padding:3px 6px;font-family:inherit}
+.player-tier{padding:2px 6px;border-radius:4px;font-size:.62rem;font-weight:700;background:rgba(251,191,36,.1);color:#fbbf24;white-space:nowrap}
+.mini-sel{background:#111827;border:1px solid rgba(255,255,255,.07);border-radius:4px;color:#374151;font-size:.65rem;padding:2px 4px;font-family:inherit}
+.del-btn{color:#374151;border:none;background:none;cursor:pointer;font-size:11px}
+.right-panel{width:210px;background:#1f2937;border-left:1px solid rgba(255,255,255,.07);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.rp-section{background:#111827;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px}
+.rp-title{font-size:.65rem;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.rp-row{display:flex;justify-content:space-between;font-size:.72rem;color:#4b5563;margin-bottom:5px}
+.rp-val{color:#6b7280;font-weight:600}
+.chart-ring{width:68px;height:68px;border-radius:50%;background:conic-gradient(#3b82f6 0% 50%, #ef4444 50% 100%);margin:6px auto 8px;display:flex;align-items:center;justify-content:center}
+.chart-inner{width:46px;height:46px;border-radius:50%;background:#111827;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#374151;font-weight:700}
+.chart-legend{display:flex;justify-content:center;gap:10px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:.65rem;color:#4b5563}
+.legend-dot{width:6px;height:6px;border-radius:50%}
+.op-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.op-btn{padding:7px;border-radius:6px;border:none;font-size:.68rem;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;transition:all .12s}
+.op-btn.primary{background:rgba(37,99,235,.12);color:#93c5fd;border:1px solid rgba(37,99,235,.2)}
+.op-btn.gray{background:rgba(255,255,255,.04);color:#4b5563;border:1px solid rgba(255,255,255,.07)}
+.op-btn.blue{background:rgba(59,130,246,.1);color:#93c5fd;border:1px solid rgba(59,130,246,.2)}
+.op-btn.red{background:rgba(239,68,68,.08);color:#fca5a5;border:1px solid rgba(239,68,68,.15)}
+.start-btn{width:100%;padding:12px;background:#2563eb;color:#fff;font-weight:800;font-size:.82rem;border:none;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .12s}
+.start-btn:hover{background:#1d4ed8}
+</style></head><body>
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark"><div class="logo-icon">⚔️</div><div><div class="logo-text">DAVIDO</div><div class="logo-sub">INHOUSE</div></div></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item on"><span class="nav-icon">🏠</span>내전 진행</div>
+    <div class="nav-item"><span class="nav-icon">⚙️</span>내전 설정</div>
+    <div class="nav-item"><span class="nav-icon">🃏</span>Draft</div>
+    <div class="nav-item"><span class="nav-icon">📊</span>Records</div>
+    <div class="nav-item"><span class="nav-icon">🗄️</span>시청자 DB</div>
+    <div class="nav-item"><span class="nav-icon">📺</span>오버레이</div>
+    <div class="nav-item"><span class="nav-icon">🤖</span>치지직 봇</div>
+    <div class="nav-item"><span class="nav-icon">🎡</span>룰렛</div>
+    <div class="nav-item"><span class="nav-icon">🔧</span>설정</div>
+  </nav>
+  <div class="sidebar-bottom"><div class="user-row"><div class="user-dot"></div><div class="user-txt">다비도 · 관리자</div></div></div>
+</div>
+<div class="main">
+  <div class="topbar"><span class="page-title">내전 진행</span><span class="badge-live">● 진행 중</span></div>
+  <div class="btn-bar">
+    <select class="sel"><option>5 vs 5</option></select>
+    <span style="font-size:.68rem;color:#4b5563">포지션 고려</span>
+    <button class="btn btn-primary">⚡ 자동 배정</button>
+    <button class="btn btn-ghost">🃏 밴픽</button>
+    <button class="btn btn-ghost">🗺 서울</button>
+    <button class="btn btn-ghost">🔀 팀 전체 스왑</button>
+    <button class="btn btn-danger">↺ 행단 초기화</button>
+  </div>
+  <div class="info-bar">
+    <span class="info-chip chip-btn">✕ 밴픽 삭제</span>
+    <span class="info-chip chip-neutral">인원 0/10</span>
+    <span class="info-chip chip-neutral">0 MMR</span>
+    <span class="info-chip chip-warn">⚠ 10명 부족</span>
+    <span class="info-chip chip-btn">+ 추가</span>
+    <span class="info-chip chip-btn">DB ↓</span>
+    <span class="info-chip chip-btn">버프 추가...</span>
+  </div>
+  <div class="content">
+    <div class="center">
+      <div class="teams-row">
+        <div class="team-box"><div class="team-header blue"><div class="team-indicator blue"></div><span class="team-label blue">BLUE</span></div><div class="team-body"><span class="empty-hint">배정 후 표시</span></div></div>
+        <div class="team-box"><div class="team-header red"><div class="team-indicator red"></div><span class="team-label red">RED</span></div><div class="team-body"><span class="empty-hint">배정 후 표시</span></div></div>
+      </div>
+      <div>
+        <div class="section-label"><span class="section-title">참가자 1-5</span></div>
+        <div class="player-row"><span class="player-num">1</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">2</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">3</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">4</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">5</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+      </div>
+      <div>
+        <div class="section-label"><span class="section-title">참가자 6-10</span></div>
+        <div class="player-row"><span class="player-num">6</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+        <div class="player-row"><span class="player-num">7</span><select class="player-select"><option>+ DB에서 선택</option></select><span class="player-tier">골드 4</span><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><select class="mini-sel"><option>+무관</option></select><button class="del-btn">✕</button></div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="rp-section">
+        <div class="rp-title">배정 후 가능</div>
+        <div class="rp-row"><span>참가 인원</span><span class="rp-val">0/10</span></div>
+        <div class="rp-row"><span>팀 상태</span><span style="color:#f59e0b;font-weight:600">대기 중</span></div>
+        <div class="rp-row"><span>평균 MMR</span><span class="rp-val">—</span></div>
+        <div class="rp-row"><span>디코 이름</span><span class="rp-val">팀박스 기준</span></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">실시간 요약</div>
+        <div class="chart-ring"><div class="chart-inner">대기</div></div>
+        <div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>BLUE 0%</div><div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>RED 0%</div></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">운영 도구</div>
+        <div class="op-grid">
+          <button class="op-btn primary">💰 포인트 지급</button>
+          <button class="op-btn gray">🔑 코드 생성</button>
+          <button class="op-btn blue">🔵 블루 승</button>
+          <button class="op-btn red">🔴 레드 승</button>
+        </div>
+      </div>
+      <div class="rp-section"><div class="rp-title">최근 내전</div><div style="font-size:.68rem;color:#374151;text-align:center;padding:8px 0">전적 없음</div></div>
+      <button class="start-btn">▶ 내전 시작하기</button>
+    </div>
+  </div>
+</div>
+</body></html>
