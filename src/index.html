@@ -33,6 +33,7 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 @keyframes floatUp{0%{background-position:0 0,25px 25px}100%{background-position:0 -1000px,25px -1000px}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes msgPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes winGlow{from{text-shadow:0 0 10px gold}to{text-shadow:0 0 30px gold,0 0 60px orange}}
 @keyframes reelBlur{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
@@ -763,6 +764,9 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
 .st-stock-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px}
 .st-stock-card:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
 .st-stock-card.selected{border-color:rgba(168,85,247,.6);background:rgba(168,85,247,.08)}
+.st-stock-card.st-danger{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.05)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.st-delist-banner{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#1a0a0a,#2d0f0f);border:2px solid #ef4444;border-radius:14px;padding:16px 24px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(239,68,68,.4);animation:slideDown .4s ease}
 .st-ticker-badge{font-size:.65rem;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.05em}
 .st-price{font-size:1.15rem;font-weight:900;font-variant-numeric:tabular-nums}
 .st-change-pos{color:#4ade80;font-size:.8rem;font-weight:700}
@@ -1694,6 +1698,10 @@ async function placeBet(team) {
       if (msg.type === 'feed_update' && msg.items) renderFeed(msg.items);
       if (msg.type === 'crash_state') applyCrashState(msg);
       if (msg.type === 'stock_update' && stData) { stData.stocks=msg.stocks; stData.marketOpen=msg.stocks[0]?.marketOpen??stData.marketOpen; stRenderAll(); }
+      if (msg.type === 'stock_delisted') {
+        if(stData){ stData.stocks=msg.stocks; stData.marketOpen=msg.stocks[0]?.marketOpen??stData.marketOpen; stRenderAll(); }
+        stShowDelistBanner(msg.delisted, msg.newStock, msg.wipedCount);
+      }
       if (msg.type === 'timing_won' && currentGame === 'timing') {
         tgSession = null; if (tgRaf){cancelAnimationFrame(tgRaf);tgRaf=null;}
         const wrap = document.getElementById('tgWrap');
@@ -5761,20 +5769,19 @@ function stRenderStockList() {
   if(!wrap) return;
   wrap.innerHTML = '';
   (stData.stocks||[]).forEach(s => {
-    const isPos = s.change >= 0;
     const chgCls = s.change>0?'st-change-pos':s.change<0?'st-change-neg':'st-change-neu';
     const chgStr = (s.change>=0?'+':'')+s.change+'%';
     const card = document.createElement('div');
-    card.className = 'st-stock-card' + (stSelected===s.id?' selected':'');
+    card.className = 'st-stock-card' + (stSelected===s.id?' selected':'') + (s.danger?' st-danger':'');
     card.onclick = () => stSelectStock(s.id);
-    // 미니 스파크라인
     const sparkId = 'spark_'+s.id;
+    const dangerBadge = s.danger ? `<span style="font-size:.65rem;font-weight:900;color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:4px;padding:1px 5px;margin-left:4px;animation:blink 1s infinite">상폐위험</span>` : '';
     card.innerHTML = `
-      <div style="width:44px;height:44px;border-radius:10px;background:${s.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <div style="width:44px;height:44px;border-radius:10px;background:${s.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;${s.danger?'box-shadow:0 0 10px rgba(239,68,68,.4)':''}">
         <span style="font-size:1.1rem;font-weight:900;color:${s.color}">${s.ticker[0]}</span>
       </div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:800;font-size:.9rem">${s.name}</div>
+        <div style="font-weight:800;font-size:.9rem">${s.name}${dangerBadge}</div>
         <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
           <span class="st-ticker-badge" style="background:${s.color}22;color:${s.color}">${s.ticker}</span>
           <span style="font-size:.7rem;color:var(--text-muted)">고:${s.high.toLocaleString()} 저:${s.low.toLocaleString()}</span>
@@ -5782,11 +5789,10 @@ function stRenderStockList() {
       </div>
       <canvas id="${sparkId}" width="80" height="36" style="flex-shrink:0"></canvas>
       <div style="text-align:right;flex-shrink:0">
-        <div class="st-price">${s.price.toLocaleString()}P</div>
+        <div class="st-price" style="${s.danger?'color:#ef4444':''}">${s.price.toLocaleString()}P</div>
         <div class="${chgCls}">${chgStr}</div>
       </div>`;
     wrap.appendChild(card);
-    // 스파크라인 그리기
     requestAnimationFrame(() => stDrawSpark(sparkId, s));
   });
 }
@@ -5964,6 +5970,33 @@ function stDrawChart(id) {
 }
 
 // stock_update는 ws.onmessage에서 직접 stRenderAll() 호출
+
+window.stShowDelistBanner = function(delisted, newStock, wipedCount) {
+  const old = document.getElementById('stDelistBanner');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'stDelistBanner';
+  el.className = 'st-delist-banner';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:1.4rem">🔴</span>
+      <div>
+        <div style="font-weight:900;font-size:.95rem;color:#ef4444">상장폐지 발생!</div>
+        <div style="font-size:.8rem;color:rgba(255,100,100,.8)">${wipedCount > 0 ? `${wipedCount}명의 보유 주식이 전액 소각됐습니다` : '보유자 없음'}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+      <span style="text-decoration:line-through;color:rgba(255,255,255,.4)">${delisted.name} (${delisted.ticker})</span>
+      <span style="color:rgba(255,255,255,.5)">→</span>
+      <span style="font-weight:800;color:${newStock.color}">${newStock.name} (${newStock.ticker})</span>
+      <span style="font-size:.75rem;color:rgba(255,255,255,.5)">${newStock.price.toLocaleString()}P</span>
+    </div>
+    <div style="font-size:.7rem;color:rgba(255,255,255,.3);margin-top:8px">새 종목이 동일 슬롯에 신규 상장되었습니다</div>
+    <button onclick="document.getElementById('stDelistBanner').remove()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem">✕</button>`;
+  el.style.position = 'fixed';
+  document.body.appendChild(el);
+  setTimeout(() => { if(document.getElementById('stDelistBanner') === el) el.remove(); }, 12000);
+};
 
 })(); // end stock IIFE
 </script>
