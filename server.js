@@ -1687,6 +1687,8 @@ const STOCK_DEFS = [
 ];
 const DELIST_PRICE = 50;  // 이 가격 이하로 떨어지면 상폐
 const WARN_PRICE   = 150; // 상폐 경고 구간
+const WHALE_THRESHOLD    = 50000; // 이 이상 보유하면 고래로 분류
+const WHALE_DRIFT_FACTOR = 0.004; // 고래 집중도 100%일 때 추가 하락 드리프트
 
 // 상폐 후 새로 상장될 종목 풀
 const STOCK_REPLACEMENT_POOL = [
@@ -1785,13 +1787,26 @@ function delistStock(idx) {
   });
 }
 
+function getWhalePressure(stockId) {
+  const viewers = readJSON(VIEWERS_FILE, {});
+  let total = 0, whaleShares = 0;
+  for (const v of Object.values(viewers)) {
+    const shares = (v.stockPortfolio || {})[stockId]?.shares || 0;
+    if (shares <= 0) continue;
+    total += shares;
+    if ((v.points || 0) >= WHALE_THRESHOLD) whaleShares += shares;
+  }
+  return total > 0 ? whaleShares / total : 0;
+}
+
 function stockTick() {
   if (!isMarketOpen()) return;
   const toDelistIdx = [];
   stocks.forEach((s, idx) => {
     const sign  = Math.random() < 0.5 ? 1 : -1;
     const pct   = Math.random() * s.vol * sign;
-    const drift = (s.basePrice - s.price) / s.basePrice * 0.018;
+    const whalePenalty = getWhalePressure(s.id) * WHALE_DRIFT_FACTOR;
+    const drift = (s.basePrice - s.price) / s.basePrice * 0.018 - whalePenalty;
     const newPrice = Math.max(5, Math.round(s.price * (1 + pct + drift)));
     s.price = newPrice;
     s.high  = Math.max(s.high, newPrice);
