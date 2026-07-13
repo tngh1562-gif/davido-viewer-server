@@ -1679,11 +1679,11 @@ app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) 
 // 주식 게임
 // ══════════════════════════════════════════════════════════
 const STOCK_DEFS = [
-  { id:'dvdo',  name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, vol:0.025, color:'#a855f7' },
-  { id:'blue',  name:'개이득전자',       ticker:'GAIN', basePrice:500,  vol:0.035, color:'#3b82f6' },
-  { id:'red',   name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  vol:0.035, color:'#ef4444' },
-  { id:'chkn',  name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  vol:0.05,  color:'#f59e0b' },
-  { id:'bank',  name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, vol:0.012, color:'#10b981' },
+  { id:'dvdo',  name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, vol:0.021, color:'#a855f7' },
+  { id:'blue',  name:'개이득전자',       ticker:'GAIN', basePrice:500,  vol:0.030, color:'#3b82f6' },
+  { id:'red',   name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  vol:0.030, color:'#ef4444' },
+  { id:'chkn',  name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  vol:0.042, color:'#f59e0b' },
+  { id:'bank',  name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, vol:0.010, color:'#10b981' },
 ];
 const DELIST_PRICE = 50;  // 이 가격 이하로 떨어지면 상폐
 const WARN_PRICE   = 150; // 상폐 경고 구간
@@ -1791,7 +1791,7 @@ function stockTick() {
   stocks.forEach((s, idx) => {
     const sign  = Math.random() < 0.5 ? 1 : -1;
     const pct   = Math.random() * s.vol * sign;
-    const drift = (s.basePrice - s.price) / s.basePrice * 0.008;
+    const drift = (s.basePrice - s.price) / s.basePrice * 0.018;
     const newPrice = Math.max(5, Math.round(s.price * (1 + pct + drift)));
     s.price = newPrice;
     s.high  = Math.max(s.high, newPrice);
@@ -1895,7 +1895,7 @@ app.post('/api/stocks/sell', async (req, res) => {
   const { viewers, viewer } = getViewer(name);
   const pf = getPortfolio(viewer);
   if (!pf[stockId] || pf[stockId].shares < qty) return res.json({ ok:false, error:'보유 수량 부족' });
-  const total = stock.price * qty;
+  const total = Math.floor(stock.price * qty * 0.97);
   try {
     const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
       { nickname:name, amount:total, reason:`📉 ${stock.ticker} ${qty}주 매도 (+${total}P)` },
