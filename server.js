@@ -1687,8 +1687,8 @@ const STOCK_DEFS = [
 ];
 const DELIST_PRICE = 50;  // 이 가격 이하로 떨어지면 상폐
 const WARN_PRICE   = 150; // 상폐 경고 구간
-const WHALE_THRESHOLD    = 20000; // 이 이상 보유하면 고래로 분류
-const WHALE_DRIFT_FACTOR = 0.002; // 고래 집중도 100%일 때 추가 하락 드리프트
+const WHALE_THRESHOLD  = 20000; // 이 이상 보유하면 고래로 분류
+const WHALE_BIAS_FACTOR = 0.03; // 고래 집중도 100%일 때 하방 확률 편향치
 
 // 상폐 후 새로 상장될 종목 풀
 const STOCK_REPLACEMENT_POOL = [
@@ -1803,10 +1803,10 @@ function stockTick() {
   if (!isMarketOpen()) return;
   const toDelistIdx = [];
   stocks.forEach((s, idx) => {
-    const sign  = Math.random() < 0.5 ? 1 : -1;
+    const pressure = getWhalePressure(s.id);
+    const sign  = Math.random() < (0.5 + pressure * WHALE_BIAS_FACTOR) ? -1 : 1;
     const pct   = Math.random() * s.vol * sign;
-    const whalePenalty = getWhalePressure(s.id) * WHALE_DRIFT_FACTOR;
-    const drift = (s.basePrice - s.price) / s.basePrice * 0.018 - whalePenalty;
+    const drift = (s.basePrice - s.price) / s.basePrice * 0.018;
     const newPrice = Math.max(5, Math.round(s.price * (1 + pct + drift)));
     s.price = newPrice;
     s.high  = Math.max(s.high, newPrice);
