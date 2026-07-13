@@ -1687,8 +1687,8 @@ const STOCK_DEFS = [
 ];
 const DELIST_PRICE = 50;  // 이 가격 이하로 떨어지면 상폐
 const WARN_PRICE   = 150; // 상폐 경고 구간
-const WHALE_THRESHOLD    = 50000; // 이 이상 보유하면 고래로 분류
-const WHALE_DRIFT_FACTOR = 0.004; // 고래 집중도 100%일 때 추가 하락 드리프트
+const WHALE_THRESHOLD    = 20000; // 이 이상 보유하면 고래로 분류
+const WHALE_DRIFT_FACTOR = 0.002; // 고래 집중도 100%일 때 추가 하락 드리프트
 
 // 상폐 후 새로 상장될 종목 풀
 const STOCK_REPLACEMENT_POOL = [
