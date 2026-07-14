@@ -669,7 +669,8 @@ app.post('/api/admin/bet', async (req, res) => {
       .map(async ([n, b]) => {
         const rawMult = totalPool / (winnerPool || 1);
         const mult = Math.min(rawMult, BET_MAX_MULT);
-        const gain = Math.floor(b.amount * mult * (1 - BET_RAKE));
+        const profit = Math.floor(b.amount * (mult - 1) * (1 - BET_RAKE));
+        const gain = b.amount + profit;
         betting.bets[n].payout = gain;
         if (INHOUSE_SERVER_URL && gain > 0) {
           try {
