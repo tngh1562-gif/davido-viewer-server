@@ -1836,8 +1836,9 @@ function stockDayClose() {
   }
 }
 
-setInterval(stockTick,     STOCK_TICK_MS);
-setInterval(stockDayClose, 60000);
+// 주식탭 임시 비활성화 — 변동 정지 (재개 시 아래 두 줄 복구)
+// setInterval(stockTick,     STOCK_TICK_MS);
+// setInterval(stockDayClose, 60000);
 
 function stocksPublic() {
   return stocks.map(s => ({
