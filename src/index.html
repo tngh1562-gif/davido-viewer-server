@@ -295,8 +295,8 @@ body{font-family:var(--font-family);background-color:var(--bg-base);color:var(--
 .logout-btn:hover{border-color:rgba(255,255,255,.25);color:#fff}
 
 main{max-width:1400px;margin:40px auto;padding:0 40px}
-.page{display:none;animation:fadeIn .4s ease forwards}
-.page.active{display:block}
+.page{display:none}
+.page.active{display:block;animation:fadeIn .3s ease both}
 
 /* CARDS */
 .card{background:var(--surface-dark);border:1px solid var(--surface-border);border-radius:var(--radius);padding:24px;position:relative;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s;overflow:hidden}
@@ -1720,18 +1720,22 @@ async function placeBet(team) {
 
 /* ══════════ COMMUNITY ══════════ */
 let commBoard = 'notice';
+let _commLoadId = 0;
 const BOARD_LABELS = { notice:'공지사항', free:'자유게시판', recommend:'추천게시판', inquiry:'문의게시판' };
 
 async function loadCommunity(board) {
+  const loadId = ++_commLoadId;
   commBoard = board;
   document.querySelectorAll('.comm-tab').forEach(t => t.classList.remove('active'));
   const tab = document.getElementById(`ctab-${board}`);
   if (tab) tab.classList.add('active');
 
   const wrap = document.getElementById('commContent');
+  if (!wrap) return;
   wrap.innerHTML = '<div class="comm-empty">불러오는 중...</div>';
 
   const r = await fetch(`/api/posts?board=${board}`).then(r=>r.json()).catch(()=>({ok:false,posts:[]}));
+  if (loadId !== _commLoadId) return;
   const posts = r.posts || [];
   const readonly = board === 'notice';
 
@@ -5440,7 +5444,7 @@ function stRenderStockList() {
     card.className = 'st-stock-card' + (stSelected===s.id?' selected':'') + (s.danger?' st-danger':'');
     card.onclick = () => stSelectStock(s.id);
     const sparkId = 'spark_'+s.id;
-    const dangerBadge = s.danger ? `<span style="font-size:.65rem;font-weight:900;color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:4px;padding:1px 5px;margin-left:4px;animation:blink 1s infinite">상폐위험</span>` : '';
+    const dangerBadge = s.danger ? `<span style="font-size:.65rem;font-weight:900;color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:4px;padding:1px 5px;margin-left:4px;animation:blink 1s infinite">급락주의</span>` : '';
     card.innerHTML = `
       <div style="width:44px;height:44px;border-radius:10px;background:${s.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;${s.danger?'box-shadow:0 0 10px rgba(239,68,68,.4)':''}">
         <span style="font-size:1.1rem;font-weight:900;color:${s.color}">${s.ticker[0]}</span>

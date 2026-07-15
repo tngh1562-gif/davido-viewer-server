@@ -1106,14 +1106,42 @@ app.get('/api/ranking', async (req, res) => {
   } catch(e) { res.json({ ok: false, ranking: [], error: e.message }); }
 });
 
+// ── Announcements 캐시 (봇 API 콜드스타트 첫 로드 빈 화면 방지) ──
+let _annCache = null;
+let _annCacheAt = 0;
+let _annCacheFetching = false;
+const ANN_CACHE_TTL = 60000;
+
+async function fetchAnnouncements(limit = 100) {
+  const now = Date.now();
+  if (_annCache && (now - _annCacheAt) < ANN_CACHE_TTL) {
+    return _annCache.slice(0, limit);
+  }
+  if (!BOT_API_URL) return null;
+  if (_annCacheFetching) {
+    // 이미 fetch 중이면 현재 캐시 반환 (stale-while-revalidate)
+    return _annCache ? _annCache.slice(0, limit) : null;
+  }
+  _annCacheFetching = true;
+  try {
+    const d = await Promise.race([
+      getJson(`${BOT_API_URL}/api/announcements?limit=100`),
+      new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
+    ]);
+    if (d.ok) {
+      _annCache = d.items || [];
+      _annCacheAt = Date.now();
+      return _annCache.slice(0, limit);
+    }
+  } catch {}
+  finally { _annCacheFetching = false; }
+  return _annCache ? _annCache.slice(0, limit) : null;
+}
+
 // ── Announcements — Bot에서 직접 가져오기 (메인 대시보드용, 최대 10개) ──
 app.get('/api/announcements', async (req, res) => {
-  if (BOT_API_URL) {
-    try {
-      const data = await getJson(`${BOT_API_URL}/api/announcements?limit=10`);
-      if (data.ok) return res.json({ ok: true, items: (data.items || []).slice(0, 10) });
-    } catch {}
-  }
+  const items = await fetchAnnouncements(10);
+  if (items !== null) return res.json({ ok: true, items });
   // fallback: 로컬 파일
   const ann = readJSON(ANN_FILE, { items: [] });
   res.json({ ok: true, items: ann.items || [] });
@@ -1159,21 +1187,17 @@ const BOARDS = ['free', 'recommend', 'inquiry'];
 app.get('/api/posts', async (req, res) => {
   const { board, page = 1 } = req.query;
   if (board === 'notice') {
-    // 공지사항 = 봇 API에서 직접 (커뮤니티는 전체, 메인은 10개)
-    const annLimit = req.query.limit || 100;
-    if (!BOT_API_URL) return res.json({ ok: true, posts: [], total: 0 });
-    try {
-      const d = await Promise.race([
-        getJson(`${BOT_API_URL}/api/announcements?limit=${annLimit}`),
-        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
-      ]);
-      const posts = (d.items || []).map(it => ({
+    const annLimit = Number(req.query.limit) || 100;
+    const items = await fetchAnnouncements(annLimit);
+    if (items !== null) {
+      const posts = items.map(it => ({
         id: it.msg_id || String(it.at),
         board: 'notice', title: it.title || '공지', content: it.body || '',
         author: '관리자', createdAt: it.at, readonly: true,
       }));
       return res.json({ ok: true, posts, total: posts.length });
-    } catch { return res.json({ ok: true, posts: [], total: 0 }); }
+    }
+    return res.json({ ok: true, posts: [], total: 0 });
   }
   const data = readJSON(POSTS_FILE, { posts: [] });
   let posts = data.posts;
@@ -1679,38 +1703,17 @@ app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) 
 // ══════════════════════════════════════════════════════════
 // 주식 게임
 // ══════════════════════════════════════════════════════════
+// ── 실제 국내 주식 5종목 (Yahoo Finance KS 티커)
 const STOCK_DEFS = [
-  { id:'dvdo',  name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, vol:0.021, color:'#a855f7' },
-  { id:'blue',  name:'개이득전자',       ticker:'GAIN', basePrice:500,  vol:0.030, color:'#3b82f6' },
-  { id:'red',   name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  vol:0.030, color:'#ef4444' },
-  { id:'chkn',  name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  vol:0.042, color:'#f59e0b' },
-  { id:'bank',  name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, vol:0.010, color:'#10b981' },
-];
-const DELIST_PRICE = 50;  // 이 가격 이하로 떨어지면 상폐
-const WARN_PRICE   = 150; // 상폐 경고 구간
-const WHALE_THRESHOLD  = 20000; // 이 이상 보유하면 고래로 분류
-const WHALE_BIAS_FACTOR = 0.03; // 고래 집중도 100%일 때 하방 확률 편향치
-
-// 상폐 후 새로 상장될 종목 풀
-const STOCK_REPLACEMENT_POOL = [
-  { name:'현타주식회사',   ticker:'HNTA', basePrice:600,  vol:0.04,  color:'#ec4899' },
-  { name:'손절각주식회사', ticker:'SNJK', basePrice:400,  vol:0.055, color:'#8b5cf6' },
-  { name:'물림방지연구소', ticker:'WTRP', basePrice:800,  vol:0.03,  color:'#06b6d4' },
-  { name:'억까증권',       ticker:'YKKA', basePrice:1000, vol:0.025, color:'#f97316' },
-  { name:'단타의민족',     ticker:'DNTM', basePrice:700,  vol:0.05,  color:'#0ea5e9' },
-  { name:'고점매수클럽',   ticker:'TOPB', basePrice:1200, vol:0.035, color:'#a3e635' },
-  { name:'매수타이밍증권', ticker:'TMNG', basePrice:500,  vol:0.04,  color:'#84cc16' },
-  { name:'존버는승리한다', ticker:'JBSL', basePrice:450,  vol:0.045, color:'#f43f5e' },
-  { name:'떡상예감주식',   ticker:'DDKK', basePrice:900,  vol:0.06,  color:'#fbbf24' },
-  { name:'내일은오른다',   ticker:'TMRW', basePrice:750,  vol:0.035, color:'#a78bfa' },
-  { name:'오조오억증권',   ticker:'OJOA', basePrice:550,  vol:0.045, color:'#34d399' },
-  { name:'킹받네금융',     ticker:'KING', basePrice:800,  vol:0.03,  color:'#fb923c' },
+  { id:'dvdo', name:'삼성전자',   ticker:'삼전', yahooTicker:'005930.KS', basePrice:1000, color:'#a855f7' },
+  { id:'blue', name:'SK하이닉스', ticker:'하닉', yahooTicker:'000660.KS', basePrice:500,  color:'#3b82f6' },
+  { id:'red',  name:'카카오',     ticker:'카카오',yahooTicker:'035720.KS', basePrice:500,  color:'#ef4444' },
+  { id:'chkn', name:'NAVER',      ticker:'네이버',yahooTicker:'035420.KS', basePrice:300,  color:'#f59e0b' },
+  { id:'bank', name:'현대차',     ticker:'현차', yahooTicker:'005380.KS', basePrice:2000, color:'#10b981' },
 ];
 
-const STOCK_TICK_MS   = 30000; // 30초마다 가격 변동
-const STOCK_OPEN_H    = 9;     // KST 9시 장 시작
-const STOCK_CLOSE_H   = 15;    // KST 15시 장 마감
-const STOCK_HIST_MAX  = 60;    // 최대 60틱 히스토리
+const STOCK_TICK_MS  = 30000; // 30초마다 실시간 조회
+const STOCK_HIST_MAX = 60;
 
 function stocksInit() {
   const saved = readJSON(STOCKS_FILE, {});
@@ -1718,12 +1721,12 @@ function stocksInit() {
     const s = saved[def.id] || {};
     return {
       ...def,
-      price:   Math.max(10, s.price   || def.basePrice),
-      open:    s.open    || def.basePrice,
-      high:    s.high    || def.basePrice,
-      low:     s.low     || def.basePrice,
-      prevClose: s.prevClose || def.basePrice,
-      history: Array.isArray(s.history) ? s.history : [def.basePrice],
+      price:    Math.max(10, s.price || def.basePrice),
+      open:     def.basePrice,
+      high:     s.high || def.basePrice,
+      low:      s.low  || def.basePrice,
+      prevClose: def.basePrice, // 기준가 = 전일종가 기준 등락률 계산 기준점
+      history:  Array.isArray(s.history) ? s.history : [def.basePrice],
       totalVol: s.totalVol || 0,
     };
   });
@@ -1731,107 +1734,83 @@ function stocksInit() {
 
 let stocks = stocksInit();
 
-function isMarketOpen() {
-  const now = new Date(Date.now() + 9*3600000); // KST
-  const h = now.getUTCHours();
-  return h >= STOCK_OPEN_H && h < STOCK_CLOSE_H;
-}
-
-function pickReplacement() {
-  const usedTickers = new Set(stocks.map(s => s.ticker));
-  const available = STOCK_REPLACEMENT_POOL.filter(r => !usedTickers.has(r.ticker));
-  if (!available.length) {
-    const suffix = Date.now().toString().slice(-3);
-    return { name:`신규상장${suffix}`, ticker:`N${suffix}`, basePrice:500, vol:0.04, color:'#6b7280' };
-  }
-  return available[Math.floor(Math.random() * available.length)];
-}
-
-function delistStock(idx) {
-  const s = stocks[idx];
-  const delistedName   = s.name;
-  const delistedTicker = s.ticker;
-  const stockId        = s.id;
-
-  // 보유자 지분 전액 삭제 (상폐 = 0원)
-  const viewers = readJSON(VIEWERS_FILE, {});
-  let wipedCount = 0;
-  Object.values(viewers).forEach(v => {
-    if (v.stockPortfolio && v.stockPortfolio[stockId]) {
-      delete v.stockPortfolio[stockId];
-      wipedCount++;
-    }
-  });
-  if (wipedCount > 0) writeJSON(VIEWERS_FILE, viewers);
-
-  // 새 종목 생성
-  const repl = pickReplacement();
-  stocks[idx] = {
-    ...repl,
-    id:        stockId,
-    price:     repl.basePrice,
-    open:      repl.basePrice,
-    high:      repl.basePrice,
-    low:       repl.basePrice,
-    prevClose: repl.basePrice,
-    history:   [repl.basePrice],
-    totalVol:  0,
+// Yahoo Finance에서 실시간 가격 조회
+async function fetchRealStock(yahooTicker) {
+  const r = await fetch(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1m&range=1d`,
+    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
+  );
+  const data = await r.json();
+  const meta = data?.chart?.result?.[0]?.meta;
+  if (!meta || !meta.regularMarketPrice) return null;
+  return {
+    price:       meta.regularMarketPrice,
+    prevClose:   meta.chartPreviousClose,      // 실제 전일 종가
+    dayHigh:     meta.regularMarketDayHigh,
+    dayLow:      meta.regularMarketDayLow,
+    marketState: meta.marketState,             // 'REGULAR' | 'CLOSED' | 'PRE' | 'POST'
   };
-
-  console.log(`[상폐] ${delistedName}(${delistedTicker}) → ${repl.name}(${repl.ticker}) 신규상장, 피해자 ${wipedCount}명`);
-  broadcast({
-    type:       'stock_delisted',
-    delisted:   { name: delistedName, ticker: delistedTicker },
-    newStock:   { name: repl.name, ticker: repl.ticker, color: repl.color, price: repl.basePrice },
-    wipedCount,
-    stocks:     stocksPublic(),
-  });
 }
 
-function getWhalePressure(stockId) {
-  const viewers = readJSON(VIEWERS_FILE, {});
-  let total = 0, whaleShares = 0;
-  for (const v of Object.values(viewers)) {
-    const shares = (v.stockPortfolio || {})[stockId]?.shares || 0;
-    if (shares <= 0) continue;
-    total += shares;
-    if ((v.points || 0) >= WHALE_THRESHOLD) whaleShares += shares;
+// 실제 장 개폐 여부 (Yahoo에서 확인, 주말·공휴일 자동 처리)
+let _marketRealOpen = null; // null = 서버 시작 후 첫 틱 전
+
+function isMarketOpen() {
+  if (_marketRealOpen !== null) return _marketRealOpen;
+  // 첫 틱 전 시간 기반 fallback (KST 평일 09:00~15:30)
+  const now = new Date(Date.now() + 9 * 3600000);
+  const h = now.getUTCHours(), m = now.getUTCMinutes(), d = now.getUTCDay();
+  if (d === 0 || d === 6) return false;
+  return h >= 9 && (h < 15 || (h === 15 && m < 30));
+}
+
+let _stockTickRunning = false;
+async function stockTick() {
+  if (_stockTickRunning) return;
+  _stockTickRunning = true;
+  try {
+    let marketStateSet = false;
+    for (const s of stocks) {
+      try {
+        const real = await fetchRealStock(s.yahooTicker);
+        if (!real) continue;
+
+        // 첫 성공 응답으로 장 개폐 결정
+        if (!marketStateSet) {
+          _marketRealOpen = real.marketState === 'REGULAR';
+          marketStateSet = true;
+        }
+        if (!_marketRealOpen) continue; // 장 마감 시 가격 변동 없음
+
+        // 실제 전일 종가 대비 등락률 → 게임 기준가에 적용
+        const ref = real.prevClose || s.basePrice;
+        const toGame = v => Math.max(5, Math.round(s.basePrice * (1 + (v - ref) / ref)));
+
+        s.price = toGame(real.price);
+        if (real.dayHigh) s.high = Math.max(s.high, toGame(real.dayHigh));
+        if (real.dayLow)  s.low  = Math.min(s.low,  toGame(real.dayLow));
+        s.history.push(s.price);
+        if (s.history.length > STOCK_HIST_MAX) s.history.shift();
+      } catch (e) {
+        console.warn(`[주식] ${s.yahooTicker} 조회 실패:`, e.message);
+      }
+    }
+    const save = {};
+    stocks.forEach(s => { save[s.id] = { price:s.price, high:s.high, low:s.low, history:s.history, totalVol:s.totalVol }; });
+    writeJSON(STOCKS_FILE, save);
+    broadcast({ type:'stock_update', stocks: stocksPublic() });
+  } finally {
+    _stockTickRunning = false;
   }
-  return total > 0 ? whaleShares / total : 0;
 }
 
-function stockTick() {
-  if (!isMarketOpen()) return;
-  const toDelistIdx = [];
-  stocks.forEach((s, idx) => {
-    const pressure = getWhalePressure(s.id);
-    const sign  = Math.random() < (0.5 + pressure * WHALE_BIAS_FACTOR) ? -1 : 1;
-    const pct   = Math.random() * s.vol * sign;
-    const drift = (s.basePrice - s.price) / s.basePrice * 0.018;
-    const newPrice = Math.max(5, Math.round(s.price * (1 + pct + drift)));
-    s.price = newPrice;
-    s.high  = Math.max(s.high, newPrice);
-    s.low   = Math.min(s.low,  newPrice);
-    s.history.push(newPrice);
-    if (s.history.length > STOCK_HIST_MAX) s.history.shift();
-    if (newPrice <= DELIST_PRICE) toDelistIdx.push(idx);
-  });
-
-  // 상폐는 가격 저장/브로드캐스트 전에 처리
-  // 역순으로 처리해야 인덱스가 안 꼬임
-  toDelistIdx.reverse().forEach(idx => delistStock(idx));
-
-  const save = {};
-  stocks.forEach(s => { save[s.id] = { price:s.price, open:s.open, high:s.high, low:s.low, prevClose:s.prevClose, history:s.history, totalVol:s.totalVol }; });
-  writeJSON(STOCKS_FILE, save);
-  broadcast({ type:'stock_update', stocks: stocksPublic() });
-}
-
-// 장 마감 시 일일 데이터 초기화
+// 장 마감(15:30) 시 일일 OHLC 리셋
 function stockDayClose() {
-  const nowH = new Date(Date.now()+9*3600000).getUTCHours();
-  if (nowH === STOCK_CLOSE_H) {
-    stocks.forEach(s => { s.prevClose = s.price; s.open = s.price; s.high = s.price; s.low = s.price; });
+  const now = new Date(Date.now() + 9 * 3600000);
+  const h = now.getUTCHours(), m = now.getUTCMinutes();
+  if (h === 15 && m >= 30 && m < 32) {
+    _marketRealOpen = false;
+    stocks.forEach(s => { s.high = s.price; s.low = s.price; });
     broadcast({ type:'stock_update', stocks: stocksPublic() });
   }
 }
@@ -1841,14 +1820,17 @@ function stockDayClose() {
 // setInterval(stockDayClose, 60000);
 
 function stocksPublic() {
-  return stocks.map(s => ({
-    id:s.id, name:s.name, ticker:s.ticker, color:s.color,
-    price:s.price, open:s.open, high:s.high, low:s.low,
-    prevClose:s.prevClose, history:s.history,
-    change: s.prevClose ? Math.round((s.price-s.prevClose)/s.prevClose*10000)/100 : 0,
-    marketOpen: isMarketOpen(),
-    danger: s.price <= WARN_PRICE,   // 상폐 경고 구간
-  }));
+  return stocks.map(s => {
+    const chg = Math.round((s.price - s.basePrice) / s.basePrice * 10000) / 100;
+    return {
+      id:s.id, name:s.name, ticker:s.ticker, color:s.color,
+      price:s.price, open:s.basePrice, high:s.high, low:s.low,
+      prevClose:s.basePrice, history:s.history,
+      change: chg,
+      marketOpen: isMarketOpen(),
+      danger: chg < -5, // 5% 이상 하락 시 경고
+    };
+  });
 }
 
 // 포트폴리오 헬퍼
