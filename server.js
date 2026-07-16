@@ -516,6 +516,28 @@ app.post('/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+function getJson(url, extraHeaders) {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const lib = target.protocol === 'https:' ? https : http;
+    const req = lib.request(target, {
+      method: 'GET',
+      headers: { ...(extraHeaders || {}) },
+      timeout: 15000,
+    }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+        catch { reject(new Error('parse_error')); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.end();
+  });
+}
+
 function postJson(url, payload, extraHeaders) {
   return new Promise((resolve, reject) => {
     const target = new URL(url);
@@ -1893,6 +1915,131 @@ app.post('/api/stocks/sell', async (req, res) => {
     addFeed('stock', name, { reason:`📉 ${stock.name} ${qty}주 매도 (+${total}P)` });
     res.json({ ok:true, points: gr.points, portfolio: getPortfolio(viewer) });
   } catch(e) { res.json({ ok:false, error:e.message }); }
+});
+
+// ══════════════════════════════════════════════════════════
+// 주식 수익 롤백 (관리자 전용)
+// POST /api/admin/stock-rollback  { dryRun: true/false, threshold: 10000 }
+// dryRun=true(기본값): 미리보기만, dryRun=false: 실제 차감+보관함 제거
+// ══════════════════════════════════════════════════════════
+app.post('/api/admin/stock-rollback', requireAdmin, async (req, res) => {
+  const dryRun   = req.body?.dryRun !== false;
+  const THRESHOLD = Math.max(0, Number(req.body?.threshold) || 10000);
+
+  try {
+    // 1. 포인트 로그 전체 조회
+    const logRes = await getJson(
+      `${INHOUSE_SERVER_URL}/api/point-log?limit=2000`,
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET }
+    );
+    const logs = Array.isArray(logRes.logs) ? logRes.logs : [];
+
+    // 2. 유저별 주식 실현손익 + 상점 구매 내역 집계
+    const byUser = {};
+    for (const e of logs) {
+      const nick = String(e.nickname || '').trim();
+      if (!nick || !e.reason) continue;
+      const isStockBuy  = e.reason.includes('📈') || (e.reason.includes('매수') && !e.reason.includes('상점'));
+      const isStockSell = e.reason.includes('📉') || e.reason.includes('매도');
+      const isShopBuy   = e.reason.includes('🛒') || e.reason.includes('상점 구매');
+      if (!isStockBuy && !isStockSell && !isShopBuy) continue;
+      if (!byUser[nick]) byUser[nick] = { realizedGain:0, firstStockAt:Infinity, shopPurchases:[] };
+      if (isStockBuy || isStockSell) {
+        byUser[nick].realizedGain += Number(e.delta) || 0;
+        const at = Number(e.at) || 0;
+        if (at < byUser[nick].firstStockAt) byUser[nick].firstStockAt = at;
+      }
+      if (isShopBuy) byUser[nick].shopPurchases.push(e);
+    }
+
+    // 3. 현재 포트폴리오에서 미실현 손익 계산
+    const viewers = readJSON(VIEWERS_FILE, {});
+    const results = [];
+
+    for (const [nickname, stats] of Object.entries(byUser)) {
+      const realizedGain = Math.round(stats.realizedGain);
+
+      const viewer  = viewers[nickname] || {};
+      const pf      = viewer.stockPortfolio || {};
+      let unrealized = 0;
+      for (const [sid, h] of Object.entries(pf)) {
+        const s = stocks.find(x => x.id === sid);
+        if (s && h.shares > 0) unrealized += (s.price - h.avgCost) * h.shares;
+      }
+      unrealized = Math.round(unrealized);
+
+      if (realizedGain < THRESHOLD) {
+        results.push({ nickname, realizedGain, unrealized, status:'skipped', reason:`실현수익 ${realizedGain}P < 기준 ${THRESHOLD}P` });
+        continue;
+      }
+
+      // 첫 주식 거래 이후 상점 구매 아이템 파악
+      const shopAfter = stats.shopPurchases.filter(p => Number(p.at) >= stats.firstStockAt);
+      const itemsToRemove = shopAfter.map(p => {
+        const m = p.reason.match(/상점 구매:\s*(.+?)\s*\(-/);
+        return m ? m[1].trim() : null;
+      }).filter(Boolean);
+
+      if (!dryRun) {
+        // 현재 포인트 조회 (차감 한도 파악)
+        let currentPts = 0;
+        try {
+          const ptRes = await getJson(
+            `${INHOUSE_SERVER_URL}/api/viewer-points?nickname=${encodeURIComponent(nickname)}`,
+            { 'x-viewer-secret': VIEWER_SERVER_SECRET }
+          );
+          currentPts = Number(ptRes.points) || 0;
+        } catch {}
+
+        const deductAmount = Math.min(realizedGain, currentPts);
+        let deductedOk = false;
+        if (deductAmount > 0) {
+          try {
+            const dr = await postJson(
+              `${INHOUSE_SERVER_URL}/api/viewer-deduct`,
+              { nickname, amount:deductAmount, reason:`🔄 주식수익 롤백 (-${deductAmount}P) [관리자]` },
+              { 'x-viewer-secret': VIEWER_SERVER_SECRET }
+            );
+            deductedOk = dr.ok;
+          } catch {}
+        }
+
+        // 포트폴리오 초기화
+        if (viewer.stockPortfolio) { delete viewer.stockPortfolio; viewers[nickname] = viewer; }
+
+        // 보관함 아이템 차감
+        const itemsRemoved = [], itemsFailed = [];
+        for (const itemName of itemsToRemove) {
+          if (BOT_API_URL && BOT_API_SECRET_VIEWER) {
+            try {
+              const r = await postJson(`${BOT_API_URL}/api/bot-command`,
+                { secret:BOT_API_SECRET_VIEWER, command:'차감', options:{ 닉네임:nickname, 보상이름:itemName, 개수:1, source:'stock_rollback' } });
+              if (r.ok) itemsRemoved.push(itemName); else itemsFailed.push(itemName);
+            } catch { itemsFailed.push(itemName); }
+          }
+        }
+
+        results.push({ nickname, realizedGain, unrealized, currentPts, deductAmount, deductedOk, portfolioWiped:true, itemsRemoved, itemsFailed, status:'rolled_back' });
+      } else {
+        results.push({ nickname, realizedGain, unrealized, deductAmount:realizedGain, portfolioWiped:Object.keys(pf).length>0, itemsToRemove, status:'dry_run' });
+      }
+    }
+
+    if (!dryRun) writeJSON(VIEWERS_FILE, viewers);
+
+    results.sort((a, b) => (b.realizedGain||0) - (a.realizedGain||0));
+    res.json({
+      ok:true, dryRun, threshold:THRESHOLD, logEntriesAnalyzed:logs.length,
+      results,
+      summary:{
+        analyzed:results.length,
+        toRollback:results.filter(r=>r.status!=='skipped').length,
+        skipped:results.filter(r=>r.status==='skipped').length,
+      }
+    });
+  } catch(e) {
+    res.json({ ok:false, error:e.message });
+  }
 });
 
 // ── WebSocket ──
