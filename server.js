@@ -1839,6 +1839,20 @@ function getPortfolio(viewer) {
   return viewer.stockPortfolio;
 }
 
+// GET /api/stocks/debug (관리자 전용 - Yahoo Finance 원본 응답 확인)
+app.get('/api/stocks/debug', async (req, res) => {
+  const results = [];
+  for (const def of STOCK_DEFS) {
+    try {
+      const raw = await fetchRealStock(def.yahooTicker);
+      results.push({ ticker: def.yahooTicker, name: def.name, raw });
+    } catch (e) {
+      results.push({ ticker: def.yahooTicker, name: def.name, error: e.message });
+    }
+  }
+  res.json({ ok: true, marketOpen: isMarketOpen(), _marketRealOpen, results });
+});
+
 // GET /api/stocks
 app.get('/api/stocks', (req, res) => {
   const name = getSessionName(req);
