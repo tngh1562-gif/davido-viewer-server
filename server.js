@@ -1701,19 +1701,22 @@ app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) 
 });
 
 // ══════════════════════════════════════════════════════════
-// 주식 게임
+// 주식 게임 (완전 랜덤워크, 24시간 가동)
 // ══════════════════════════════════════════════════════════
-// ── 실제 국내 주식 5종목 (Yahoo Finance KS 티커)
 const STOCK_DEFS = [
-  { id:'dvdo', name:'삼성전자',   ticker:'삼전', yahooTicker:'005930.KS', basePrice:1000, color:'#a855f7' },
-  { id:'blue', name:'SK하이닉스', ticker:'하닉', yahooTicker:'000660.KS', basePrice:500,  color:'#3b82f6' },
-  { id:'red',  name:'카카오',     ticker:'카카오',yahooTicker:'035720.KS', basePrice:500,  color:'#ef4444' },
-  { id:'chkn', name:'NAVER',      ticker:'네이버',yahooTicker:'035420.KS', basePrice:300,  color:'#f59e0b' },
-  { id:'bank', name:'현대차',     ticker:'현차', yahooTicker:'005380.KS', basePrice:2000, color:'#10b981' },
+  { id:'dvdo', name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, color:'#a855f7' },
+  { id:'blue', name:'개이득전자',       ticker:'GAIN', basePrice:500,  color:'#3b82f6' },
+  { id:'red',  name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  color:'#ef4444' },
+  { id:'chkn', name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  color:'#f59e0b' },
+  { id:'bank', name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, color:'#10b981' },
 ];
 
-const STOCK_TICK_MS  = 30000; // 30초마다 실시간 조회
+const STOCK_TICK_MS  = 30000; // 30초마다 가격 변동
 const STOCK_HIST_MAX = 60;
+
+// 가격 하한/상한 (기준가의 10% ~ 500%)
+const STOCK_PRICE_FLOOR = 0.10;
+const STOCK_PRICE_CAP   = 5.00;
 
 function stocksInit() {
   const saved = readJSON(STOCKS_FILE, {});
@@ -1721,116 +1724,68 @@ function stocksInit() {
     const s = saved[def.id] || {};
     return {
       ...def,
-      price:    Math.max(10, s.price || def.basePrice),
-      open:     def.basePrice,
-      high:     s.high || def.basePrice,
-      low:      s.low  || def.basePrice,
-      prevClose: def.basePrice, // 기준가 = 전일종가 기준 등락률 계산 기준점
-      history:  Array.isArray(s.history) ? s.history : [def.basePrice],
-      totalVol: s.totalVol || 0,
+      price:     Math.max(Math.round(def.basePrice * STOCK_PRICE_FLOOR), s.price || def.basePrice),
+      open:      s.open     || def.basePrice,
+      high:      s.high     || def.basePrice,
+      low:       s.low      || def.basePrice,
+      prevClose: s.prevClose || def.basePrice,
+      history:   Array.isArray(s.history) ? s.history : [def.basePrice],
+      totalVol:  s.totalVol || 0,
     };
   });
 }
 
 let stocks = stocksInit();
 
-// Yahoo Finance에서 실시간 가격 조회
-async function fetchRealStock(yahooTicker) {
-  const r = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1m&range=1d`,
-    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
-  );
-  const data = await r.json();
-  const meta = data?.chart?.result?.[0]?.meta;
-  if (!meta || !meta.regularMarketPrice) return null;
-  return {
-    price:       meta.regularMarketPrice,
-    prevClose:   meta.chartPreviousClose,      // 실제 전일 종가
-    dayHigh:     meta.regularMarketDayHigh,
-    dayLow:      meta.regularMarketDayLow,
-    marketState: meta.marketState,             // 'REGULAR' | 'CLOSED' | 'PRE' | 'POST'
-  };
+function isMarketOpen() { return true; } // 24시간 가동
+
+function stockTick() {
+  stocks.forEach(s => {
+    // 변동폭 자체를 랜덤하게 (0.3% ~ 4%) → 매 틱 예측 불가
+    const vol = 0.003 + Math.random() * 0.037;
+    // 방향도 완전 랜덤 (50:50)
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    // 5% 확률로 쇼크 이벤트 (±8~15% 급등락)
+    const shock = Math.random() < 0.05 ? (0.08 + Math.random() * 0.07) * (Math.random() < 0.5 ? 1 : -1) : 0;
+    const pct = vol * sign + shock;
+
+    const floor = Math.round(s.basePrice * STOCK_PRICE_FLOOR);
+    const cap   = Math.round(s.basePrice * STOCK_PRICE_CAP);
+    const newPrice = Math.min(cap, Math.max(floor, Math.round(s.price * (1 + pct))));
+    s.price = newPrice;
+    s.high  = Math.max(s.high, newPrice);
+    s.low   = Math.min(s.low,  newPrice);
+    s.history.push(newPrice);
+    if (s.history.length > STOCK_HIST_MAX) s.history.shift();
+  });
+
+  const save = {};
+  stocks.forEach(s => { save[s.id] = { price:s.price, open:s.open, high:s.high, low:s.low, prevClose:s.prevClose, history:s.history, totalVol:s.totalVol }; });
+  writeJSON(STOCKS_FILE, save);
+  broadcast({ type:'stock_update', stocks: stocksPublic() });
 }
 
-// 실제 장 개폐 여부 (Yahoo에서 확인, 주말·공휴일 자동 처리)
-let _marketRealOpen = null; // null = 서버 시작 후 첫 틱 전
-
-function isMarketOpen() {
-  if (_marketRealOpen !== null) return _marketRealOpen;
-  // 첫 틱 전 시간 기반 fallback (KST 평일 09:00~15:30)
+// 자정(KST 00:00)마다 일일 OHLC 리셋
+function stockDayReset() {
   const now = new Date(Date.now() + 9 * 3600000);
-  const h = now.getUTCHours(), m = now.getUTCMinutes(), d = now.getUTCDay();
-  if (d === 0 || d === 6) return false;
-  return h >= 9 && (h < 15 || (h === 15 && m < 30));
-}
-
-let _stockTickRunning = false;
-async function stockTick() {
-  if (_stockTickRunning) return;
-  _stockTickRunning = true;
-  try {
-    let marketStateSet = false;
-    for (const s of stocks) {
-      try {
-        const real = await fetchRealStock(s.yahooTicker);
-        if (!real) continue;
-
-        // 첫 성공 응답으로 장 개폐 결정
-        if (!marketStateSet) {
-          _marketRealOpen = real.marketState === 'REGULAR';
-          marketStateSet = true;
-        }
-        if (!_marketRealOpen) continue; // 장 마감 시 가격 변동 없음
-
-        // 실제 전일 종가 대비 등락률 → 게임 기준가에 적용
-        const ref = real.prevClose || s.basePrice;
-        const toGame = v => Math.max(5, Math.round(s.basePrice * (1 + (v - ref) / ref)));
-
-        s.price = toGame(real.price);
-        if (real.dayHigh) s.high = Math.max(s.high, toGame(real.dayHigh));
-        if (real.dayLow)  s.low  = Math.min(s.low,  toGame(real.dayLow));
-        s.history.push(s.price);
-        if (s.history.length > STOCK_HIST_MAX) s.history.shift();
-      } catch (e) {
-        console.warn(`[주식] ${s.yahooTicker} 조회 실패:`, e.message);
-      }
-    }
-    const save = {};
-    stocks.forEach(s => { save[s.id] = { price:s.price, high:s.high, low:s.low, history:s.history, totalVol:s.totalVol }; });
-    writeJSON(STOCKS_FILE, save);
-    broadcast({ type:'stock_update', stocks: stocksPublic() });
-  } finally {
-    _stockTickRunning = false;
-  }
-}
-
-// 장 마감(15:30) 시 일일 OHLC 리셋
-function stockDayClose() {
-  const now = new Date(Date.now() + 9 * 3600000);
-  const h = now.getUTCHours(), m = now.getUTCMinutes();
-  if (h === 15 && m >= 30 && m < 32) {
-    _marketRealOpen = false;
-    stocks.forEach(s => { s.high = s.price; s.low = s.price; });
+  if (now.getUTCHours() === 0 && now.getUTCMinutes() < 1) {
+    stocks.forEach(s => { s.prevClose = s.price; s.open = s.price; s.high = s.price; s.low = s.price; });
     broadcast({ type:'stock_update', stocks: stocksPublic() });
   }
 }
 
-// 주식탭 임시 비활성화 — 변동 정지 (재개 시 아래 두 줄 복구)
-// setInterval(stockTick,     STOCK_TICK_MS);
-// setInterval(stockDayClose, 60000);
+setInterval(stockTick,    STOCK_TICK_MS);
+setInterval(stockDayReset, 60000);
 
 function stocksPublic() {
-  return stocks.map(s => {
-    const chg = Math.round((s.price - s.basePrice) / s.basePrice * 10000) / 100;
-    return {
-      id:s.id, name:s.name, ticker:s.ticker, color:s.color,
-      price:s.price, open:s.basePrice, high:s.high, low:s.low,
-      prevClose:s.basePrice, history:s.history,
-      change: chg,
-      marketOpen: isMarketOpen(),
-      danger: chg < -5, // 5% 이상 하락 시 경고
-    };
-  });
+  return stocks.map(s => ({
+    id:s.id, name:s.name, ticker:s.ticker, color:s.color,
+    price:s.price, open:s.open, high:s.high, low:s.low,
+    prevClose:s.prevClose, history:s.history,
+    change: s.prevClose ? Math.round((s.price - s.prevClose) / s.prevClose * 10000) / 100 : 0,
+    marketOpen: true,
+    danger: s.prevClose ? (s.price - s.prevClose) / s.prevClose < -0.05 : false,
+  }));
 }
 
 // 포트폴리오 헬퍼
@@ -1838,20 +1793,6 @@ function getPortfolio(viewer) {
   if (!viewer.stockPortfolio) viewer.stockPortfolio = {};
   return viewer.stockPortfolio;
 }
-
-// GET /api/stocks/debug (관리자 전용 - Yahoo Finance 원본 응답 확인)
-app.get('/api/stocks/debug', async (req, res) => {
-  const results = [];
-  for (const def of STOCK_DEFS) {
-    try {
-      const raw = await fetchRealStock(def.yahooTicker);
-      results.push({ ticker: def.yahooTicker, name: def.name, raw });
-    } catch (e) {
-      results.push({ ticker: def.yahooTicker, name: def.name, error: e.message });
-    }
-  }
-  res.json({ ok: true, marketOpen: isMarketOpen(), _marketRealOpen, results });
-});
 
 // GET /api/stocks
 app.get('/api/stocks', (req, res) => {
