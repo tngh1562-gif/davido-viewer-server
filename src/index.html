@@ -878,7 +878,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item active" onclick="switchTab('page-home',this)">메인 대시보드</div>
       <div class="nav-item" onclick="switchTab('page-community',this);loadCommunity('notice')">커뮤니티</div>
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
-      <div class="nav-item" style="display:none" onclick="switchTab('page-stock',this);initStock()">주식</div>
+      <div class="nav-item" id="stockNavTab" style="display:none" onclick="switchTab('page-stock',this);initStock()">주식</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
       <div class="nav-item" onclick="switchTab('page-mypage',this);loadMyPage()">마이페이지</div>
       <div class="nav-item" style="display:none" onclick="switchTab('page-monster',this);initMonsterGame()">몬스터</div>
@@ -1527,6 +1527,7 @@ function showApp(viewer, inhousePoints){
   const ADMINS = ['다비도'];
   if(ADMINS.includes(viewer.name)){
     document.getElementById('adminNavTab').style.display = '';
+    document.getElementById('stockNavTab').style.display = '';
   }
   loadSnapshot();
   loadRanking();
