@@ -1701,22 +1701,41 @@ app.post('/api/game/monster/save', express.json({ limit: '100kb' }), (req, res) 
 });
 
 // ══════════════════════════════════════════════════════════
-// 주식 게임 (완전 랜덤워크, 24시간 가동)
+// 주식 게임 (드리프트 없는 순수 랜덤워크 + 상폐, 24시간)
 // ══════════════════════════════════════════════════════════
 const STOCK_DEFS = [
-  { id:'dvdo', name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, color:'#a855f7' },
-  { id:'blue', name:'개이득전자',       ticker:'GAIN', basePrice:500,  color:'#3b82f6' },
-  { id:'red',  name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  color:'#ef4444' },
-  { id:'chkn', name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  color:'#f59e0b' },
-  { id:'bank', name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, color:'#10b981' },
+  { id:'dvdo', name:'영끌홀딩스',       ticker:'YKKL', basePrice:1000, vol:0.022, color:'#a855f7' },
+  { id:'blue', name:'개이득전자',       ticker:'GAIN', basePrice:500,  vol:0.032, color:'#3b82f6' },
+  { id:'red',  name:'나락방지위원회',   ticker:'NRAK', basePrice:500,  vol:0.032, color:'#ef4444' },
+  { id:'chkn', name:'탕진엔터테인먼트', ticker:'TNGJ', basePrice:300,  vol:0.045, color:'#f59e0b' },
+  { id:'bank', name:'존버캐피탈',       ticker:'JNBR', basePrice:2000, vol:0.012, color:'#10b981' },
+];
+const DELIST_PRICE = 50;
+const WARN_PRICE   = 150;
+
+const STOCK_REPLACEMENT_POOL = [
+  { name:'현타주식회사',   ticker:'HNTA', basePrice:600,  vol:0.038, color:'#ec4899' },
+  { name:'손절각주식회사', ticker:'SNJK', basePrice:400,  vol:0.050, color:'#8b5cf6' },
+  { name:'물림방지연구소', ticker:'WTRP', basePrice:800,  vol:0.028, color:'#06b6d4' },
+  { name:'억까증권',       ticker:'YKKA', basePrice:1000, vol:0.025, color:'#f97316' },
+  { name:'단타의민족',     ticker:'DNTM', basePrice:700,  vol:0.042, color:'#0ea5e9' },
+  { name:'고점매수클럽',   ticker:'TOPB', basePrice:1200, vol:0.030, color:'#a3e635' },
+  { name:'매수타이밍증권', ticker:'TMNG', basePrice:500,  vol:0.038, color:'#84cc16' },
+  { name:'존버는승리한다', ticker:'JBSL', basePrice:450,  vol:0.042, color:'#f43f5e' },
+  { name:'떡상예감주식',   ticker:'DDKK', basePrice:900,  vol:0.055, color:'#fbbf24' },
+  { name:'내일은오른다',   ticker:'TMRW', basePrice:750,  vol:0.032, color:'#a78bfa' },
+  { name:'오조오억증권',   ticker:'OJOA', basePrice:550,  vol:0.042, color:'#34d399' },
+  { name:'킹받네금융',     ticker:'KING', basePrice:800,  vol:0.028, color:'#fb923c' },
 ];
 
-const STOCK_TICK_MS  = 30000; // 30초마다 가격 변동
+const STOCK_TICK_MS  = 30000;
 const STOCK_HIST_MAX = 60;
 
-// 가격 하한/상한 (기준가의 10% ~ 500%)
-const STOCK_PRICE_FLOOR = 0.10;
-const STOCK_PRICE_CAP   = 5.00;
+// Box-Muller 정규분포 난수 — 드리프트 없는 순수 GBM에 사용
+function randn() {
+  const u = Math.random() || 1e-10;
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
 
 function stocksInit() {
   const saved = readJSON(STOCKS_FILE, {});
@@ -1724,40 +1743,54 @@ function stocksInit() {
     const s = saved[def.id] || {};
     return {
       ...def,
-      price:     Math.max(Math.round(def.basePrice * STOCK_PRICE_FLOOR), s.price || def.basePrice),
-      open:      s.open     || def.basePrice,
-      high:      s.high     || def.basePrice,
-      low:       s.low      || def.basePrice,
-      prevClose: s.prevClose || def.basePrice,
-      history:   Array.isArray(s.history) ? s.history : [def.basePrice],
-      totalVol:  s.totalVol || 0,
+      price:    Math.max(DELIST_PRICE + 1, s.price || def.basePrice),
+      open:     s.open     || def.basePrice,
+      high:     s.high     || def.basePrice,
+      low:      s.low      || def.basePrice,
+      prevClose:s.prevClose || def.basePrice,
+      history:  Array.isArray(s.history) ? s.history : [def.basePrice],
+      totalVol: s.totalVol || 0,
     };
   });
 }
 
 let stocks = stocksInit();
+function isMarketOpen() { return true; }
 
-function isMarketOpen() { return true; } // 24시간 가동
+function pickReplacement() {
+  const used = new Set(stocks.map(s => s.ticker));
+  const pool = STOCK_REPLACEMENT_POOL.filter(r => !used.has(r.ticker));
+  if (!pool.length) { const sfx = Date.now().toString().slice(-3); return { name:`신규상장${sfx}`, ticker:`N${sfx}`, basePrice:500, vol:0.04, color:'#6b7280' }; }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function delistStock(idx) {
+  const s = stocks[idx];
+  const viewers = readJSON(VIEWERS_FILE, {});
+  let wipedCount = 0;
+  Object.values(viewers).forEach(v => { if (v.stockPortfolio?.[s.id]) { delete v.stockPortfolio[s.id]; wipedCount++; } });
+  if (wipedCount > 0) writeJSON(VIEWERS_FILE, viewers);
+  const repl = pickReplacement();
+  stocks[idx] = { ...repl, id:s.id, price:repl.basePrice, open:repl.basePrice, high:repl.basePrice, low:repl.basePrice, prevClose:repl.basePrice, history:[repl.basePrice], totalVol:0 };
+  console.log(`[상폐] ${s.name}(${s.ticker}) → ${repl.name}(${repl.ticker}), 피해자 ${wipedCount}명`);
+  broadcast({ type:'stock_delisted', delisted:{name:s.name,ticker:s.ticker}, newStock:{name:repl.name,ticker:repl.ticker,color:repl.color,price:repl.basePrice}, wipedCount, stocks:stocksPublic() });
+}
 
 function stockTick() {
-  stocks.forEach(s => {
-    // 변동폭 자체를 랜덤하게 (0.3% ~ 4%) → 매 틱 예측 불가
-    const vol = 0.003 + Math.random() * 0.037;
-    // 방향도 완전 랜덤 (50:50)
-    const sign = Math.random() < 0.5 ? 1 : -1;
-    // 5% 확률로 쇼크 이벤트 (±8~15% 급등락)
-    const shock = Math.random() < 0.05 ? (0.08 + Math.random() * 0.07) * (Math.random() < 0.5 ? 1 : -1) : 0;
-    const pct = vol * sign + shock;
-
-    const floor = Math.round(s.basePrice * STOCK_PRICE_FLOOR);
-    const cap   = Math.round(s.basePrice * STOCK_PRICE_CAP);
-    const newPrice = Math.min(cap, Math.max(floor, Math.round(s.price * (1 + pct))));
+  const toDelistIdx = [];
+  stocks.forEach((s, idx) => {
+    // 순수 기하 브라운 운동 — drift=0, 회귀 없음
+    // 저점이 와도 반등 보장 없이 계속 떨어질 수 있음
+    const pct = s.vol * randn();
+    const newPrice = Math.max(5, Math.round(s.price * (1 + pct)));
     s.price = newPrice;
     s.high  = Math.max(s.high, newPrice);
     s.low   = Math.min(s.low,  newPrice);
     s.history.push(newPrice);
     if (s.history.length > STOCK_HIST_MAX) s.history.shift();
+    if (newPrice <= DELIST_PRICE) toDelistIdx.push(idx);
   });
+  toDelistIdx.reverse().forEach(idx => delistStock(idx));
 
   const save = {};
   stocks.forEach(s => { save[s.id] = { price:s.price, open:s.open, high:s.high, low:s.low, prevClose:s.prevClose, history:s.history, totalVol:s.totalVol }; });
@@ -1765,7 +1798,6 @@ function stockTick() {
   broadcast({ type:'stock_update', stocks: stocksPublic() });
 }
 
-// 자정(KST 00:00)마다 일일 OHLC 리셋
 function stockDayReset() {
   const now = new Date(Date.now() + 9 * 3600000);
   if (now.getUTCHours() === 0 && now.getUTCMinutes() < 1) {
@@ -1774,7 +1806,7 @@ function stockDayReset() {
   }
 }
 
-setInterval(stockTick,    STOCK_TICK_MS);
+setInterval(stockTick,     STOCK_TICK_MS);
 setInterval(stockDayReset, 60000);
 
 function stocksPublic() {
@@ -1784,7 +1816,7 @@ function stocksPublic() {
     prevClose:s.prevClose, history:s.history,
     change: s.prevClose ? Math.round((s.price - s.prevClose) / s.prevClose * 10000) / 100 : 0,
     marketOpen: true,
-    danger: s.prevClose ? (s.price - s.prevClose) / s.prevClose < -0.05 : false,
+    danger: s.price <= WARN_PRICE,
   }));
 }
 
