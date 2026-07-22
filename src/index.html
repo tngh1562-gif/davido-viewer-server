@@ -868,6 +868,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       </div>
 
     </div>
+    <p style="margin-top:12px;font-size:10px;line-height:1.6;color:rgba(255,255,255,.22);word-break:keep-all;text-align:center">본 서비스는 부정 이용 방지 및 계정 보호를 목적으로 접속 IP 주소를 수집·보관합니다. 수집된 정보는 서비스 운영자만 열람할 수 있으며, 해당 목적 외의 용도로 이용하지 않습니다.</p>
   </div>
 </div>
 
@@ -1715,7 +1716,7 @@ async function placeBet(team) {
         tgSession = null; if (tgRaf){cancelAnimationFrame(tgRaf);tgRaf=null;}
         const wrap = document.getElementById('tgWrap');
         if (wrap) {
-          const t = fmtTG(msg.targetMs);
+          const t = msg.targetMs ? fmtTG(msg.targetMs) : '??';
           wrap.innerHTML = `<div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
             <div class="tg-target">${t}초</div>
             <div class="tg-won-box"><div style="font-size:28px">🏆</div>
@@ -2796,10 +2797,9 @@ async function initTiming(wrap) {
 
 function renderTiming(wrap, state) {
   if (!state || !state.ok) { wrap.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:40px">로딩 실패</div>'; return; }
-  // ±3초 범위로만 표시 (정확한 순간 비공개)
-  const target = fmtTG(state.targetMs);
 
   if (state.status === 'won') {
+    const target = state.winner?.targetMs ? fmtTG(state.winner.targetMs) : '??';
     wrap.innerHTML = `
       <div style="text-align:center;padding:20px">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">오늘의 목표 시간</div>
@@ -2807,8 +2807,8 @@ function renderTiming(wrap, state) {
         <div class="tg-won-box">
           <div style="font-size:28px;margin-bottom:8px">🏆</div>
           <div style="font-size:18px;font-weight:700;color:#c4b5fd">${escapeHtml(state.winner?.name||'?')}님이 당첨!</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차 ${(state.winner?.diff||0)}ms · +100P 지급</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:12px">내일 새로운 타이밍이 공개됩니다 🎲</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px">오차 ${(state.winner?.diff||0)}ms · +1000P 지급</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:12px">내일 새로운 타이밍이 시작됩니다 🎲</div>
         </div>
       </div>`;
     return;
@@ -2817,18 +2817,18 @@ function renderTiming(wrap, state) {
   wrap.innerHTML = `
     <div style="text-align:center;padding:20px" id="tgWrap">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">오늘의 목표 시간</div>
-      <div class="tg-target">${target}초</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">목표 시간에 STOP · 선착순 1명 100P</div>
+      <div class="tg-target" style="filter:blur(5px);user-select:none">??:??</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">도전하면 힌트 공개 · 선착순 1명 1000P</div>
       <div id="tgPhase">
         <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
         <div class="tg-timer" id="tgTimerDisp">00.00</div>
-        <button class="tg-start-btn" id="tgStartBtn" onclick="tgStart(${state.targetMs})">도전하기 (1P 차감)</button>
+        <button class="tg-start-btn" id="tgStartBtn" onclick="tgStart()">도전하기 (1P 차감)</button>
       </div>
       <div id="tgResult" style="margin-top:16px"></div>
     </div>`;
 }
 
-async function tgStart(targetMs) {
+async function tgStart() {
   if (tgRaf) cancelAnimationFrame(tgRaf);
   const startBtn = document.getElementById('tgStartBtn');
   if (startBtn) { startBtn.disabled = true; startBtn.textContent = '시작 중...'; }
@@ -2843,13 +2843,11 @@ async function tgStart(targetMs) {
   }
   if (r.points != null) savePts(r.points);
   if (r.fatigue != null) saveFatigue(r.fatigue);
-  // 네트워크 왕복의 절반만큼 이미 경과됐으므로 보정
-  // → 서버-클라이언트 시계 차이 + 네트워크 지연 모두 해결
   const halfRtt = Math.round((reqReceivedAt - reqSentAt) / 2);
-  tgSession = { sessionId: r.sessionId, startedAt: reqReceivedAt - halfRtt, targetMs };
+  tgSession = { sessionId: r.sessionId, startedAt: reqReceivedAt - halfRtt };
 
-  // 타이머 보임 — 단, 정확한 목표 시간은 범위로만 알려줌
   document.getElementById('tgPhase').innerHTML = `
+    <div style="font-size:12px;color:#a78bfa;margin-bottom:6px">힌트: 약 <b>${r.hintSec}초</b> 부근</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">현재 시간</div>
     <div class="tg-timer" id="tgTimerDisp">00.00</div>
     <button class="tg-stop-btn" onclick="tgStop()">⏹ STOP!</button>`;
@@ -2890,17 +2888,16 @@ async function tgStop() {
     document.getElementById('tgPhase').innerHTML = '<div style="color:var(--text-muted);font-size:14px">오늘의 당첨자가 나왔습니다 🎉</div>';
   } else if (r.error) {
     resultEl.innerHTML = `<div style="color:#ff6b81;font-size:14px">${escapeHtml(r.error)}</div>`;
-    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs||0})" id="tgStartBtn">다시 도전 (1P)</button>`;
+    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart()" id="tgStartBtn">다시 도전 (1P)</button>`;
   } else {
     const diff = r.diff || 0;
     const elapsed = r.elapsed || 0;
-    const sign = elapsed > r.targetMs ? '+' : '-';
     resultEl.innerHTML = `<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:16px">
       <div style="font-size:15px;color:var(--text-muted)">나의 기록: <b style="color:#fff">${fmtTG(elapsed)}초</b></div>
-      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${sign}${(diff/1000).toFixed(3)}초</div>
+      <div style="font-size:13px;color:#f87171;margin-top:4px">오차: ${(diff/1000).toFixed(3)}초</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:8px">아쉽네요! 다시 도전해보세요</div>
     </div>`;
-    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart(${r.targetMs})" id="tgStartBtn">다시 도전 (1P)</button>`;
+    document.getElementById('tgPhase').innerHTML = `<button class="tg-start-btn" onclick="tgStart()" id="tgStartBtn">다시 도전 (1P)</button>`;
   }
 }
 

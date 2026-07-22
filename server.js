@@ -893,10 +893,8 @@ const timingSessions = new Map(); // sessionId → { targetMs, startedAt, name, 
 function getTodayKST() {
   return new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
 }
-function getDailyTargetMs() {
-  const today = getTodayKST();
-  const hash = crypto.createHmac('sha256', SESSION_SECRET).update('timing-' + today).digest('hex');
-  return (parseInt(hash.slice(0, 8), 16) % 19000) + 1000; // 1.00 ~ 19.99초
+function getRandomTargetMs() {
+  return Math.floor(Math.random() * 19000) + 1000; // 1.000 ~ 19.999초, 세션마다 다름
 }
 // 당첨자 조회 — 인하우스 서버 우선 (3초 타임아웃), fallback 로컬
 async function getTimingWinner() {
@@ -933,13 +931,11 @@ async function saveTimingWinner(date, winner) {
 
 app.get('/api/game/timing/state', async (req, res) => {
   try {
-    const targetMs = getDailyTargetMs();
     const winner = await getTimingWinner();
-    res.json({ ok: true, targetMs, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
+    res.json({ ok: true, status: winner ? 'won' : 'open', winner, date: getTodayKST() });
   } catch(e) {
     console.error('[TIMING STATE]', e.message);
-    try { res.json({ ok: true, targetMs: getDailyTargetMs(), status: 'open', winner: null, date: getTodayKST() }); }
-    catch { res.json({ ok: true, targetMs: 10000, status: 'open', winner: null, date: getTodayKST() }); }
+    res.json({ ok: true, status: 'open', winner: null, date: getTodayKST() });
   }
 });
 
@@ -966,10 +962,11 @@ app.post('/api/game/timing/start', async (req, res) => {
     }
     const sessionId = crypto.randomBytes(16).toString('hex');
     const startedAt = Date.now();
-    timingSessions.set(sessionId, { targetMs: getDailyTargetMs(), startedAt, name, date: getTodayKST() });
+    const targetMs = getRandomTargetMs();
+    timingSessions.set(sessionId, { targetMs, startedAt, name, date: getTodayKST() });
     setTimeout(() => timingSessions.delete(sessionId), 30000);
     addFeed('game', name, { reason: '⏱ 타이밍 복권 도전 (-1P)' });
-    res.json({ ok: true, sessionId, startedAt, points: r.points });
+    res.json({ ok: true, sessionId, startedAt, points: r.points, hintSec: Math.floor(targetMs / 1000) });
   } catch(e) {
     res.json({ ok: false, error: e.message });
   }
@@ -984,11 +981,11 @@ app.post('/api/game/timing/press', async (req, res) => {
   timingSessions.delete(sessionId);
   if (session.date !== getTodayKST()) return res.json({ ok: true, won: false, error: '날짜가 바뀌었습니다' });
   // 이중 당첨 방지: 락 확인 + getTimingWinner 동시 체크
-  if (timingWinnerSaving) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
-  if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, targetMs: session.targetMs, elapsed: 0, error: '이미 당첨자 있음' });
+  if (timingWinnerSaving) return res.json({ ok: true, won: false, diff: 0, elapsed: 0, error: '이미 당첨자 있음' });
+  if (await getTimingWinner()) return res.json({ ok: true, won: false, diff: 0, elapsed: 0, error: '이미 당첨자 있음' });
   const elapsed = Date.now() - session.startedAt;
   const diff = Math.abs(elapsed - session.targetMs);
-  if (diff <= 5) { // ±0.005초 (5ms)
+  if (diff <= 5) { // ±5ms
     timingWinnerSaving = true;
     let newPoints = null;
     try {
@@ -998,7 +995,7 @@ app.post('/api/game/timing/press', async (req, res) => {
       if (r.ok) newPoints = r.points;
       else console.error('[TIMING] 1000P 지급 실패:', name, r.error);
     } catch(e) { console.error('[TIMING] 1000P 지급 오류:', name, e.message); }
-    const winner = { name, hitMs: elapsed, diff, at: Date.now() };
+    const winner = { name, hitMs: elapsed, diff, targetMs: session.targetMs, at: Date.now() };
     await saveTimingWinner(getTodayKST(), winner);
     timingWinnerSaving = false;
     broadcast({ type: 'timing_won', winner, targetMs: session.targetMs });
@@ -1009,7 +1006,7 @@ app.post('/api/game/timing/press', async (req, res) => {
     saveViewer(tvs);
     return res.json({ ok: true, won: true, diff, elapsed, targetMs: session.targetMs, prize: 1000, points: newPoints });
   }
-  return res.json({ ok: true, won: false, diff, elapsed, targetMs: session.targetMs });
+  return res.json({ ok: true, won: false, diff, elapsed });
 });
 
 // 인하우스 팀 라인업 프록시
