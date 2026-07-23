@@ -1799,8 +1799,8 @@ function stockTick() {
   const toDelistIdx = [];
   stocks.forEach((s, idx) => {
     // 순수 기하 브라운 운동 — drift=0, 회귀 없음
-    // 저점이 와도 반등 보장 없이 계속 떨어질 수 있음
-    const pct = s.vol * randn();
+    // 틱당 최대 ±12% 상한으로 2000%+ 폭등/폭락 방지
+    const pct = Math.max(-0.12, Math.min(0.12, s.vol * randn()));
     const newPrice = Math.max(5, Math.round(s.price * (1 + pct)));
     s.price = newPrice;
     s.high  = Math.max(s.high, newPrice);
