@@ -1867,6 +1867,7 @@ app.post('/api/stocks/buy', async (req, res) => {
   const qty = Math.floor(Number(shares));
   if (!qty || qty < 1) return res.json({ ok:false, error:'최소 1주' });
   if (qty > 10000) return res.json({ ok:false, error:'1회 최대 10,000주' });
+  if (!rl(`stock-buy-day:${name}`, 4, 86400)) return res.json({ ok:false, error:'오늘 매수 횟수를 초과했습니다 (하루 4회)' });
   const total = stock.price * qty;
   try {
     const dr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-deduct`,
@@ -1900,7 +1901,7 @@ app.post('/api/stocks/sell', async (req, res) => {
   const { viewers, viewer } = getViewer(name);
   const pf = getPortfolio(viewer);
   if (!pf[stockId] || pf[stockId].shares < qty) return res.json({ ok:false, error:'보유 수량 부족' });
-  const total = Math.floor(stock.price * qty * 0.97);
+  const total = Math.floor(stock.price * qty * 0.96);
   try {
     const gr = await postJson(`${INHOUSE_SERVER_URL}/api/viewer-grant`,
       { nickname:name, amount:total, reason:`📉 ${stock.ticker} ${qty}주 매도 (+${total}P)` },
