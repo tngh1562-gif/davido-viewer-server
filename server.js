@@ -464,9 +464,10 @@ app.post('/api/auth/confirm', (req, res) => {
   const { token, name } = req.body;
   if (!token || !name) return res.json({ ok: false, error: 'token, name 필요' });
 
-  // 예약 닉네임 사칭 차단
+  // 예약 닉네임 사칭 차단 (관리자 닉네임은 제외)
   const nameLower = name.trim().toLowerCase();
-  if (RESERVED_NAMES.some(r => nameLower === r || nameLower.includes(r))) {
+  const adminNamesLower = (process.env.ADMIN_NICKNAMES || '다비도').split(',').map(s => s.trim().toLowerCase());
+  if (!adminNamesLower.includes(nameLower) && RESERVED_NAMES.some(r => nameLower === r || nameLower.includes(r))) {
     return res.json({ ok: false, error: '사용할 수 없는 닉네임입니다' });
   }
 
