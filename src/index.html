@@ -5473,7 +5473,7 @@ function stRenderMarketStatus() {
   if(!el) return;
   el.innerHTML = stData.marketOpen
     ? '<span style="color:#4ade80;font-weight:700">● 장 운영중</span>'
-    : '<span style="color:#f87171;font-weight:700">● 장 마감</span> <span style="color:var(--text-muted)">09:00~15:00에 거래 가능</span>';
+    : '<span style="color:#f87171;font-weight:700">● 장 마감</span> <span style="color:var(--text-muted)">평일 09:00~15:30에 거래 가능</span>';
 }
 
 function stRenderPortfolio() {
@@ -5664,7 +5664,7 @@ function stUpdateHoldingInfo() {
 
 window.stExecute = async function() {
   if(!stSelected||!stData) return;
-  if(!stData.marketOpen) { toast('장이 닫혀 있습니다 (09:00~15:00)','err'); return; }
+  if(!stData.marketOpen) { toast('장이 닫혀 있습니다 (평일 09:00~15:30)','err'); return; }
   const qty = parseInt(document.getElementById('stQtyInput')?.value)||0;
   if(qty<1) { toast('수량을 입력하세요','err'); return; }
   const btn = document.getElementById('stExecBtn');

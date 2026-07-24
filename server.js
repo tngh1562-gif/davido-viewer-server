@@ -1775,7 +1775,17 @@ function stocksInit() {
 }
 
 let stocks = stocksInit();
-function isMarketOpen() { return true; }
+
+// KST 기준 평일 09:00~15:30만 장 운영
+function isMarketOpen() {
+  const now = new Date(Date.now() + 9 * 3600000); // UTC → KST
+  const day = now.getUTCDay();                    // 0=일, 6=토
+  if (day === 0 || day === 6) return false;
+  const totalMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  return totalMin >= 9 * 60 && totalMin < 15 * 60 + 30;
+}
+
+let _lastMarketOpen = isMarketOpen();
 
 function pickReplacement() {
   const used = new Set(stocks.map(s => s.ticker));
@@ -1797,6 +1807,7 @@ function delistStock(idx) {
 }
 
 function stockTick() {
+  if (!isMarketOpen()) return;
   const toDelistIdx = [];
   stocks.forEach((s, idx) => {
     // 순수 기하 브라운 운동 — drift=0, 회귀 없음
@@ -1819,11 +1830,21 @@ function stockTick() {
 }
 
 function stockDayReset() {
-  const now = new Date(Date.now() + 9 * 3600000);
-  if (now.getUTCHours() === 0 && now.getUTCMinutes() < 1) {
-    stocks.forEach(s => { s.prevClose = s.price; s.open = s.price; s.high = s.price; s.low = s.price; });
-    broadcast({ type:'stock_update', stocks: stocksPublic() });
+  const open = isMarketOpen();
+  if (open === _lastMarketOpen) return;
+  _lastMarketOpen = open;
+
+  if (open) {
+    // 개장: 당일 시가/고가/저가 리셋
+    stocks.forEach(s => { s.open = s.price; s.high = s.price; s.low = s.price; });
+  } else {
+    // 폐장: 종가 저장
+    stocks.forEach(s => { s.prevClose = s.price; });
+    const save = {};
+    stocks.forEach(s => { save[s.id] = { price:s.price, open:s.open, high:s.high, low:s.low, prevClose:s.prevClose, history:s.history, totalVol:s.totalVol }; });
+    writeJSON(STOCKS_FILE, save);
   }
+  broadcast({ type:'stock_update', stocks: stocksPublic() });
 }
 
 setInterval(stockTick,     STOCK_TICK_MS);
@@ -1835,7 +1856,7 @@ function stocksPublic() {
     price:s.price, open:s.open, high:s.high, low:s.low,
     prevClose:s.prevClose, history:s.history,
     change: s.prevClose ? Math.round((s.price - s.prevClose) / s.prevClose * 10000) / 100 : 0,
-    marketOpen: true,
+    marketOpen: isMarketOpen(),
     danger: s.price <= WARN_PRICE,
   }));
 }
@@ -1861,7 +1882,7 @@ app.get('/api/stocks', (req, res) => {
 app.post('/api/stocks/buy', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok:false, error:'로그인 필요' });
-  if (!isMarketOpen()) return res.json({ ok:false, error:'장이 닫혀 있습니다 (09:00~15:00)' });
+  if (!isMarketOpen()) return res.json({ ok:false, error:'장이 닫혀 있습니다 (평일 09:00~15:30)' });
   const { stockId, shares } = req.body || {};
   const stock = stocks.find(s => s.id === stockId);
   if (!stock) return res.json({ ok:false, error:'종목 없음' });
@@ -1893,7 +1914,7 @@ app.post('/api/stocks/buy', async (req, res) => {
 app.post('/api/stocks/sell', async (req, res) => {
   const name = getSessionName(req);
   if (!name) return res.json({ ok:false, error:'로그인 필요' });
-  if (!isMarketOpen()) return res.json({ ok:false, error:'장이 닫혀 있습니다 (09:00~15:00)' });
+  if (!isMarketOpen()) return res.json({ ok:false, error:'장이 닫혀 있습니다 (평일 09:00~15:30)' });
   const { stockId, shares } = req.body || {};
   const stock = stocks.find(s => s.id === stockId);
   if (!stock) return res.json({ ok:false, error:'종목 없음' });
