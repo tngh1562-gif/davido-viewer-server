@@ -881,6 +881,7 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
       <div class="nav-item" onclick="switchTab('page-minigames',this)">미니게임</div>
       <div class="nav-item" id="stockNavTab" onclick="switchTab('page-stock',this);initStock()">주식</div>
       <div class="nav-item" onclick="switchTab('page-store',this)">내전 상점</div>
+      <div class="nav-item" onclick="switchTab('page-stats',this);loadStatsPage()">전적 검색</div>
       <div class="nav-item" onclick="switchTab('page-mypage',this);loadMyPage()">마이페이지</div>
       <div class="nav-item" style="display:none" onclick="switchTab('page-monster',this);initMonsterGame()">몬스터</div>
       <div class="nav-item" id="adminNavTab" style="display:none;color:#ef4444" onclick="switchTab('page-admin',this);loadAdminUsers();loadBanAttempts()">🛡 관리자</div>
@@ -1371,6 +1372,27 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     </div>
   </div>
 </div>
+
+<!-- ── 전적 검색 탭 ── -->
+<div id="page-stats" class="page">
+  <div class="section-wrap" style="max-width:900px;margin:0 auto">
+    <div class="h-section">전적 검색</div>
+
+    <!-- 검색창 -->
+    <div style="display:flex;gap:10px;margin-bottom:28px">
+      <input id="statsSearchInput" type="text" placeholder="닉네임 검색..." autocomplete="off"
+        style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;color:#fff;font-size:1rem;font-family:inherit;outline:none"
+        oninput="statsAutocomplete(this.value)"
+        onkeydown="if(event.key==='Enter')searchPlayer(this.value)">
+      <button onclick="searchPlayer(document.getElementById('statsSearchInput').value)"
+        style="padding:12px 22px;background:var(--ref-green);color:#000;border:none;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit">검색</button>
+    </div>
+    <div id="statsAutoList" style="display:none;background:rgba(20,20,30,.95);border:1px solid rgba(255,255,255,.12);border-radius:10px;margin-top:-20px;margin-bottom:18px;overflow:hidden"></div>
+
+    <!-- 결과 영역 -->
+    <div id="statsResult"></div>
+  </div>
+</div>
 </main>
 
 <!-- 모바일 하단 탭바 -->
@@ -1386,6 +1408,9 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
   </button>
   <button class="mtab" id="mtab-community" onclick="switchTab('page-community',this);syncMobileTab('community');loadCommunity('free')">
     <span class="mtab-icon">💬</span>커뮤니티
+  </button>
+  <button class="mtab" id="mtab-stats" onclick="switchTab('page-stats',this);syncMobileTab('stats');loadStatsPage()">
+    <span class="mtab-icon">📊</span>전적
   </button>
 </div>
 
@@ -2237,8 +2262,8 @@ function syncMobileTab(tab) {
   const el = document.getElementById('mtab-'+tab);
   if(el) el.classList.add('active');
   // 상단 PC 탭도 동기화
-  const pageMap = {bet:'page-home',minigame:'page-minigames',shop:'page-store',community:'page-community'};
-  const navMap  = {bet:0,minigame:1,shop:2,community:3};
+  const pageMap = {bet:'page-home',minigame:'page-minigames',shop:'page-store',community:'page-community',stats:'page-stats'};
+  const navMap  = {bet:0,minigame:1,shop:2,community:3,stats:4};
   const navItems = document.querySelectorAll('.nav-item');
   if(navItems[navMap[tab]]) navItems[navMap[tab]].classList.add('active');
 }
@@ -2319,6 +2344,87 @@ function triggerAvatarUpload(){
   };
 
   input.click();
+}
+
+/* ══════════════════════════════════════
+   전적 검색
+══════════════════════════════════════ */
+let _statsPlayers = [];
+
+async function loadStatsPage() {
+  if (_statsPlayers.length) return;
+  try {
+    const r = await fetch('/api/inhouse/players-list').then(r=>r.json());
+    if (r.ok) _statsPlayers = r.players || [];
+  } catch {}
+}
+
+function statsAutocomplete(val) {
+  const list = document.getElementById('statsAutoList');
+  if (!val.trim()) { list.style.display='none'; return; }
+  const q = val.toLowerCase();
+  const matched = _statsPlayers.filter(n=>n.toLowerCase().includes(q)).slice(0,8);
+  if (!matched.length) { list.style.display='none'; return; }
+  list.innerHTML = matched.map(n=>`<div style="padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);font-size:.93rem"
+    onmousedown="document.getElementById('statsSearchInput').value='${n.replace(/'/g,"\\'")}';searchPlayer('${n.replace(/'/g,"\\'")}');document.getElementById('statsAutoList').style.display='none'"
+    >${n}</div>`).join('');
+  list.style.display='block';
+}
+
+async function searchPlayer(name) {
+  name = (name||'').trim();
+  document.getElementById('statsAutoList').style.display='none';
+  if (!name) return;
+  const result = document.getElementById('statsResult');
+  result.innerHTML = '<div style="color:var(--text-muted);padding:20px 0">불러오는 중...</div>';
+  try {
+    const r = await fetch(`/api/inhouse/player-stats/${encodeURIComponent(name)}`).then(r=>r.json());
+    if (!r.ok) { result.innerHTML=`<div style="color:#f87171;padding:20px 0">${r.error||'조회 실패'}</div>`; return; }
+    const wr = r.winRate;
+    const wrColor = wr>=60?'#4ade80':wr>=50?'#facc15':'#f87171';
+    result.innerHTML = `
+    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:1.4rem;font-weight:800;letter-spacing:-.02em;margin-bottom:16px">${name}</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="font-size:2rem;font-weight:900;color:${wrColor}">${wr}%</div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">승률</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:2rem;font-weight:900">${r.totalGames}</div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">판</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:1.1rem;font-weight:700;color:#4ade80">${r.wins}승</div>
+          <div style="font-size:.9rem;color:#f87171">${r.losses}패</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:1.8rem;font-weight:900;color:#c4b5fd">${r.kda}</div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">KDA</div>
+        </div>
+        <div style="text-align:center;font-size:.95rem;line-height:1.7">
+          <span style="color:#4ade80">${r.avgKills}</span> /
+          <span style="color:#f87171">${r.avgDeaths}</span> /
+          <span style="color:#60a5fa">${r.avgAssists}</span>
+          <div style="font-size:.8rem;color:var(--text-muted)">평균 K/D/A</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-weight:700;margin-bottom:12px;font-size:.9rem;letter-spacing:.04em;color:var(--text-muted)">챔피언별</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${(r.champions||[]).map(c=>{
+        const cwr=c.winRate;const cc=cwr>=60?'#4ade80':cwr>=50?'#facc15':'#f87171';
+        return `<div style="display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.04);border-radius:10px;padding:12px 16px">
+          <div style="font-weight:700;min-width:100px;font-size:.95rem">${c.champion}</div>
+          <div style="color:${cc};font-weight:800;min-width:48px">${cwr}%</div>
+          <div style="color:var(--text-muted);font-size:.88rem">${c.wins}승 ${c.games-c.wins}패 (${c.games}판)</div>
+          <div style="margin-left:auto;color:#c4b5fd;font-weight:700">KDA ${c.kda}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch(e) {
+    result.innerHTML='<div style="color:#f87171;padding:20px 0">서버 연결 실패. 잠시 후 다시 시도해주세요.</div>';
+  }
 }
 
 /* ══════════════════════════════════════

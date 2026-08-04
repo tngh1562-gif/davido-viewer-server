@@ -2079,6 +2079,27 @@ wss.on('connection', (ws) => {
   }));
 });
 
+// ── 내전 전적 프록시 ─────────────────────────────────────────────
+app.get('/api/inhouse/players-list', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const data = await getJson(`${INHOUSE_SERVER_URL}/api/players-list`);
+    res.json(data);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/api/inhouse/player-stats/:name', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const data = await getJson(`${INHOUSE_SERVER_URL}/api/player-stats/${encodeURIComponent(req.params.name)}`);
+    res.json(data);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`davido-viewer server on :${PORT}`);
   startBetting(); // 배당폭발 게임 루프 시작
