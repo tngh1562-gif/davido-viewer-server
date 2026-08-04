@@ -2350,36 +2350,185 @@ function triggerAvatarUpload(){
    전적 검색
 ══════════════════════════════════════ */
 let _statsPlayers = [];
+let _statsAliases = {};
+let _statsLoaded = false;
 
 async function loadStatsPage() {
-  if (_statsPlayers.length) return;
+  if (_statsLoaded) return;
+  _statsLoaded = true;
   try {
     const r = await fetch('/api/inhouse/players-list').then(r=>r.json());
-    if (r.ok) _statsPlayers = r.players || [];
+    if (r.ok) {
+      _statsPlayers = r.players || [];
+      _statsAliases = r.aliases || {};
+    }
   } catch {}
+  loadStatsLeaderboard();
+}
+
+async function loadStatsLeaderboard() {
+  const result = document.getElementById('statsResult');
+  if (!result || result.dataset.hasSearch) return;
+  result.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:20px 0">통계 불러오는 중...</div>';
+  try {
+    const r = await fetch('/api/inhouse/match-history?limit=200').then(r=>r.json());
+    if (!r.ok || !r.matches || !r.matches.length) {
+      result.innerHTML = '<div style="color:var(--text-muted);font-size:.9rem;text-align:center;padding:40px 0;opacity:.6">아직 기록된 경기가 없습니다.</div>';
+      return;
+    }
+    const pmap = {};
+    for (const m of r.matches) {
+      for (const t of m.teams || []) {
+        for (const p of t.players || []) {
+          if (!p.name) continue;
+          if (!pmap[p.name]) pmap[p.name] = { wins:0, games:0, kills:0, deaths:0, assists:0 };
+          pmap[p.name].games++;
+          if (p.win) pmap[p.name].wins++;
+          pmap[p.name].kills += p.kills||0;
+          pmap[p.name].deaths += p.deaths||0;
+          pmap[p.name].assists += p.assists||0;
+        }
+      }
+    }
+    const players = Object.entries(pmap)
+      .filter(([,s])=>s.games>=1)
+      .map(([name,s])=>({
+        name,
+        games: s.games,
+        wins: s.wins,
+        wr: Math.round(s.wins/s.games*100),
+        kda: s.deaths===0 ? (s.kills+s.assists).toFixed(2) : ((s.kills+s.assists)/s.deaths).toFixed(2),
+      }))
+      .sort((a,b)=>b.games-a.games||b.wr-a.wr);
+    const totalMatches = r.total || r.matches.length;
+    const recentMatches = r.matches.slice(0,5);
+    const wrTop = [...players].sort((a,b)=>b.wr-a.wr||b.games-a.games).filter(p=>p.games>=3).slice(0,5);
+    const kdaTop = [...players].sort((a,b)=>parseFloat(b.kda)-parseFloat(a.kda)||b.games-a.games).filter(p=>p.games>=3).slice(0,5);
+    const aliasRev = {};
+    for (const [chzzk, lol] of Object.entries(_statsAliases)) aliasRev[lol.toLowerCase()] = chzzk;
+    function dispName(name) {
+      const alias = aliasRev[name.toLowerCase()];
+      return alias ? `${alias} <span style="font-size:.72rem;color:var(--text-muted);font-weight:400">(${name})</span>` : name;
+    }
+    function wrColor(wr) { return wr>=60?'#4ade80':wr>=50?'#facc15':'#f87171'; }
+    function wrBadge(wr) { return `<span style="background:${wrColor(wr)}22;color:${wrColor(wr)};border-radius:5px;padding:1px 7px;font-size:.78rem;font-weight:700">${wr}%</span>`; }
+    result.innerHTML = `
+    <div style="display:grid;gap:10px;margin-bottom:18px">
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <div style="text-align:center;flex:1;min-width:80px">
+          <div style="font-size:1.8rem;font-weight:900;letter-spacing:-.03em">${totalMatches}</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">총 경기</div>
+        </div>
+        <div style="width:1px;height:36px;background:rgba(255,255,255,.08)"></div>
+        <div style="text-align:center;flex:1;min-width:80px">
+          <div style="font-size:1.8rem;font-weight:900;letter-spacing:-.03em">${players.length}</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">참여 선수</div>
+        </div>
+        <div style="width:1px;height:36px;background:rgba(255,255,255,.08)"></div>
+        <div style="text-align:center;flex:1;min-width:80px">
+          <div style="font-size:1.8rem;font-weight:900;letter-spacing:-.03em">${players[0]?.games||0}</div>
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">최다 참여</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden">
+        <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+          <span style="color:#4ade80;font-size:1rem">↑</span>승률 TOP
+        </div>
+        ${wrTop.map((p,i)=>`
+        <div onclick="document.getElementById('statsSearchInput').value='${p.name}';searchPlayer('${p.name}')"
+          style="display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;${i>0?'border-top:1px solid rgba(255,255,255,.04)':''};transition:background .15s"
+          onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+          <span style="font-size:.75rem;font-weight:700;color:${i===0?'#ffc844':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--text-muted)'};min-width:14px">${i+1}</span>
+          <span style="flex:1;font-size:.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dispName(p.name)}</span>
+          <span style="font-size:.78rem;color:var(--text-muted)">${p.games}판</span>
+          ${wrBadge(p.wr)}
+        </div>`).join('')}
+      </div>
+      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden">
+        <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+          <span style="color:#60a5fa;font-size:1rem">⚡</span>KDA TOP
+        </div>
+        ${kdaTop.map((p,i)=>`
+        <div onclick="document.getElementById('statsSearchInput').value='${p.name}';searchPlayer('${p.name}')"
+          style="display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;${i>0?'border-top:1px solid rgba(255,255,255,.04)':''};transition:background .15s"
+          onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+          <span style="font-size:.75rem;font-weight:700;color:${i===0?'#ffc844':i===1?'#c0c0c0':i===2?'#cd7f32':'var(--text-muted)'};min-width:14px">${i+1}</span>
+          <span style="flex:1;font-size:.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dispName(p.name)}</span>
+          <span style="font-size:.78rem;color:var(--text-muted)">${p.games}판</span>
+          <span style="color:#60a5fa;font-weight:700;font-size:.85rem">${p.kda} KDA</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--text-muted)">최근 경기</div>
+      ${recentMatches.map((m,i)=>{
+        const d = new Date(m.playedAt);
+        const dateStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+        const blueTeam = (m.teams||[]).find(t=>t.teamId===100)||m.teams?.[0]||{players:[]};
+        const redTeam = (m.teams||[]).find(t=>t.teamId===200)||m.teams?.[1]||{players:[]};
+        const blueWin = blueTeam.win;
+        return `<div style="padding:11px 16px;${i>0?'border-top:1px solid rgba(255,255,255,.04)':''}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:.72rem;color:var(--text-muted)">${dateStr}</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1;font-size:.78rem;line-height:1.5;${blueWin?'color:#60a5fa;font-weight:600':'color:var(--text-muted)'}">
+              ${(blueTeam.players||[]).slice(0,5).map(p=>p.name||'').join(', ')}
+            </div>
+            <div style="flex-shrink:0;text-align:center;font-size:.7rem">
+              <div style="font-weight:800;font-size:.82rem">${blueWin?'<span style="color:#60a5fa">Blue</span> <span style="color:var(--text-muted)">승</span>':'<span style="color:#f87171">Red</span> <span style="color:var(--text-muted)">승</span>'}</div>
+            </div>
+            <div style="flex:1;font-size:.78rem;line-height:1.5;text-align:right;${!blueWin?'color:#f87171;font-weight:600':'color:var(--text-muted)'}">
+              ${(redTeam.players||[]).slice(0,5).map(p=>p.name||'').join(', ')}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch(e) {
+    result.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:20px 0">통계를 불러오지 못했습니다.</div>';
+  }
 }
 
 function statsAutocomplete(val) {
   const list = document.getElementById('statsAutoList');
   if (!val.trim()) { list.style.display='none'; return; }
   const q = val.toLowerCase();
-  const matched = _statsPlayers.filter(n=>n.toLowerCase().includes(q)).slice(0,8);
+  const lolMatched = _statsPlayers.filter(n=>n.toLowerCase().includes(q));
+  const aliasMatched = Object.keys(_statsAliases).filter(k=>k.includes(q) && !lolMatched.map(n=>n.toLowerCase()).includes(_statsAliases[k].toLowerCase())).map(k=>_statsAliases[k]);
+  const matched = [...new Set([...lolMatched, ...aliasMatched])].slice(0,8);
   if (!matched.length) { list.style.display='none'; return; }
-  list.innerHTML = matched.map(n=>`<div style="padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);font-size:.93rem"
-    onmousedown="document.getElementById('statsSearchInput').value='${n.replace(/'/g,"\\'")}';searchPlayer('${n.replace(/'/g,"\\'")}');document.getElementById('statsAutoList').style.display='none'"
-    >${n}</div>`).join('');
+  const aliasRev = {};
+  for (const [chzzk,lol] of Object.entries(_statsAliases)) aliasRev[lol.toLowerCase()] = chzzk;
+  list.innerHTML = matched.map(n=>{
+    const safe = n.replace(/'/g,"\\'");
+    const chzzk = aliasRev[n.toLowerCase()];
+    const label = chzzk ? `${chzzk} <span style="color:var(--text-muted);font-size:.8rem">(${n})</span>` : n;
+    return `<div style="padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);font-size:.93rem"
+      onmousedown="document.getElementById('statsSearchInput').value='${safe}';searchPlayer('${safe}');document.getElementById('statsAutoList').style.display='none'"
+      >${label}</div>`;
+  }).join('');
   list.style.display='block';
 }
 
 async function searchPlayer(name) {
   name = (name||'').trim();
   document.getElementById('statsAutoList').style.display='none';
-  if (!name) return;
   const result = document.getElementById('statsResult');
+  if (!name) {
+    delete result.dataset.hasSearch;
+    loadStatsLeaderboard();
+    return;
+  }
+  result.dataset.hasSearch = '1';
   result.innerHTML = '<div style="color:var(--text-muted);padding:32px 0;text-align:center;font-size:.9rem">불러오는 중...</div>';
   try {
     const r = await fetch(`/api/inhouse/player-stats/${encodeURIComponent(name)}`).then(r=>r.json());
-    if (!r.ok) { result.innerHTML=`<div style="color:#f87171;padding:24px 0">${r.error||'조회 실패'}</div>`; return; }
+    if (!r.ok) { result.innerHTML=`<div style="color:#f87171;padding:24px 0;text-align:center">${r.error||'조회 실패'}</div><div style="text-align:center;margin-top:8px"><button onclick="document.getElementById('statsSearchInput').value='';searchPlayer('')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--text-muted);border-radius:8px;padding:8px 18px;cursor:pointer;font-size:.85rem;font-family:inherit">← 리더보드로</button></div>`; return; }
     const wr = r.winRate;
     const wrColor = wr>=60?'#4ade80':wr>=50?'#facc15':'#f87171';
     const kdaVal = parseFloat(r.kda);
@@ -2388,6 +2537,14 @@ async function searchPlayer(name) {
     const dash = circ*(1 - wr/100);
 
     result.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <span style="font-size:1.1rem;font-weight:800">${r.chzzkName||r.name}</span>
+        ${r.chzzkName?`<span style="font-size:.78rem;color:var(--text-muted);margin-left:6px">(롤: ${r.name})</span>`:''}
+      </div>
+      <button onclick="document.getElementById('statsSearchInput').value='';searchPlayer('')"
+        style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--text-muted);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:.8rem;font-family:inherit">← 리더보드</button>
+    </div>
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px 28px;margin-bottom:12px">
       <div style="font-size:.75rem;font-weight:700;letter-spacing:.1em;color:var(--text-muted);margin-bottom:14px">전체 통계</div>
       <div style="display:flex;align-items:center;gap:28px;flex-wrap:wrap">

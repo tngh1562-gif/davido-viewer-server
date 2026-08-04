@@ -2100,6 +2100,63 @@ app.get('/api/inhouse/player-stats/:name', async (req, res) => {
   }
 });
 
+app.get('/api/inhouse/match-history', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = parseInt(req.query.offset) || 0;
+    const data = await getJson(`${INHOUSE_SERVER_URL}/api/match-history?limit=${limit}&offset=${offset}`);
+    res.json(data);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/api/inhouse/name-aliases', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const data = await getJson(`${INHOUSE_SERVER_URL}/api/name-aliases`);
+    res.json(data);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/api/inhouse/name-aliases', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const data = await postJson(`${INHOUSE_SERVER_URL}/api/name-aliases`, req.body,
+      { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' });
+    res.json(data);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.delete('/api/inhouse/name-aliases/:chzzk', async (req, res) => {
+  if (!INHOUSE_SERVER_URL) return res.json({ ok: false, error: 'INHOUSE_SERVER_URL 미설정' });
+  try {
+    const target = new URL(`${INHOUSE_SERVER_URL}/api/name-aliases/${encodeURIComponent(req.params.chzzk)}`);
+    const lib = target.protocol === 'https:' ? https : http;
+    const result = await new Promise((resolve, reject) => {
+      const r = lib.request(target, {
+        method: 'DELETE',
+        headers: { 'x-viewer-secret': VIEWER_SERVER_SECRET || 'davido-admin' },
+        timeout: 8000,
+      }, rs => {
+        const chunks = [];
+        rs.on('data', c => chunks.push(c));
+        rs.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString())); } catch { reject(new Error('parse')); } });
+      });
+      r.on('error', reject);
+      r.end();
+    });
+    res.json(result);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`davido-viewer server on :${PORT}`);
   startBetting(); // 배당폭발 게임 루프 시작
