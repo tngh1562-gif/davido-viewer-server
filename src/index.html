@@ -1389,6 +1389,28 @@ main{max-width:1400px;margin:40px auto;padding:0 40px}
     </div>
     <div id="statsAutoList" style="display:none;background:rgba(20,20,30,.95);border:1px solid rgba(255,255,255,.12);border-radius:10px;margin-top:-20px;margin-bottom:18px;overflow:hidden"></div>
 
+    <!-- 닉네임 별칭 관리 (접었다 펼 수 있는) -->
+    <div style="margin-bottom:20px">
+      <button onclick="toggleAliasPanel()" id="aliasPanelToggle"
+        style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 16px;color:var(--text-muted);font-size:.83rem;cursor:pointer;font-family:inherit;width:100%;text-align:left">
+        <span id="aliasPanelArrow" style="font-size:.7rem;transition:transform .2s">▶</span>
+        치지직 ↔ 롤 닉네임 별칭 관리
+        <span style="margin-left:auto;font-size:.75rem;opacity:.5">검색 시 자동 연결</span>
+      </button>
+      <div id="aliasPanel" style="display:none;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:none;border-radius:0 0 10px 10px;padding:16px">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <input id="aliasChzzk" placeholder="치지직 닉네임 (예: 다비도)" autocomplete="off"
+            style="flex:1;min-width:120px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:.88rem;font-family:inherit;outline:none">
+          <span style="line-height:38px;color:var(--text-muted);font-size:.9rem">→</span>
+          <input id="aliasLol" placeholder="롤 닉네임 (예: DABIDO)" autocomplete="off"
+            style="flex:1;min-width:120px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:.88rem;font-family:inherit;outline:none">
+          <button onclick="addAlias()" style="padding:9px 18px;background:var(--ref-green);color:#000;border:none;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit;white-space:nowrap">추가</button>
+        </div>
+        <div id="aliasList" style="font-size:.83rem"></div>
+        <div id="aliasMsg" style="font-size:.8rem;margin-top:6px;min-height:16px"></div>
+      </div>
+    </div>
+
     <!-- 결과 영역 -->
     <div id="statsResult"></div>
   </div>
@@ -2352,6 +2374,66 @@ function triggerAvatarUpload(){
 let _statsPlayers = [];
 let _statsAliases = {};
 let _statsLoaded = false;
+
+function toggleAliasPanel() {
+  const panel = document.getElementById('aliasPanel');
+  const arrow = document.getElementById('aliasPanelArrow');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  arrow.style.transform = open ? 'rotate(90deg)' : '';
+  if (open) renderAliasList();
+}
+
+function renderAliasList() {
+  const el = document.getElementById('aliasList');
+  if (!el) return;
+  const entries = Object.entries(_statsAliases);
+  if (!entries.length) { el.innerHTML = '<span style="color:var(--text-muted)">등록된 별칭 없음</span>'; return; }
+  el.innerHTML = entries.map(([chzzk, lol]) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span style="flex:1;font-weight:600">${chzzk}</span>
+      <span style="color:var(--text-muted);font-size:.8rem">→ 롤:</span>
+      <span style="flex:1">${lol}</span>
+      <button onclick="deleteAlias('${chzzk.replace(/'/g,"\\'")}','${lol.replace(/'/g,"\\'")}')"
+        style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:6px;padding:3px 10px;font-size:.78rem;cursor:pointer;font-family:inherit">삭제</button>
+    </div>`).join('');
+}
+
+async function addAlias() {
+  const chzzk = document.getElementById('aliasChzzk').value.trim();
+  const lol   = document.getElementById('aliasLol').value.trim();
+  const msg   = document.getElementById('aliasMsg');
+  if (!chzzk || !lol) { msg.style.color='#f87171'; msg.textContent='두 닉네임을 모두 입력하세요'; return; }
+  msg.style.color='var(--text-muted)'; msg.textContent='저장 중...';
+  try {
+    const r = await fetch('/api/inhouse/name-aliases', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ chzzk, lol })
+    }).then(r=>r.json());
+    if (r.ok) {
+      _statsAliases[chzzk.toLowerCase()] = lol;
+      _statsLoaded = false;
+      document.getElementById('aliasChzzk').value='';
+      document.getElementById('aliasLol').value='';
+      msg.style.color='#4ade80'; msg.textContent=`✓ "${chzzk}" → "${lol}" 추가됨`;
+      renderAliasList();
+    } else { msg.style.color='#f87171'; msg.textContent=r.error||'저장 실패'; }
+  } catch { msg.style.color='#f87171'; msg.textContent='서버 연결 실패'; }
+}
+
+async function deleteAlias(chzzk, lol) {
+  const msg = document.getElementById('aliasMsg');
+  msg.style.color='var(--text-muted)'; msg.textContent='삭제 중...';
+  try {
+    const r = await fetch(`/api/inhouse/name-aliases/${encodeURIComponent(chzzk)}`, { method:'DELETE' }).then(r=>r.json());
+    if (r.ok) {
+      delete _statsAliases[chzzk.toLowerCase()];
+      _statsLoaded = false;
+      msg.style.color='#4ade80'; msg.textContent=`✓ "${chzzk}" 별칭 삭제됨`;
+      renderAliasList();
+    } else { msg.style.color='#f87171'; msg.textContent=r.error||'삭제 실패'; }
+  } catch { msg.style.color='#f87171'; msg.textContent='서버 연결 실패'; }
+}
 
 async function loadStatsPage() {
   if (_statsLoaded) return;
